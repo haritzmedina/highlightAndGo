@@ -22,17 +22,29 @@
       "chrome"
     ]
   },
+  "dependencies": {
+    "jquery": "^3.2.1",
+    "jquery-csv": "^0.8.3"
+  },
   "devDependencies": {
     "babel-cli": "6.x.x",
     "babel-core": "6.x.x",
+    "babel-eslint": "^8.0.1",
     "babel-loader": "7.x.x",
     "babel-preset-env": "1.x.x",
     "chai": "4.x.x",
     "chromereload": "0.x.x",
     "debounce": "1.x.x",
     "del": "3.x.x",
+    "dotenv": "^4.0.0",
     "eslint": "4.x.x",
+    "eslint-config-standard": "^10.2.1",
     "eslint-loader": "1.x.x",
+    "eslint-plugin-import": "^2.7.0",
+    "eslint-plugin-jasmine": "^2.8.4",
+    "eslint-plugin-node": "^5.1.1",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^3.0.1",
     "gulp": "3.x.x",
     "gulp-bump": "2.x.x",
     "gulp-cache": "0.x.x",
@@ -53,6 +65,7 @@
     "gulp-webdriver": "^2.0.3",
     "gulp-zip": "^4.x.x",
     "jasmine-core": "^2.6.3",
+    "jsdom": "git+https://github.com/haritzmedina/jsdom.git#master",
     "karma": "^1.7.0",
     "karma-babel-preprocessor": "^6.0.1",
     "karma-chrome-launcher": "^2.1.1",

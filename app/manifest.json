@@ -14,6 +14,18 @@
       "scripts/background.js"
     ]
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "scripts/contentScript.js"
+      ],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
   "page_action": {
     "default_icon": {
       "19": "images/icon-19.png",

@@ -1,5 +1,4 @@
-let chromeExtensionFolderPath = __dirname+'/dist/chrome';
-
+let chromeExtensionFolderPath = __dirname + '/dist/chrome'
 
 exports.config = {
 
@@ -48,7 +47,7 @@ exports.config = {
     maxInstances: 5,
     //
     browserName: 'chrome',
-    chromeOptions: {args: ["--load-extension="+chromeExtensionFolderPath, "--no-first-run", "--no-sandbox", "--no-default-browser-check"]},
+    chromeOptions: {args: ['--load-extension=' + chromeExtensionFolderPath, '--no-first-run', '--no-sandbox', '--no-default-browser-check']},
     show: false
   }],
   //
@@ -111,7 +110,7 @@ exports.config = {
   // Services take over a specific job you don't want to take care of. They enhance
   // your test setup with almost no effort. Unlike plugins, they don't add new
   // commands. Instead, they hook themselves up into the test process.
-  services: ['selenium-standalone','webpack'],
+  services: ['selenium-standalone', 'webpack'],
   //
   // Framework you want to run your specs with.
   // The following are supported: Mocha, Jasmine, and Cucumber
@@ -128,10 +127,9 @@ exports.config = {
 
   reportOptions: {
     dot: {
-      outputDir: './test/reports',
+      outputDir: './test/reports'
     }
   },
-
 
   //
   // Options to be passed to Jasmine.
@@ -143,10 +141,10 @@ exports.config = {
     // The Jasmine framework allows interception of each assertion in order to log the state of the application
     // or website depending on the result. For example, it is pretty handy to take a screenshot every time
     // an assertion fails.
-    expectationResultHandler: function(passed, assertion) {
+    expectationResultHandler: function (passed, assertion) {
       // do something
     }
-  },
+  }
 
   //
   // =====
