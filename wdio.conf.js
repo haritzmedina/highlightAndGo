@@ -47,7 +47,7 @@ exports.config = {
     maxInstances: 5,
     //
     browserName: 'chrome',
-    chromeOptions: {args: ['--load-extension=' + chromeExtensionFolderPath, '--no-first-run', '--no-sandbox', '--no-default-browser-check']},
+    chromeOptions: {args: ['--load-extension=' + chromeExtensionFolderPath, '--no-first-run', '--no-sandbox', '--no-default-browser-check', '--headless', '--disable-gpu', '--window-size=1280,800']},
     show: false
   }],
   //
