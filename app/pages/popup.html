@@ -2,13 +2,23 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Popup</title>
+  <title>Options</title>
   <link rel="stylesheet" type="text/css" href="../styles/popup.css">
 </head>
 <body>
 
-  <h1>Popup</h1>
+<div id="modeSwitcherContainer">
+  <div id="original" class="modeSwitcherButton" data-active="true">
+    <span class="modeSwitcherButtonName">Original</span>
+  </div>
+  <div id="edit" class="modeSwitcherButton" data-active="false">
+    <span class="modeSwitcherButtonName">Edit</span>
+  </div>
+  <div id="view" class="modeSwitcherButton" data-active="false">
+    <span class="modeSwitcherButtonName">View</span>
+  </div>
+</div>
 
-  <script src="../scripts/popup.js"></script>
+<script src="../scripts/popup.js"></script>
 </body>
 </html>

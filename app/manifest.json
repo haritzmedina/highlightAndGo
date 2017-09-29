@@ -22,6 +22,9 @@
       "js": [
         "scripts/contentScript.js"
       ],
+      "css": [
+        "styles/contentScript.css"
+      ],
       "run_at": "document_end",
       "all_frames": false
     }

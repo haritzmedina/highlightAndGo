@@ -9,4 +9,25 @@ chrome.tabs.onUpdated.addListener((tabId) => {
   chrome.pageAction.show(tabId)
 })
 
-console.log(`'Allo 'Allo! Event Page for Page Action`)
+const HypothesisManager = require('./background/HypothesisManager')
+const ModesManager = require('./background/ModesManager')
+
+class Background {
+  constructor () {
+    this.hypothesisManager = null
+    this.modesManager = null
+  }
+
+  init () {
+    // Initialize hypothesis manager
+    this.hypothesisManager = new HypothesisManager()
+    this.hypothesisManager.init()
+
+    // Initialize modes manager
+    this.modesManager = new ModesManager()
+    this.modesManager.init()
+  }
+}
+
+window.background = new Background()
+window.background.init()

@@ -7,8 +7,10 @@ if (typeof window === 'undefined') {
 
 class HypothesisClient {
   constructor (token) {
+    if (token) {
+      this.token = token
+    }
     this.baseURI = 'https://hypothes.is/api'
-    this.token = token
   }
 
   createNewAnnotation (data, callback) {
@@ -51,15 +53,18 @@ class HypothesisClient {
 
   fetchAnnotation (id, callback) {
     let url = this.baseURI + '/annotations/' + id
+    let headers = {
+      'cache-control': 'no-cache'
+    }
+    if (this.token) {
+      headers['authorization'] = 'Bearer ' + this.token
+    }
     let settings = {
       'async': true,
       'crossDomain': true,
       'url': url,
       'method': 'GET',
-      'headers': {
-        'authorization': 'Bearer ' + this.token,
-        'cache-control': 'no-cache'
-      }
+      'headers': headers
     }
     $.ajax(settings).done((response) => {
       callback(response)
@@ -103,19 +108,22 @@ class HypothesisClient {
 
   searchAnnotations (data, callback) {
     let url = this.baseURI + '/search'
+    let headers = {
+      'cache-control': 'no-cache'
+    }
+    if (this.token) {
+      headers['authorization'] = 'Bearer ' + this.token
+    }
     let settings = {
       'async': true,
       'crossDomain': true,
       'url': url,
       'method': 'GET',
-      'headers': {
-        'authorization': 'Bearer ' + this.token,
-        'cache-control': 'no-cache'
-      },
+      'headers': headers,
       'data': data
     }
     $.ajax(settings).done((response) => {
-      callback(response)
+      callback(response.rows)
     })
   }
 }
