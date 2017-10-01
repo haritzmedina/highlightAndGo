@@ -22,6 +22,7 @@ class ModesMenu {
           scope: 'extension',
           cmd: 'setMode',
           params: {mode: Modes[button.id]}}, (done) => {
+          console.log(done)
           if (done) {
             console.log('Switched to mode %s', button.id)
             window.close()

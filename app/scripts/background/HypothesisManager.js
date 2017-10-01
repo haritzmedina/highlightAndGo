@@ -10,6 +10,17 @@ class HypothesisManager {
   }
 
   init () {
+    // Try to load token for first time
+    this.retrieveHypothesisToken((err, token) => {
+      if (err) {
+        console.error('User is not logged in Hypothesis')
+        this.token = null
+      } else {
+        console.debug('User is logged in Hypothesis. His token is %s', token)
+        this.token = token
+      }
+    })
+
     // Create an observer to check if user is logged to hypothesis
     this.retryHypothesisTokenRetrieve()
 

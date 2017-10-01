@@ -60,9 +60,14 @@ class Popup {
     let rangeSelector = this.annotation.target[0].selector[1]
     let startNode = document.evaluate('/' + this.annotation.target[0].selector[1]['startContainer'], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
     let endNode = document.evaluate('/' + this.annotation.target[0].selector[1]['endContainer'], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
-    let nodesBetween = this.getNodesBetween(node, startNode, endNode)
-    console.log(nodesBetween)
+    let nodesBetween = this.getNodesBetween(startNode, endNode)
     let nodesToHighlight = []
+    // Highlight all the nodes between
+    nodesBetween.forEach((node) => {
+      node.className += 'popupHighlight'
+      nodesToHighlight.push(node)
+    })
+    // TODO If no nodes between, take the init point and last point of both nodes
     // Highlight start node from offset position
     let startWrapper = document.createElement('mark')
     startWrapper.className = 'popupHighlight'
@@ -77,38 +82,7 @@ class Popup {
     endWrapper.innerHTML = remarkElementsEnd
     endNode.innerHTML = endNode.innerHTML.replace(remarkElementsEnd, endWrapper.outerHTML)
     nodesToHighlight.push(endNode.querySelector('.popupHighlight'))
-    // Highlight all the nodes between
-    nodesBetween.forEach((node) => {
-      // Create the wrapper and insert the content in
-      let wrapper = document.createElement('mark')
-      wrapper.className = 'popupHighlight'
-      wrapper.innerText = node.textContent
-      node.parentElement.innerHTML = node.parentElement.innerHTML.replace(node.textContent, wrapper.outerHTML)
-    })
     return nodesToHighlight
-  }
-
-  // TODO Retrieve all nodes between start and end
-  getNodesBetween (rootNode, startNode, endNode) {
-    let pastStartNode = false
-    let reachedEndNode = false
-    let textNodes = []
-
-    function getNodes (node) {
-      if (node === startNode) {
-        pastStartNode = true
-      } else if (node === endNode) {
-        reachedEndNode = true
-      } else {
-        if (pastStartNode && !reachedEndNode && !/^\s*$/.test(node.nodeValue)) {
-          textNodes.push(node)
-        }
-      }
-    }
-
-    getNodes(rootNode)
-
-    return textNodes
   }
 }
 

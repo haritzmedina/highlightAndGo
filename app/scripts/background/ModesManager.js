@@ -15,6 +15,11 @@ class ModesManager {
         } else if (request.cmd === 'setMode') {
           this.setMode(request.params.mode)
           sendResponse(true)
+          chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            chrome.tabs.update(tabs[0].id, {url: tabs[0].url}, () => {
+              console.log('Switched and reloaded ')
+            })
+          })
         }
       }
     })

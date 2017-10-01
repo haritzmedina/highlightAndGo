@@ -43,6 +43,7 @@
     "chrome_style": true
   },
   "permissions": [
-    "contextMenus"
+    "contextMenus",
+    "tabs"
   ]
 }

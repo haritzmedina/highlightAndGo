@@ -39,6 +39,28 @@ class DOM {
       callback(error)
     })
   }
+
+  /**
+   * Retrieve nodes between two nodes in the DOM tree
+   * @param startNode
+   * @param endNode
+   * @returns {*} A list of nodes
+   */
+  static getNodesBetween (startNode, endNode) {
+    // startNode and endNode is the same
+    if (startNode === endNode) {
+      return []
+    }
+    // startNode is child of endNode
+    if ($.contains(endNode, startNode)) {
+      return []
+    }
+    // endNode is child of startNode
+    if ($.contains(startNode, endNode)) {
+      return []
+    }
+    return $(startNode).nextUntil(endNode).toArray()
+  }
 }
 
 module.exports = DOM
