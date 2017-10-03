@@ -116,6 +116,17 @@ class DataUtils {
     }
     return false
   }
+
+  static intersectionNonEqual (a, b, equalComparison) {
+    return a.filter((n) => {
+      for (let i = 0; i < b.length; i++) {
+        if (equalComparison(n, b[i])) {
+          return true
+        }
+      }
+      return false
+    })
+  }
 }
 
 module.exports = DataUtils

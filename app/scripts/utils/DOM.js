@@ -1,4 +1,5 @@
 const $ = require('jquery')
+const DataUtils = require('./DataUtils')
 
 class DOM {
   static searchElement (target) {
@@ -41,12 +42,12 @@ class DOM {
   }
 
   /**
-   * Retrieve nodes between two nodes in the DOM tree
+   * Retrieve nodes between two nodes in the DOM tree (they are not in order)
    * @param startNode
    * @param endNode
    * @returns {*} A list of nodes
    */
-  static getNodesBetween (startNode, endNode) {
+  static getNodesBetween (startNode, endNode, commonParent) {
     // startNode and endNode is the same
     if (startNode === endNode) {
       return []
@@ -59,7 +60,68 @@ class DOM {
     if ($.contains(startNode, endNode)) {
       return []
     }
-    return $(startNode).nextUntil(endNode).toArray()
+    // startNode and endNode are in different subtrees
+    let nodesBetween = []
+    let startNodeParentIterator = startNode
+    while (startNodeParentIterator.parentElement !== commonParent) {
+      // Next elements
+      nodesBetween = nodesBetween.concat(DOM.getNextSiblings(startNodeParentIterator))
+      // Iterator
+      startNodeParentIterator = startNodeParentIterator.parentElement
+    }
+    console.log('Nodes between')
+    console.log(nodesBetween)
+    let startNext = DOM.getNextSiblings(startNodeParentIterator)
+    console.log('StartNext')
+    console.log(startNext)
+    // End to init
+    let endNodeParentIterator = endNode
+    while (endNodeParentIterator.parentElement !== commonParent) {
+      // Previous elements
+      nodesBetween = nodesBetween.concat(DOM.getPreviousSiblings(endNodeParentIterator))
+      // Iterator
+      endNodeParentIterator = endNodeParentIterator.parentElement
+    }
+    console.log('Nodes between')
+    console.log(nodesBetween)
+    let endPrevious = DOM.getPreviousSiblings(endNodeParentIterator)
+    console.log('endPrevious')
+    console.log(endPrevious)
+    let intersection = DataUtils.intersectionNonEqual(startNext, endPrevious, (a, b) => {
+      if (a.nodeType === b.nodeType) {
+        if (a.nodeType === 1) {
+          return a.outerHTML === b.outerHTML
+        } else {
+          return a.nodeValue === b.nodeValue
+        }
+      } else {
+        return false
+      }
+    })
+    console.log('Intersection')
+    console.log(intersection)
+    nodesBetween = nodesBetween.concat(intersection)
+    return nodesBetween
+  }
+
+  static getNextSiblings (currentNode) {
+    let iterator = currentNode
+    let siblings = []
+    while (iterator.nextSibling !== null) {
+      siblings.push(iterator.nextSibling)
+      iterator = iterator.nextSibling
+    }
+    return siblings
+  }
+
+  static getPreviousSiblings (currentNode) {
+    let iterator = currentNode
+    let siblings = []
+    while (iterator.previousSibling !== null) {
+      siblings.push(iterator.previousSibling)
+      iterator = iterator.previousSibling
+    }
+    return siblings
   }
 }
 

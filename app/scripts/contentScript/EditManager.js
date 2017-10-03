@@ -2,8 +2,7 @@ const HypothesisSidebarFactory = require('./HypothesisSidebarFactory')
 
 class EditManager {
   init () {
-    // TODO Open hypothesis client (sidebar)
-    console.log('Hey')
+    // Open hypothesis client (sidebar)
     HypothesisSidebarFactory.insertHypothesisSidebar()
   }
 }
