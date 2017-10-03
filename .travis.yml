@@ -12,6 +12,7 @@ before_install:
   - sh -e /etc/init.d/xvfb start # Start X-window to run chrome
 before_script:
   - npm install -g gulp-cli
+  - npm install babel-plugin-transform-es3-member-expression-literals # Fix a bug to compile dom-seek and dom-node-iterator
 script:
   - gulp
   - gulp test
