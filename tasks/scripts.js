@@ -21,6 +21,12 @@ gulp.task('scripts', (cb) => {
       devtool: args.sourcemaps ? 'inline-source-map' : false,
       watch: args.watch,
       plugins: [
+        new webpack.ProvidePlugin({
+          $: 'jquery',
+          jQuery: 'jquery',
+          'window.jQuery': 'jquery',
+          Popper: ['popper.js', 'default']
+        }),
         new webpack.DefinePlugin({
           'process.env.NODE_ENV': JSON.stringify(ENV),
           'process.env.VENDOR': JSON.stringify(args.vendor)

@@ -1,19 +1,27 @@
+@import '../../node_modules/bootstrap/dist/css/bootstrap.min';
+
+body{
+  min-width: 400px;
+  height: 100%;
+}
+
+#popupContainer{
+  margin: 0px;
+}
+
 .modeSwitcherButton{
-  width:100px;
-  height:30px;
-  background-color: rgba(200,200,200,0.5);
-  border-radius: 10px;
-  margin-top: 10px;
-  text-align: center;
-  padding-top: 15px;
-}
-
-.modeSwitcherButton:hover{
   cursor: pointer;
-  background-color: rgba(150,150,150,0.5);
 }
 
-.modeSwitcherButton[data-active='true']{
-  background-color: rgba(130,160,200,0.5);
+.modeSwitcherButton[aria-pressed='true']{
+  background-color: rgba(130,160,200,0.4);
   cursor: default;
+}
+
+#annotationMenu[data-active="false"] {
+  display: none;
+}
+
+#annotationMenu[data-active="true"] {
+  display: block;
 }

@@ -1,19 +1,17 @@
-const Modes = require('./Modes')
-
-class ModesManager {
+class SelectedAnnotatorManager {
   constructor () {
-    this.currentMode = Modes.annotation // TODO By default it is original
+    this.currentAnnotator = 'purpose'
   }
 
   init () {
     // Initialize replier for requests of modes related metadata
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.scope === 'extension') {
-        if (request.cmd === 'getCurrentMode') {
-          console.log(this.currentMode)
-          sendResponse(this.currentMode)
-        } else if (request.cmd === 'setMode') {
-          this.setMode(request.params.mode)
+        if (request.cmd === 'getCurrentAnnotator') {
+          console.debug(this.currentAnnotator)
+          sendResponse(this.currentAnnotator)
+        } else if (request.cmd === 'setAnnotator') {
+          this.setMode(request.params.annotator)
           sendResponse(true)
           chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
             chrome.tabs.update(tabs[0].id, {url: tabs[0].url}, () => {
@@ -25,13 +23,13 @@ class ModesManager {
     })
   }
 
-  setMode (mode) {
-    this.currentMode = mode
+  setMode (annotator) {
+    this.currentAnnotator = annotator
   }
 
   getMode () {
-    return this.currentMode
+    return this.currentAnnotator
   }
 }
 
-module.exports = ModesManager
+module.exports = SelectedAnnotatorManager

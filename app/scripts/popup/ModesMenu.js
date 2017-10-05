@@ -1,21 +1,28 @@
 const Modes = require('../background/Modes')
+const AnnotatorMenu = require('AnnotatorMenu')
 
 class ModesMenu {
   init () {
-    // Indicar cual es el actual
+    // Retrieve current mode
     chrome.runtime.sendMessage({scope: 'extension', cmd: 'getCurrentMode'}, (mode) => {
       // Remove mode active tag for everybody
       let buttons = document.querySelectorAll('.modeSwitcherButton')
       buttons.forEach(button => {
-        button.dataset.active = 'false'
+        button.setAttribute('aria-pressed', 'false')
       })
-      console.log(mode)
+      console.debug('Current mode:')
+      console.debug(mode)
       // Add active element
       let activeButton = document.querySelector('#' + mode.id)
-      activeButton.dataset.active = 'true'
+      activeButton.setAttribute('aria-pressed', 'true')
+      this.initializeSubMenu(mode)
+      this.createEventListeners()
     })
-    // Añadir eventos on click
-    let buttons = document.querySelectorAll('.modeSwitcherButton')
+  }
+
+  createEventListeners () {
+    // Add on click event listeners
+    let buttons = document.querySelectorAll('.modeSwitcherButton[aria-pressed="false"]')
     buttons.forEach(button => {
       button.addEventListener('click', () => {
         chrome.runtime.sendMessage({
@@ -30,6 +37,14 @@ class ModesMenu {
         })
       })
     })
+  }
+
+  initializeSubMenu (mode) {
+    console.log(mode)
+    if (mode.id === Modes.annotation.id) {
+      let annotatorMenu = new AnnotatorMenu()
+      annotatorMenu.init()
+    }
   }
 }
 

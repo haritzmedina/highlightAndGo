@@ -6,10 +6,10 @@ class ViewManager {
   }
 
   init () {
-    // TODO Load hypothesis annotations for current page
+    // Load hypothesis annotations for current page
     this.loadHypothesisAnnotations((annotations) => {
-      console.log(annotations)
-      // TODO Apply operations for annotations
+      console.debug(annotations)
+      // Apply operations for annotations
       annotations.forEach(annotation => {
         this.applyOperation(annotation)
       })
