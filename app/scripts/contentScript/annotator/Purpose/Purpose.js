@@ -3,7 +3,7 @@ require('bootstrap')
 
 class Purpose {
   constructor () {
-    this.hypothesisClient = new HypothesisClient()
+    this.hypothesisClient = null
   }
 
   init () {

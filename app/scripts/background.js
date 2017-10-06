@@ -11,6 +11,7 @@ chrome.tabs.onUpdated.addListener((tabId) => {
 
 const HypothesisManager = require('./background/HypothesisManager')
 const ModesManager = require('./background/ModesManager')
+const SelectedAnnotatorManager = require('./background/SelectedAnnotatorManager')
 
 class Background {
   constructor () {
@@ -26,6 +27,10 @@ class Background {
     // Initialize modes manager
     this.modesManager = new ModesManager()
     this.modesManager.init()
+
+    // Initialize annotator manager
+    this.selectedAnnotatorManager = new SelectedAnnotatorManager()
+    this.selectedAnnotatorManager.init()
   }
 }
 

@@ -1,17 +1,14 @@
-const Purpose = require('annotator/Purpose/Purpose')
+const Annotators = require('../background/Annotators')
+const Purpose = require('./annotator/Purpose/Purpose')
 
 class AnnotatorManager {
-  constructor () {
-    this.annotators = {
-      'purpose': Purpose
-    }
-  }
-
   init () {
     // Retrieve current annotator
     chrome.runtime.sendMessage({scope: 'extension', cmd: 'getCurrentAnnotator'}, (currentAnnotator) => {
-      let annotator = new this.annotators[currentAnnotator]()
-      annotator.init()
+      if (currentAnnotator.id === Annotators.purpose.id) {
+        let purposeAnnotator = new Purpose()
+        purposeAnnotator.init()
+      }
     })
   }
 }

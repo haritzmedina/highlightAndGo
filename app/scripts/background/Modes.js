@@ -1,4 +1,4 @@
-const SLRUpdaterModes = {
+const Modes = {
   edit: {
     id: 'edit',
     name: 'Edit',
@@ -21,4 +21,4 @@ const SLRUpdaterModes = {
   }
 }
 
-module.exports = SLRUpdaterModes
+module.exports = Modes

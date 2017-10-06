@@ -1,7 +1,7 @@
 const Modes = require('./background/Modes')
 const EditManager = require('./contentScript/EditManager')
 const ViewManager = require('./contentScript/ViewManager')
-
+const AnnotatorManager = require('./contentScript/AnnotatorManager')
 
 class ContentScript {
   constructor () {
@@ -23,6 +23,9 @@ class ContentScript {
         // Call edit content script
         this.viewManager = new ViewManager()
         this.viewManager.init()
+      } else if (currentMode.id === Modes.annotation.id) {
+        this.annotatorManager = new AnnotatorManager()
+        this.annotatorManager.init()
       }
     })
   }

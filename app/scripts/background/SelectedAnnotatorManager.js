@@ -1,11 +1,14 @@
+const Annotators = require('./Annotators')
+
 class SelectedAnnotatorManager {
   constructor () {
-    this.currentAnnotator = 'purpose'
+    this.currentAnnotator = Annotators.purpose
   }
 
   init () {
     // Initialize replier for requests of modes related metadata
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log('hey')
       if (request.scope === 'extension') {
         if (request.cmd === 'getCurrentAnnotator') {
           console.debug(this.currentAnnotator)

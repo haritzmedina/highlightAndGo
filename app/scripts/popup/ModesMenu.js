@@ -1,5 +1,5 @@
 const Modes = require('../background/Modes')
-const AnnotatorMenu = require('AnnotatorMenu')
+const AnnotatorMenu = require('./AnnotatorMenu')
 
 class ModesMenu {
   init () {
