@@ -44,6 +44,9 @@
   },
   "permissions": [
     "contextMenus",
+    "https://hypothes.is/",
+    "storage",
     "tabs"
-  ]
+  ],
+  "web_accessible_resources": ["pages/*.html"]
 }
