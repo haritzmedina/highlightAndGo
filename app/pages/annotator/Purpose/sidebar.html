@@ -1,16 +1,34 @@
-<div id="annotatorSidebarContainer">
-  <div id="purposeContainer" class="card text-center">
-    <div id="groupSelectorContainer" class="card-header">
-      <div class="dropdown">
-        <button class="btn btn-secondary dropdown-toggle" type="button" id="annotationDropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          Hypothesis group
-        </button>
-        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-          <a id="__world__" class="dropdown-item" href="#">Public</a>
+<div id="annotatorSidebarWrapper">
+  <div id="bucket-bar"></div>
+  <div id="annotatorSidebarContainer">
+    <div id="purposeContainer" class="card text-center">
+      <div id="groupSelectorContainer" class="card-header" aria-hidden="true">
+        <!--<div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" id="annotationDropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Hypothesis group
+          </button>
+          <div class="dropdown-menu" aria-labelled-by="dropdownMenuButton">
+            <template id="dropdownMenuItemTemplate"><a data-group-id="groupId" class="dropdown-item" href="#">GroupName</a></template>
+          </div>
+        </div>-->
+        <label for="dropdown-menu">Group:</label> <select id="dropdown-menu" class="dropdown">
+        </select>
+        <div id="hypothesisLogin" class="card-header" aria-hidden="true">
+          <a href="https://hypothes.is/login">Log in</a> / <a href="https://hypothes.is/signup">Sign up</a>
+        </div>
+        <div id="purposesWrapper">
+          <template id="purposeButtonTemplate">
+            <button type="button" class="btn btn-outline-primary purposeButton">Purpose</button>
+          </template>
+          <div id="purposes" class="card-body" aria-hidden="true">
+          </div>
         </div>
       </div>
     </div>
-    <div id="purposes" class="card-body">
-    </div>
   </div>
+  <button id="sidebarButton" data-toggled="false">
+    <span class="sidebarButtonIconBar navbar-btn"></span>
+    <span class="sidebarButtonIconBar navbar-btn"></span>
+    <span class="sidebarButtonIconBar navbar-btn"></span>
+  </button>
 </div>

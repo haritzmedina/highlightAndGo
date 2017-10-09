@@ -1,5 +1,22 @@
-$zIndex: 50000;
-$sideBarWidth: 20em;
+$zIndex: 2147483647;
+$sideBarWidth: 150px;
+
+
+
+
+#annotatorSidebarWrapper {
+  @import '../../../../node_modules/bootstrap/scss/bootstrap';
+}
+
+#bucket-bar{
+  background-color: rgba(0,0,0,0.08);
+  width: 2em;
+  left: 0;
+  position: fixed;
+  height: 100%;
+  top: 0;
+  z-index: $zIndex - 1;
+}
 
 #annotatorSidebarContainer{
   z-index: $zIndex;
@@ -9,12 +26,12 @@ $sideBarWidth: 20em;
   height: 100%;
   margin-left: - $sideBarWidth;
   overflow-y: auto;
-  background: #000;
-  transition: all 0.5s ease;
+  background: rgba(255,255,255,1);
+  transition: width 0.5s ease;
+  bottom: 0;
 }
 
 #annotatorSidebarContainer[data-shown="true"] {
-  bottom: 0;
   width: $sideBarWidth;
 }
 
@@ -26,6 +43,20 @@ html[data-sidebar-shown="true"]{
   padding-left: $sideBarWidth;
 } */
 
+.card-header[aria-hidden="true"]{
+  display: none;
+}
+
+.card-body[aria-hidden="true"]{
+  display: none;
+}
+
+.purposeButton {
+  cursor: pointer;
+  margin-bottom: 10px;
+  display: block;
+}
+
 #sidebarButton{
   width: 40px;
   height: 40px;
@@ -34,15 +65,41 @@ html[data-sidebar-shown="true"]{
   padding: 0;
   margin: 0;
   z-index: calc( #{$zIndex} + 1);
-  bottom: 15px;
+  top: 15px;
   left: 15px;
+  transition: all 0.5s ease;
 }
 
-#sidebarbuttonIconBar{
+#sidebarButton[data-toggled="true"]{
+  margin-left: $sideBarWidth;
+}
+
+.sidebarButtonIconBar{
   width: 80%;
   height: 2px;
   margin: 0 auto;
   display: block;
   background: #555;
   transition: all 0.8s cubic-bezier(0.810, -0.330, 0.345, 1.375);
+}
+
+#sidebarButton span:first-of-type,
+#sidebarButton span:nth-of-type(2),
+#sidebarButton span:last-of-type {
+  transform: none;
+  opacity: 1;
+  margin: 5px auto;
+}
+
+#sidebarButton[data-toggled="true"] span {
+  margin: 0 auto;
+}
+#sidebarButton[data-toggled="true"] span:first-of-type {
+  transform: rotate(45deg) translate(2px, 2px);
+}
+#sidebarButton[data-toggled="true"] span:nth-of-type(2) {
+  opacity: 0;
+}
+#sidebarButton[data-toggled="true"] span:last-of-type {
+  transform: rotate(-45deg) translate(1px, -1px);
 }
