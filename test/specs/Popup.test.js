@@ -61,9 +61,6 @@ describe('Popup test', function () {
   })
 
   it('Tool creates a popup using annotation', async function () {
-    // let url = await browser.getAttribute('')
-    // let url = await browser.getAttribute('#firstHeading > a', 'href');
-    // expect(url).toBe('http://dbpedia.org/page/Wikipedia');
     browser.call(() => new Promise((resolve) => {
       hypothesisClient.fetchAnnotation(annotationId, (response) => {
         expect(response.uri).toBe(WEBSITE_URL)
@@ -72,7 +69,7 @@ describe('Popup test', function () {
     }))
   })
 
-  afterAll((done) => {
+  afterAll(() => {
     browser.call(() => new Promise((resolve) => {
       hypothesisClient.deleteAnnotation(annotationId, () => {
         console.log('Deleted annotation ' + annotationId)

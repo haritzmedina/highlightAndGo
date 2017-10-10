@@ -2,20 +2,24 @@ const HypothesisClient = require('../../../hypothesis/HypothesisClient')
 const $ = require('jquery')
 const ChromeStorage = require('../../../utils/ChromeStorage')
 const LanguageUtils = require('../../../utils/LanguageUtils')
+const DOM = require('../../../utils/DOM')
 
 const domAnchorTextQuote = require('dom-anchor-text-quote')
+const domAnchorTextPosition = require('dom-anchor-text-position')
+const xpathRange = require('xpath-range')
 
 // TODO Review
 // require('bootstrap')
 
 const selectedGroupNamespace = 'hypothesis.currentGroup'
-const reloadIntervalInSeconds = 60 // Reload the group annotations every 60 seconds
+const reloadIntervalInSeconds = 6 // Reload the group annotations every 60 seconds
+const defaultGroup = {id: '__world__', name: 'Public', public: true}
 
 class Purpose {
   constructor () {
     this.hypothesisClient = null
     this.user = {}
-    this.currentGroup = {id: '__world__', name: 'Public', public: true}
+    this.currentGroup = null
   }
 
   init () {
@@ -30,55 +34,24 @@ class Purpose {
 
   initSidebar () {
     let sidebarURL = chrome.extension.getURL('pages/annotator/Purpose/sidebar.html')
-    let _this = this
     $.get(sidebarURL, (html) => {
       // Append sidebar to content
       $('body').append($.parseHTML(html))
       // Initialize sidebar toggle button
       this.initSidebarButton()
-      // Retrieve hypothesis token
-      chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
-        let sidebarContainer = document.querySelector('#annotatorSidebarContainer')
-        if (token) {
-          this.hypothesisClient = new HypothesisClient(token)
-          this.reloadGroups(() => {
-            ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
-              let currentGroup
-              if (!LanguageUtils.isEmptyObject(savedCurrentGroup) && savedCurrentGroup.data) {
-                currentGroup = JSON.parse(savedCurrentGroup.data)
-                _this.currentGroup = currentGroup
-              } else {
-                currentGroup = _this.currentGroup
-              }
-              // Set select option
-              this.setGroupSelectorValue(currentGroup)
-              // TODO Set event handler for group change
-              this.setEventForGroupSelectChange()
-              // Periodically retrieve annotations and reload layout
-              this.reloadPurposes(() => {
-                setInterval(() => {
-                  this.reloadPurposes()
-                }, reloadIntervalInSeconds * 1000)
-              })
-            })
-          })
-        } else {
-          // Display login/sign up form
-          let hypothesisLogin = sidebarContainer.querySelector('#hypothesisLogin')
-          $(hypothesisLogin).attr('aria-hidden', 'false')
-        }
+      // Load groups container
+      this.reloadGroupsContainer(() => {
+        setInterval(() => {
+          this.reloadGroupsContainer()
+        }, reloadIntervalInSeconds * 1000)
       })
     })
   }
 
-  setGroupSelectorValue (currentGroup) {
-    $('#dropdown-menu').find('option[data-group-id="' + currentGroup.id + '"]').prop('selected', 'selected')
-  }
-
   setEventForGroupSelectChange () {
-    let menu = document.querySelector('#dropdown-menu')
+    let menu = document.querySelector('#groupSelector')
     $(menu).change(() => {
-      let selectedGroup = $('#dropdown-menu').find('option:selected').get(0)
+      let selectedGroup = $('#groupSelector').find('option:selected').get(0)
       this.updateCurrentGroup(selectedGroup.dataset.groupId)
     })
   }
@@ -132,17 +105,75 @@ class Purpose {
     })
   }
 
-  reloadGroups (callback) {
+  reloadGroupsContainer (callback) {
+    // Check logged in hypothesis
+    chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
+      if (token) {
+        this.hypothesisClient = new HypothesisClient(token)
+        // Hide login/sign up form
+        $('#notLoggedInGroupContainer').attr('aria-hidden', 'true')
+        // Display group container
+        $('#loggedInGroupContainer').attr('aria-hidden', 'false')
+        // Set current group if not defined
+        this.defineCurrentGroup(() => {
+          // Render groups container
+          this.renderGroupsContainer(() => {
+          })
+        })
+      } else {
+        // Display login/sign up form
+        $('#notLoggedInGroupContainer').attr('aria-hidden', 'false')
+        // Hide group container
+        $('#loggedInGroupContainer').attr('aria-hidden', 'true')
+        // Hide purposes wrapper
+        $('#purposesWrapper').attr('aria-hidden', 'true')
+        if (LanguageUtils.isFunction(callback)) {
+          callback()
+        }
+      }
+    })
+  }
+
+  /**
+   * If not current group set, load from chrome storage last session
+   * @param callback
+   */
+  defineCurrentGroup (callback) {
+    if (!this.currentGroup) {
+      ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
+        if (err) {
+          throw new Error('Unable to retrieve current selected group')
+        } else {
+          // Parse chrome storage result
+          if (!LanguageUtils.isEmptyObject(savedCurrentGroup) && savedCurrentGroup.data) {
+            this.currentGroup = JSON.parse(savedCurrentGroup.data)
+          } else {
+            this.currentGroup = defaultGroup
+          }
+        }
+        if (LanguageUtils.isFunction(callback)) {
+          callback()
+        }
+      })
+    } else {
+      if (LanguageUtils.isFunction(callback)) {
+        callback()
+      }
+    }
+  }
+
+  renderGroupsContainer (callback) {
+    // Set select option
+    $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
+    // Reload purposes for current group
+    this.reloadPurposes()
     // Display group selector and purposes selector
-    let groupSelectorContainer = document.querySelector('#groupSelectorContainer')
-    let purposes = document.querySelector('#purposes')
-    $(groupSelectorContainer).attr('aria-hidden', 'false')
-    $(purposes).attr('aria-hidden', 'false')
-    // TODO Retrieve groups if user is logged in
+    $('#purposesWrapper').attr('aria-hidden', 'false')
+    // Retrieve groups
     this.hypothesisClient.getUserProfile((profile) => {
       this.user.groups = profile.groups
-      console.log(profile.groups)
-      let dropdownMenu = document.querySelector('#dropdown-menu')
+      console.debug(profile.groups)
+      let dropdownMenu = document.querySelector('#groupSelector')
       this.user.groups.forEach(group => {
         let groupSelectorItem = document.createElement('option')
         groupSelectorItem.dataset.groupId = group.id
@@ -150,6 +181,8 @@ class Purpose {
         groupSelectorItem.className = 'dropdown-item'
         dropdownMenu.appendChild(groupSelectorItem)
       })
+      // Set event handler for group change
+      this.setEventForGroupSelectChange()
       if (LanguageUtils.isFunction(callback)) {
         callback()
       }
@@ -164,24 +197,100 @@ class Purpose {
   }
 
   setHandlerForButtons () {
+    // TODO Substitute by JQuery On content added to #purposes
     let purposeButtons = document.querySelectorAll('.purposeButton')
     purposeButtons.forEach(purposeButton => {
       purposeButton.addEventListener('click', (e) => {
-        let handler = this.purposeOnClickEvent()
+        let handler = this.purposeOnClickEvent({event: e})
         handler()
       })
     })
   }
 
   purposeOnClickEvent (opts) {
-    return (event) => {
-      let text = ''
+    return () => {
+      /* let text = ''
       if (window.getSelection) {
         text = window.getSelection().toString()
       } else if (document.selection && document.selection.type !== 'Control') {
         text = document.selection.createRange().text
       }
-      console.log(text)
+      console.log(text) */
+      let selectors = []
+      let range = document.getSelection().getRangeAt(0)
+      // Create FragmentSelector
+      let fragmentSelector = this.getFragmentSelector(range)
+      if (fragmentSelector) {
+        selectors.push(fragmentSelector)
+      }
+      // Create RangeSelector
+      let rangeSelector = this.getRangeSelector(range)
+      if (rangeSelector) {
+        selectors.push(rangeSelector)
+      }
+      // Create TextPositionSelector
+      let textPositionSelector = this.getTextPositionSelector(range)
+      if (textPositionSelector) {
+        selectors.push(textPositionSelector)
+      }
+      // Create TextQuoteSelector
+      let textQuoteSelector = this.getTextQuoteSelector(range)
+      if (textQuoteSelector) {
+        selectors.push(textQuoteSelector)
+      }
+      // TODO Construct the annotation to send to hypothesis
+      let annotation = this.constructAnnotation(selectors, opts.event.target.dataset.tag)
+      this.hypothesisClient.createNewAnnotation(annotation, (response) => {
+        console.log('Created annotation with ID: ' + response)
+      })
+      // TODO Highlight the content in the DOM
+    }
+  }
+
+  getFragmentSelector (range) {
+    if (range.commonAncestorContainer) {
+      let parentId = DOM.getParentNodeWithId(range.commonAncestorContainer)
+      if (parentId) {
+        return {
+          'conformsTo': 'https://tools.ietf.org/html/rfc3236',
+          'type': 'FragmentSelector',
+          'value': parentId
+        }
+      }
+    }
+  }
+
+  getRangeSelector (range) {
+    let rangeSelector = xpathRange.fromRange(range)
+    rangeSelector['type'] = 'RangeSelector'
+    return rangeSelector
+  }
+
+  getTextPositionSelector (range) {
+    let textPositionSelector = domAnchorTextPosition.fromRange(document.body, range)
+    textPositionSelector['type'] = 'TextPositionSelector'
+    return textPositionSelector
+  }
+
+  getTextQuoteSelector (range) {
+    let textQuoteSelector = domAnchorTextQuote.fromRange(document.body, range)
+    textQuoteSelector['type'] = 'TextQuoteSelector'
+    return textQuoteSelector
+  }
+
+  constructAnnotation (selectors, tag) {
+    return {
+      group: this.currentGroup.id,
+      permissions: {
+        read: ['group:__world__']
+      },
+      references: [],
+      tags: [tag],
+      target: [{
+        selector: selectors
+      }],
+      text: '',
+      uri: window.location.href
     }
   }
 }

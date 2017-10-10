@@ -3,24 +3,31 @@
   <div id="annotatorSidebarContainer">
     <div id="purposeContainer" class="card text-center">
       <div id="groupSelectorContainer" class="card-header" aria-hidden="true">
-        <!--<div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle" type="button" id="annotationDropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Hypothesis group
-          </button>
-          <div class="dropdown-menu" aria-labelled-by="dropdownMenuButton">
-            <template id="dropdownMenuItemTemplate"><a data-group-id="groupId" class="dropdown-item" href="#">GroupName</a></template>
+        <div id="loggedInGroupContainer">
+          <div id="groupHeader" class="header">
+            <label for="groupSelector">Choose your group</label>
           </div>
-        </div>-->
-        <label for="dropdown-menu">Group:</label> <select id="dropdown-menu" class="dropdown">
-        </select>
-        <div id="hypothesisLogin" class="card-header" aria-hidden="true">
-          <a href="https://hypothes.is/login">Log in</a> / <a href="https://hypothes.is/signup">Sign up</a>
+          <div id="groupBody" class="bodyContainer">
+            <select id="groupSelector" class="dropdown">
+            </select>
+          </div>
+        </div>
+        <div id="notLoggedInGroupContainer" aria-hidden="true">
+          <div id="hypothesisLogin" class="header">
+            Please log in hypothesis
+          </div>
+          <div>
+            <a href="https://hypothes.is/login" target="_blank">Log in</a> / <a href="https://hypothes.is/signup" target="_blank">Sign up</a>
+          </div>
         </div>
         <div id="purposesWrapper">
           <template id="purposeButtonTemplate">
-            <button type="button" class="btn btn-outline-primary purposeButton">Purpose</button>
+            <button type="button" class="purposeButton">Purpose</button>
           </template>
-          <div id="purposes" class="card-body" aria-hidden="true">
+          <div id="purposesHeader" class="header">
+            Purposes
+          </div>
+          <div id="purposes" class="bodyContainer">
           </div>
         </div>
       </div>

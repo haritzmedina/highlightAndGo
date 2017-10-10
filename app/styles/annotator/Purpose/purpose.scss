@@ -1,12 +1,14 @@
 $zIndex: 2147483647;
 $sideBarWidth: 150px;
+$themeColor: #7952b3;
 
-
-
-
-#annotatorSidebarWrapper {
-  @import '../../../../node_modules/bootstrap/scss/bootstrap';
+/* html {
+  transition: all 0.5s ease;
 }
+
+html[data-sidebar-shown="true"]{
+  padding-left: $sideBarWidth;
+} */
 
 #bucket-bar{
   background-color: rgba(0,0,0,0.08);
@@ -26,35 +28,92 @@ $sideBarWidth: 150px;
   height: 100%;
   margin-left: - $sideBarWidth;
   overflow-y: auto;
-  background: rgba(255,255,255,1);
   transition: width 0.5s ease;
   bottom: 0;
+  background-color: whitesmoke;
+  font-size: 14px;
+  font-family: sans-serif;
 }
+
+button {
+  font-size: 14px;
+  font-family: sans-serif;
+}
+
+select {
+  font-size: 14px;
+  font-family: sans-serif;
+}
+
 
 #annotatorSidebarContainer[data-shown="true"] {
   width: $sideBarWidth;
 }
 
-/* html {
-  transition: all 0.5s ease;
+.header{
+  background-color: rgba(150,150,150,0.5);
+  margin-top: 0.5rem;
+  padding: 0.2rem;
+  border-top-left-radius: 0.2rem;
+  border-top-right-radius: 0.2rem;
+  min-width: calc( #{$sideBarWidth} - 0.5rem - 0.2rem);
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
 }
 
-html[data-sidebar-shown="true"]{
-  padding-left: $sideBarWidth;
-} */
-
-.card-header[aria-hidden="true"]{
+#loggedInGroupContainer[aria-hidden="true"]{
   display: none;
 }
 
-.card-body[aria-hidden="true"]{
+#notLoggedInGroupContainer[aria-hidden="true"]{
   display: none;
+}
+
+#purposesWrapper[aria-hidden="true"]{
+  display: none;
+}
+
+.bodyContainer {
+  background-color: #ececec;
+  min-width: calc( #{$sideBarWidth} - 0.5rem - 0.2rem);
+  padding: 0.4rem 0.2rem 0.4rem;
+}
+
+.bodyContainer[aria-hidden="true"]{
+  display: none;
+}
+
+#groupSelector {
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid $themeColor;
+  width: $sideBarWidth - 10px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#groupSelector:hover {
+  background-color: $themeColor;
+  color: white;
 }
 
 .purposeButton {
   cursor: pointer;
   margin-bottom: 10px;
   display: block;
+  border: 1px solid $themeColor;
+  background-color: rgba(0,0,0,0);
+  margin-left: auto;
+  margin-right: auto;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.purposeButton:hover {
+  background-color: $themeColor;
+  color: white;
 }
 
 #sidebarButton{

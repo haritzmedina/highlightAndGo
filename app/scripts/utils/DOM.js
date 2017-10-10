@@ -123,6 +123,10 @@ class DOM {
     }
     return siblings
   }
+
+  static getParentNodeWithId (elem) {
+    return $(elem).parents('[id]').get(0).id
+  }
 }
 
 module.exports = DOM

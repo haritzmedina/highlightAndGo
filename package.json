@@ -32,7 +32,8 @@
     "jquery": "^3.2.1",
     "jquery-csv": "^0.8.3",
     "popper.js": "^1.12.5",
-    "qtip2": "^3.0.3"
+    "qtip2": "^3.0.3",
+    "xpath-range": "^1.1.1"
   },
   "devDependencies": {
     "babel-cli": "6.x.x",

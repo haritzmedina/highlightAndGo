@@ -66,8 +66,6 @@ class Popup {
       wrapper.innerHTML = range.startContainer.nodeValue.slice(range.startOffset, range.endOffset)
       let newStringifiedContent = range.startContainer.nodeValue.slice(0, range.startOffset) + wrapper.outerHTML + range.startContainer.nodeValue.slice(range.endOffset, range.startContainer.nodeValue.length)
       this.replaceContent(range.startContainer, newStringifiedContent)
-      /* range.commonAncestorContainer.parentElement.innerHTML =
-        range.commonAncestorContainer.parentElement.innerHTML.replace(range.startContainer.nodeValue, range.startContainer.nodeValue.slice(0, range.startOffset) + wrapper.outerHTML + range.startContainer.nodeValue.slice(range.endOffset, range.startContainer.nodeValue.length)) */
     } else {
       // Start node
       let startWrapper = document.createElement('mark')
