@@ -162,3 +162,9 @@ select {
 #sidebarButton[data-toggled="true"] span:last-of-type {
   transform: rotate(-45deg) translate(1px, -1px);
 }
+
+.popupHighlight {
+  background-color: rgba(200,200,200,0.7);
+  cursor: pointer;
+  text-decoration: wavy;
+}

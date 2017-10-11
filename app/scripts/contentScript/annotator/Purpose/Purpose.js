@@ -2,14 +2,9 @@ const HypothesisClient = require('../../../hypothesis/HypothesisClient')
 const $ = require('jquery')
 const ChromeStorage = require('../../../utils/ChromeStorage')
 const LanguageUtils = require('../../../utils/LanguageUtils')
-const DOM = require('../../../utils/DOM')
+const DOMTextUtils = require('../../../utils/DOMTextUtils')
 
-const domAnchorTextQuote = require('dom-anchor-text-quote')
-const domAnchorTextPosition = require('dom-anchor-text-position')
-const xpathRange = require('xpath-range')
-
-// TODO Review
-// require('bootstrap')
+const highlightClassName = 'popupHighlight'
 
 const selectedGroupNamespace = 'hypothesis.currentGroup'
 const reloadIntervalInSeconds = 6 // Reload the group annotations every 60 seconds
@@ -65,6 +60,8 @@ class Purpose {
           console.debug('Group updated. Name: %s id: %s', group.name, group.id)
           // Reload purposes
           this.reloadPurposes()
+          // Reload annotations highlight
+          this.reloadAnnotationsHighlight()
         })
       }
     })
@@ -119,6 +116,8 @@ class Purpose {
           // Render groups container
           this.renderGroupsContainer(() => {
           })
+          // Load annotations highlight
+          this.reloadAnnotationsHighlight()
         })
       } else {
         // Display login/sign up form
@@ -132,6 +131,34 @@ class Purpose {
         }
       }
     })
+  }
+
+  reloadAnnotationsHighlight (callback) {
+    // Remove previously highlighted content
+    DOMTextUtils.unHighlightAllContent(highlightClassName)
+    // Highlight the content according to current group's purposes
+    if (this.hypothesisClient) {
+      this.hypothesisClient.searchAnnotations({url: window.location.href, group: this.currentGroup.id}, (annotations) => {
+        console.log(annotations)
+        let purposeAnnotations = []
+        annotations.forEach(annotation => {
+          for (let i = 0; i < annotation.tags.length; i++) {
+            if (annotation.tags[i].includes('Purpose:')) {
+              let purposeAnnotation = {}
+              Object.assign(purposeAnnotation, annotation)
+              purposeAnnotation.purpose = annotation.tags[i].substr(8)
+              purposeAnnotations.push(purposeAnnotation)
+              return
+            }
+          }
+        })
+        purposeAnnotations.forEach(purposeAnnotation => {
+          DOMTextUtils.highlightContent(purposeAnnotation.target[0].selector, highlightClassName, purposeAnnotation.id, {purpose: purposeAnnotation.purpose})
+        })
+      })
+    } else {
+      throw Error('Hypothesis client is not created')
+    }
   }
 
   /**
@@ -163,8 +190,6 @@ class Purpose {
   }
 
   renderGroupsContainer (callback) {
-    // Set select option
-    $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
     // Reload purposes for current group
     this.reloadPurposes()
     // Display group selector and purposes selector
@@ -181,6 +206,8 @@ class Purpose {
         groupSelectorItem.className = 'dropdown-item'
         dropdownMenu.appendChild(groupSelectorItem)
       })
+      // Set select option
+      $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
       // Set event handler for group change
       this.setEventForGroupSelectChange()
       if (LanguageUtils.isFunction(callback)) {
@@ -209,73 +236,36 @@ class Purpose {
 
   purposeOnClickEvent (opts) {
     return () => {
-      /* let text = ''
-      if (window.getSelection) {
-        text = window.getSelection().toString()
-      } else if (document.selection && document.selection.type !== 'Control') {
-        text = document.selection.createRange().text
-      }
-      console.log(text) */
       let selectors = []
       let range = document.getSelection().getRangeAt(0)
       // Create FragmentSelector
-      let fragmentSelector = this.getFragmentSelector(range)
+      let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
       if (fragmentSelector) {
         selectors.push(fragmentSelector)
       }
       // Create RangeSelector
-      let rangeSelector = this.getRangeSelector(range)
+      let rangeSelector = DOMTextUtils.getRangeSelector(range)
       if (rangeSelector) {
         selectors.push(rangeSelector)
       }
       // Create TextPositionSelector
-      let textPositionSelector = this.getTextPositionSelector(range)
+      let textPositionSelector = DOMTextUtils.getTextPositionSelector(range)
       if (textPositionSelector) {
         selectors.push(textPositionSelector)
       }
       // Create TextQuoteSelector
-      let textQuoteSelector = this.getTextQuoteSelector(range)
+      let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
       if (textQuoteSelector) {
         selectors.push(textQuoteSelector)
       }
-      // TODO Construct the annotation to send to hypothesis
+      // Construct the annotation to send to hypothesis
       let annotation = this.constructAnnotation(selectors, opts.event.target.dataset.tag)
-      this.hypothesisClient.createNewAnnotation(annotation, (response) => {
-        console.log('Created annotation with ID: ' + response)
+      this.hypothesisClient.createNewAnnotation(annotation, (annotationId) => {
+        console.log('Created annotation with ID: ' + annotationId)
+        // TODO Highlight the content in the DOM
+        DOMTextUtils.highlightContent(selectors, highlightClassName, annotationId, {})
       })
-      // TODO Highlight the content in the DOM
     }
-  }
-
-  getFragmentSelector (range) {
-    if (range.commonAncestorContainer) {
-      let parentId = DOM.getParentNodeWithId(range.commonAncestorContainer)
-      if (parentId) {
-        return {
-          'conformsTo': 'https://tools.ietf.org/html/rfc3236',
-          'type': 'FragmentSelector',
-          'value': parentId
-        }
-      }
-    }
-  }
-
-  getRangeSelector (range) {
-    let rangeSelector = xpathRange.fromRange(range)
-    rangeSelector['type'] = 'RangeSelector'
-    return rangeSelector
-  }
-
-  getTextPositionSelector (range) {
-    let textPositionSelector = domAnchorTextPosition.fromRange(document.body, range)
-    textPositionSelector['type'] = 'TextPositionSelector'
-    return textPositionSelector
-  }
-
-  getTextQuoteSelector (range) {
-    let textQuoteSelector = domAnchorTextQuote.fromRange(document.body, range)
-    textQuoteSelector['type'] = 'TextQuoteSelector'
-    return textQuoteSelector
   }
 
   constructAnnotation (selectors, tag) {

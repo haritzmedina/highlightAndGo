@@ -44,6 +44,14 @@ class LanguageUtils {
       cancelable: true
     }))
   }
+
+  static renameObjectKey (o, oldKey, newKey) {
+    if (oldKey !== newKey) {
+      Object.defineProperty(o, newKey,
+        Object.getOwnPropertyDescriptor(o, oldKey))
+      delete o[oldKey]
+    }
+  }
 }
 
 module.exports = LanguageUtils
