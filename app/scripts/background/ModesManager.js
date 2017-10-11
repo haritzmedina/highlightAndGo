@@ -1,7 +1,7 @@
 const Modes = require('./Modes')
 const LanguageUtils = require('../utils/LanguageUtils')
 
-const defaultMode = Modes.annotation // TODO By default it is original
+const defaultMode = Modes.original // By default it is original
 
 class ModesManager {
   constructor () {
@@ -14,7 +14,7 @@ class ModesManager {
       if (request.scope === 'extension') {
         if (request.cmd === 'getCurrentMode') {
           chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-            console.log(this.getMode(tabs[0].id))
+            console.debug(this.getMode(tabs[0].id))
             sendResponse(this.getMode(tabs[0].id))
           })
           return true
@@ -23,7 +23,7 @@ class ModesManager {
             this.setMode(request.params.mode, tabs[0].id)
             chrome.tabs.update(tabs[0].id, {url: tabs[0].url}, () => {
               sendResponse(true)
-              console.log('Switched and reloaded ')
+              console.debug('Switched and reloaded ')
             })
           })
           return true
