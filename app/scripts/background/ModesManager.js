@@ -1,8 +1,11 @@
 const Modes = require('./Modes')
+const LanguageUtils = require('../utils/LanguageUtils')
+
+const defaultMode = Modes.annotation // TODO By default it is original
 
 class ModesManager {
   constructor () {
-    this.currentMode = Modes.annotation // TODO By default it is original
+    this.currentModes = {}
   }
 
   init () {
@@ -10,27 +13,34 @@ class ModesManager {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.scope === 'extension') {
         if (request.cmd === 'getCurrentMode') {
-          console.log(this.currentMode)
-          sendResponse(this.currentMode)
-        } else if (request.cmd === 'setMode') {
-          this.setMode(request.params.mode)
-          sendResponse(true)
           chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            console.log(this.getMode(tabs[0].id))
+            sendResponse(this.getMode(tabs[0].id))
+          })
+          return true
+        } else if (request.cmd === 'setMode') {
+          chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            this.setMode(request.params.mode, tabs[0].id)
             chrome.tabs.update(tabs[0].id, {url: tabs[0].url}, () => {
+              sendResponse(true)
               console.log('Switched and reloaded ')
             })
           })
+          return true
         }
       }
     })
   }
 
-  setMode (mode) {
-    this.currentMode = mode
+  setMode (mode, tabId) {
+    this.currentModes[tabId] = mode
   }
 
-  getMode () {
-    return this.currentMode
+  getMode (tabId) {
+    if (LanguageUtils.isEmptyObject(this.currentModes[tabId])) {
+      this.setMode(defaultMode, tabId)
+    }
+    return this.currentModes[tabId]
   }
 }
 

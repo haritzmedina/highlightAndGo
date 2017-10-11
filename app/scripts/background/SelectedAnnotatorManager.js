@@ -8,7 +8,6 @@ class SelectedAnnotatorManager {
   init () {
     // Initialize replier for requests of modes related metadata
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      console.log('hey')
       if (request.scope === 'extension') {
         if (request.cmd === 'getCurrentAnnotator') {
           console.debug(this.currentAnnotator)
@@ -18,7 +17,7 @@ class SelectedAnnotatorManager {
           sendResponse(true)
           chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
             chrome.tabs.update(tabs[0].id, {url: tabs[0].url}, () => {
-              console.log('Switched and reloaded ')
+              console.debug('Switched and reloaded ')
             })
           })
         }
