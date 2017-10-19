@@ -113,7 +113,7 @@ class Purpose {
         purposeButton.dataset.purpose = purpose.name
         purposeButton.dataset.color = purpose.color
         purposeButton.dataset.filterActive = purpose.activated || 'false'
-        this.setColor(purposeButton, purpose.color)
+        this.setBackgroundColor(purposeButton, purpose.color)
         purposeContainer.appendChild(purposeButton)
       })
       // Set event handler for purpose buttons
@@ -217,9 +217,9 @@ class Purpose {
               highlightedElements.forEach(highlightedElement => {
                 // If need to highlight, set the color corresponding to, in other case, maintain its original color
                 if (classNameToHighlight === highlightClassName) {
-                  this.setColor(highlightedElement, purposeAnnotation.color)
+                  this.setBackgroundColor(highlightedElement, purposeAnnotation.color)
                 } else {
-                  this.setColor(highlightedElement, 'initial')
+                  this.setBackgroundColor(highlightedElement)
                 }
                 // Set purpose color
                 highlightedElement.dataset.color = purposeAnnotation.color
@@ -336,7 +336,7 @@ class Purpose {
   createAnnotationHandler (opts) {
     let selectors = []
     // If selection is empty, return null
-    if (document.getSelection().length === 0) {
+    if (document.getSelection().toString().length === 0) {
       console.debug('Current selection is empty') // TODO Show user message
       return
     }
@@ -369,9 +369,11 @@ class Purpose {
       let highlightedElements = DOMTextUtils.highlightContent(selectors, highlightClassName, annotationId, {})
       highlightedElements.forEach(highlightedElement => {
         // Set color
-        this.setColor(highlightedElement, opts.event.target.dataset.color)
+        this.setBackgroundColor(highlightedElement, opts.event.target.dataset.color)
         // Set data purpose
+        highlightedElement.dataset.color = opts.event.target.dataset.color
         highlightedElement.dataset.tag = opts.event.target.dataset.tag
+        highlightedElement.dataset.purpose = opts.event.target.dataset.purpose
       })
     })
   }
@@ -406,7 +408,7 @@ class Purpose {
       elements.forEach(element => {
         $(element).removeClass(highlightClassName)
         $(element).addClass(highlightFilteredClassName)
-        $(element).css('background-color', 'initial')
+        this.setBackgroundColor(element)
       })
     } else {
       // Set in filter status current purpose
@@ -423,9 +425,15 @@ class Purpose {
     }
   }
 
-  setColor (elem, color) {
+  setBackgroundColor (elem, color) {
     if (color) {
       $(elem).css('background-color', color)
+    } else {
+      if (elem.nodeName === 'MARK') {
+        $(elem).css('background-color', 'initial')
+      } else {
+        $(elem).css('background-color', '')
+      }
     }
   }
 
@@ -448,7 +456,7 @@ class Purpose {
     let annotatorToggle = document.querySelector('#annotatorToggle')
     annotatorToggle.addEventListener('click', () => {
       if (!annotatorToggle.checked) {
-        // TODO Highlight only actived purposes
+        // Highlight only actived purposes
         let elements = document.querySelectorAll('.' + highlightClassName)
         elements.forEach(element => {
           // Retrieve if purpose is active or not
@@ -456,11 +464,11 @@ class Purpose {
           if (elementPurpose.active) {
             $(element).removeClass(highlightFilteredClassName)
             $(element).addClass(highlightClassName)
-            $(element).css('background-color', element.dataset.color)
+            this.setBackgroundColor(element, element.dataset.color)
           } else {
             $(element).removeClass(highlightClassName)
             $(element).addClass(highlightFilteredClassName)
-            $(element).css('background-color', 'initial')
+            this.setBackgroundColor(element)
           }
         })
         // Active only purposes already actived in the purpose panel
@@ -469,14 +477,14 @@ class Purpose {
           purposeButton.dataset.filterActive = purpose.active ? 'true' : 'false'
         })
       } else {
-        // TODO Highlight all the filtered purposes
+        // Highlight all the filtered purposes
         let elements = document.querySelectorAll('.' + highlightFilteredClassName)
         elements.forEach(element => {
           $(element).removeClass(highlightFilteredClassName)
           $(element).addClass(highlightClassName)
-          $(element).css('background-color', element.dataset.color)
+          this.setBackgroundColor(element, element.dataset.color)
         })
-        // TODO Active all purposes in sidebar
+        // Active all purposes in sidebar
         this.currentPurposes.forEach((purpose) => {
           let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
           purposeButton.dataset.filterActive = 'true'

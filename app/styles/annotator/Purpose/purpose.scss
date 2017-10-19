@@ -19,6 +19,13 @@ html[data-sidebar-shown="true"]{
   padding-left: $sideBarWidth;
 } */
 
+#annotatorSidebarWrapper {
+  all: initial;
+  * {
+    min-width: unset;
+  }
+}
+
 #bucket-bar{
   background-color: rgba(0,0,0,0.08);
   width: 2em;
@@ -98,7 +105,7 @@ select {
   margin-left: auto;
   margin-right: auto;
   border: 1px solid $themeColor;
-  width: $sideBarWidth - 10px;
+  max-width: $sideBarWidth - 10px;
   height: 30px;
   font-size: 16px;
   cursor: pointer;
@@ -114,7 +121,7 @@ select {
   cursor: pointer;
   margin-bottom: 10px;
   display: block;
-  border: 1px solid black;
+  border: 2px solid black;
   background-color: rgba(200,200,200,0.8);
   margin-left: auto;
   margin-right: auto;
@@ -135,6 +142,7 @@ select {
 
 .purposeButton[data-filter-active='false']{
   box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.5);
+  border-width: 1px;
   color: black;
 }
 
