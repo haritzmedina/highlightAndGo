@@ -1,13 +1,16 @@
 const HypothesisClient = require('../../../hypothesis/HypothesisClient')
 const $ = require('jquery')
+const jsYaml = require('js-yaml')
 const ChromeStorage = require('../../../utils/ChromeStorage')
 const LanguageUtils = require('../../../utils/LanguageUtils')
 const DOMTextUtils = require('../../../utils/DOMTextUtils')
+const DataUtils = require('../../../utils/DataUtils')
 
 const highlightClassName = 'popupHighlight'
+const highlightFilteredClassName = 'popupHighlightFiltered'
 
 const selectedGroupNamespace = 'hypothesis.currentGroup'
-const reloadIntervalInSeconds = 6 // Reload the group annotations every 60 seconds
+const reloadIntervalInSeconds = 600 // TODO Reload the group annotations every 60 seconds
 const defaultGroup = {id: '__world__', name: 'Public', public: true}
 
 class Purpose {
@@ -15,16 +18,13 @@ class Purpose {
     this.hypothesisClient = null
     this.user = {}
     this.currentGroup = null
+    this.currentPurposes = {}
   }
 
   init () {
     console.debug('Initializing purpose annotator')
     // Create sidebar
     this.initSidebar()
-    // TODO Retrieve annotations to highlight
-    /* document.addEventListener('selectionchange', (e) => {
-      console.log(e)
-    }) */
   }
 
   initSidebar () {
@@ -35,8 +35,9 @@ class Purpose {
       // Initialize sidebar toggle button
       this.initSidebarButton()
       // Load groups container
-      this.reloadGroupsContainer(() => {
+      this.reloadGroupsContainer({reloadAnnotations: true}, () => {
         setInterval(() => {
+          console.debug('Reloading groups container')
           this.reloadGroupsContainer()
         }, reloadIntervalInSeconds * 1000)
       })
@@ -59,9 +60,10 @@ class Purpose {
         ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(group)}, ChromeStorage.local, () => {
           console.debug('Group updated. Name: %s id: %s', group.name, group.id)
           // Reload purposes
-          this.reloadPurposes()
-          // Reload annotations highlight
-          this.reloadAnnotationsHighlight()
+          this.reloadPurposes(() => {
+            // Reload annotations highlight
+            this.reloadAnnotationsHighlight()
+          })
         })
       }
     })
@@ -75,34 +77,70 @@ class Purpose {
   }
 
   reloadPurposes (callback) {
-    // TODO Retrieve annotations for url https://*/* and tag prefix purpose:
+    console.debug('Reloading purposes')
+    // Retrieve annotations for url https://*/* and tag prefix Purpose:
     this.hypothesisClient.searchAnnotations({uri: 'https://*/*', group: this.currentGroup.id}, (annotations) => {
       let purposes = []
       annotations.forEach(annotation => {
+        let purposeNames = [] // For each purpose in the annotation
         annotation.tags.forEach(tag => {
           if (tag.includes('Purpose:')) {
-            purposes.push(tag.substr(8))
+            purposeNames.push(tag.substr(8))
           }
         })
+        // Set the color for each purpose
+        let params = jsYaml.load(annotation.text)
+        purposeNames.forEach(purposeName => {
+          let purpose = {name: purposeName}
+          if (params && params.color) {
+            purpose['color'] = params.color
+          }
+          purposes.push(purpose)
+        })
       })
+      // Save current purposes
+      this.updateCurrentPurposes(purposes)
       // Create the buttons of the cheatsheet
       let purposeContainer = document.querySelector('#purposes')
       purposeContainer.innerHTML = '' // On every reload, clean the previous buttons
-      purposes.forEach(purpose => {
+      this.currentPurposes.forEach(purpose => {
         let purposeButtonTemplate = document.querySelector('#purposeButtonTemplate')
         let purposeButton = $(purposeButtonTemplate.content.firstElementChild).clone().get(0)
-        purposeButton.innerText = purpose
-        purposeButton.dataset.tag = 'Purpose:' + purpose
+        purposeButton.innerText = purpose.name
+        purposeButton.title = purpose.name
+        // Add metadata required for the button operations
+        purposeButton.dataset.tag = 'Purpose:' + purpose.name
+        purposeButton.dataset.purpose = purpose.name
+        purposeButton.dataset.color = purpose.color
+        purposeButton.dataset.filterActive = purpose.activated || 'false'
+        this.setColor(purposeButton, purpose.color)
         purposeContainer.appendChild(purposeButton)
       })
+      // Set event handler for purpose buttons
       this.setHandlerForButtons()
+      console.debug('Reloaded purposes')
+      // Callback
       if (LanguageUtils.isFunction(callback)) {
         callback()
       }
     })
   }
 
-  reloadGroupsContainer (callback) {
+  updateCurrentPurposes (purposes) {
+    console.debug('Updating current purposes')
+    let originalPurposes = []
+    originalPurposes = originalPurposes.concat(this.currentPurposes)
+    purposes.forEach(purpose => {
+      let originalPurpose = DataUtils.queryByExample(originalPurposes, {name: purpose.name})[0]
+      if (originalPurpose && originalPurpose.activated) {
+        purpose.activated = true
+      }
+    })
+    this.currentPurposes = purposes
+    console.debug('Updated current purposes')
+  }
+
+  reloadGroupsContainer (opts, callback) {
     // Check logged in hypothesis
     chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
       if (token) {
@@ -115,9 +153,19 @@ class Purpose {
         this.defineCurrentGroup(() => {
           // Render groups container
           this.renderGroupsContainer(() => {
+            if (opts && opts.reloadAnnotations) {
+              // Load annotations highlight
+              this.reloadAnnotationsHighlight({}, () => {
+                if (LanguageUtils.isFunction(callback)) {
+                  callback()
+                }
+              })
+            } else {
+              if (LanguageUtils.isFunction(callback)) {
+                callback()
+              }
+            }
           })
-          // Load annotations highlight
-          this.reloadAnnotationsHighlight()
         })
       } else {
         // Display login/sign up form
@@ -133,13 +181,16 @@ class Purpose {
     })
   }
 
-  reloadAnnotationsHighlight (callback) {
+  reloadAnnotationsHighlight (opts, callback) {
+    console.debug('Reloading annotations highlight')
     // Remove previously highlighted content
     DOMTextUtils.unHighlightAllContent(highlightClassName)
+    DOMTextUtils.unHighlightAllContent(highlightFilteredClassName)
+    // Retrieve purposes
     // Highlight the content according to current group's purposes
     if (this.hypothesisClient) {
       this.hypothesisClient.searchAnnotations({url: window.location.href, group: this.currentGroup.id}, (annotations) => {
-        console.log(annotations)
+        console.debug(annotations)
         let purposeAnnotations = []
         annotations.forEach(annotation => {
           for (let i = 0; i < annotation.tags.length; i++) {
@@ -147,13 +198,47 @@ class Purpose {
               let purposeAnnotation = {}
               Object.assign(purposeAnnotation, annotation)
               purposeAnnotation.purpose = annotation.tags[i].substr(8)
+              let purpose = DataUtils.queryByExample(this.currentPurposes, {name: purposeAnnotation.purpose})[0]
+              if (purpose && purpose.color) {
+                purposeAnnotation.color = purpose.color || null
+              }
               purposeAnnotations.push(purposeAnnotation)
               return
             }
           }
         })
+        let promises = []
         purposeAnnotations.forEach(purposeAnnotation => {
-          DOMTextUtils.highlightContent(purposeAnnotation.target[0].selector, highlightClassName, purposeAnnotation.id, {purpose: purposeAnnotation.purpose})
+          promises.push(new Promise((resolve, reject) => {
+            let classNameToHighlight = this.retrieveHighlightClassName(purposeAnnotation)
+            try {
+              let highlightedElements = DOMTextUtils.highlightContent(purposeAnnotation.target[0].selector, classNameToHighlight, purposeAnnotation.id, {purpose: purposeAnnotation.purpose})
+              // Highlight in same color as button
+              highlightedElements.forEach(highlightedElement => {
+                // If need to highlight, set the color corresponding to, in other case, maintain its original color
+                if (classNameToHighlight === highlightClassName) {
+                  this.setColor(highlightedElement, purposeAnnotation.color)
+                } else {
+                  this.setColor(highlightedElement, 'initial')
+                }
+                // Set purpose color
+                highlightedElement.dataset.color = purposeAnnotation.color
+                // Set data purpose
+                highlightedElement.dataset.purpose = purposeAnnotation.purpose
+                highlightedElement.dataset.tag = 'Purpose:' + purposeAnnotation.purpose
+              })
+            } catch (err) {
+              throw err
+            } finally {
+              resolve()
+            }
+          }))
+        })
+        Promise.all(promises).then(() => {
+          console.debug('Reloaded annotations highlight')
+          if (LanguageUtils.isFunction(callback)) {
+            callback()
+          }
         })
       })
     } else {
@@ -190,8 +275,6 @@ class Purpose {
   }
 
   renderGroupsContainer (callback) {
-    // Reload purposes for current group
-    this.reloadPurposes()
     // Display group selector and purposes selector
     $('#purposesWrapper').attr('aria-hidden', 'false')
     // Retrieve groups
@@ -199,6 +282,7 @@ class Purpose {
       this.user.groups = profile.groups
       console.debug(profile.groups)
       let dropdownMenu = document.querySelector('#groupSelector')
+      dropdownMenu.innerHTML = '' // Remove all groups
       this.user.groups.forEach(group => {
         let groupSelectorItem = document.createElement('option')
         groupSelectorItem.dataset.groupId = group.id
@@ -210,9 +294,14 @@ class Purpose {
       $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
       // Set event handler for group change
       this.setEventForGroupSelectChange()
-      if (LanguageUtils.isFunction(callback)) {
-        callback()
-      }
+      // Set event for annotation toggle
+      this.setEventForAnnotationToggle()
+      // Reload purposes for current group
+      this.reloadPurposes(() => {
+        if (LanguageUtils.isFunction(callback)) {
+          callback()
+        }
+      })
     })
   }
 
@@ -228,44 +317,63 @@ class Purpose {
     let purposeButtons = document.querySelectorAll('.purposeButton')
     purposeButtons.forEach(purposeButton => {
       purposeButton.addEventListener('click', (e) => {
-        let handler = this.purposeOnClickEvent({event: e})
-        handler()
+        this.retrievePurposeOnClickEventHandler({event: e})()
       })
     })
   }
 
-  purposeOnClickEvent (opts) {
+  retrievePurposeOnClickEventHandler (opts) {
     return () => {
-      let selectors = []
-      let range = document.getSelection().getRangeAt(0)
-      // Create FragmentSelector
-      let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
-      if (fragmentSelector) {
-        selectors.push(fragmentSelector)
+      let annotatorToggle = document.querySelector('#annotatorToggle')
+      if (annotatorToggle.checked) {
+        this.createAnnotationHandler(opts)
+      } else {
+        this.filterAnnotationHandler(opts)
       }
-      // Create RangeSelector
-      let rangeSelector = DOMTextUtils.getRangeSelector(range)
-      if (rangeSelector) {
-        selectors.push(rangeSelector)
-      }
-      // Create TextPositionSelector
-      let textPositionSelector = DOMTextUtils.getTextPositionSelector(range)
-      if (textPositionSelector) {
-        selectors.push(textPositionSelector)
-      }
-      // Create TextQuoteSelector
-      let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
-      if (textQuoteSelector) {
-        selectors.push(textQuoteSelector)
-      }
-      // Construct the annotation to send to hypothesis
-      let annotation = this.constructAnnotation(selectors, opts.event.target.dataset.tag)
-      this.hypothesisClient.createNewAnnotation(annotation, (annotationId) => {
-        console.log('Created annotation with ID: ' + annotationId)
-        // TODO Highlight the content in the DOM
-        DOMTextUtils.highlightContent(selectors, highlightClassName, annotationId, {})
-      })
     }
+  }
+
+  createAnnotationHandler (opts) {
+    let selectors = []
+    // If selection is empty, return null
+    if (document.getSelection().length === 0) {
+      console.debug('Current selection is empty') // TODO Show user message
+      return
+    }
+    let range = document.getSelection().getRangeAt(0)
+    // Create FragmentSelector
+    let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
+    if (fragmentSelector) {
+      selectors.push(fragmentSelector)
+    }
+    // Create RangeSelector
+    let rangeSelector = DOMTextUtils.getRangeSelector(range)
+    if (rangeSelector) {
+      selectors.push(rangeSelector)
+    }
+    // Create TextPositionSelector
+    let textPositionSelector = DOMTextUtils.getTextPositionSelector(range)
+    if (textPositionSelector) {
+      selectors.push(textPositionSelector)
+    }
+    // Create TextQuoteSelector
+    let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
+    if (textQuoteSelector) {
+      selectors.push(textQuoteSelector)
+    }
+    // Construct the annotation to send to hypothesis
+    let annotation = this.constructAnnotation(selectors, opts.event.target.dataset.tag)
+    this.hypothesisClient.createNewAnnotation(annotation, (annotationId) => {
+      console.debug('Created annotation with ID: ' + annotationId)
+      // Highlight the content in the DOM
+      let highlightedElements = DOMTextUtils.highlightContent(selectors, highlightClassName, annotationId, {})
+      highlightedElements.forEach(highlightedElement => {
+        // Set color
+        this.setColor(highlightedElement, opts.event.target.dataset.color)
+        // Set data purpose
+        highlightedElement.dataset.tag = opts.event.target.dataset.tag
+      })
+    })
   }
 
   constructAnnotation (selectors, tag) {
@@ -282,6 +390,99 @@ class Purpose {
       text: '',
       uri: window.location.href
     }
+  }
+
+  filterAnnotationHandler (opts) {
+    // Retrieve tag of element
+    let purpose = opts.event.target.dataset.purpose
+    if (opts.event.target.dataset.filterActive === 'true') {
+      // Set in filter status current purpose
+      this.currentPurposes[DataUtils.queryIndexByExample(this.currentPurposes, {name: purpose})].active = false
+      // Deactivate filter button
+      opts.event.target.dataset.filterActive = 'false'
+      // Retrieve all elements highlighted and with tag
+      let elements = document.querySelectorAll('.' + highlightClassName + '[data-purpose="' + purpose + '"]')
+      // Unhighlight for each element
+      elements.forEach(element => {
+        $(element).removeClass(highlightClassName)
+        $(element).addClass(highlightFilteredClassName)
+        $(element).css('background-color', 'initial')
+      })
+    } else {
+      // Set in filter status current purpose
+      this.currentPurposes[DataUtils.queryIndexByExample(this.currentPurposes, {name: purpose})].active = true
+      // Activate filter button
+      opts.event.target.dataset.filterActive = 'true'
+      // Retrieve all elements highlighted and with tag
+      let elements = document.querySelectorAll('.' + highlightFilteredClassName + '[data-purpose="' + purpose + '"]')
+      elements.forEach(element => {
+        $(element).removeClass(highlightFilteredClassName)
+        $(element).addClass(highlightClassName)
+        $(element).css('background-color', opts.event.target.dataset.color)
+      })
+    }
+  }
+
+  setColor (elem, color) {
+    if (color) {
+      $(elem).css('background-color', color)
+    }
+  }
+
+  retrieveHighlightClassName (purposeAnnotation) {
+    // If annotation toggle is active, all annotations with purpose are shown
+    let annotatorToggle = document.querySelector('#annotatorToggle')
+    if (annotatorToggle.checked) {
+      return highlightClassName
+    } else {
+      let currentPurpose = DataUtils.queryByExample(this.currentPurposes, {name: purposeAnnotation.purpose})[0]
+      if (currentPurpose.active) {
+        return highlightClassName
+      } else {
+        return highlightFilteredClassName
+      }
+    }
+  }
+
+  setEventForAnnotationToggle () {
+    let annotatorToggle = document.querySelector('#annotatorToggle')
+    annotatorToggle.addEventListener('click', () => {
+      if (!annotatorToggle.checked) {
+        // TODO Highlight only actived purposes
+        let elements = document.querySelectorAll('.' + highlightClassName)
+        elements.forEach(element => {
+          // Retrieve if purpose is active or not
+          let elementPurpose = DataUtils.queryByExample(this.currentPurposes, {name: element.dataset.purpose})[0]
+          if (elementPurpose.active) {
+            $(element).removeClass(highlightFilteredClassName)
+            $(element).addClass(highlightClassName)
+            $(element).css('background-color', element.dataset.color)
+          } else {
+            $(element).removeClass(highlightClassName)
+            $(element).addClass(highlightFilteredClassName)
+            $(element).css('background-color', 'initial')
+          }
+        })
+        // Active only purposes already actived in the purpose panel
+        this.currentPurposes.forEach((purpose) => {
+          let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
+          purposeButton.dataset.filterActive = purpose.active ? 'true' : 'false'
+        })
+      } else {
+        // TODO Highlight all the filtered purposes
+        let elements = document.querySelectorAll('.' + highlightFilteredClassName)
+        elements.forEach(element => {
+          $(element).removeClass(highlightFilteredClassName)
+          $(element).addClass(highlightClassName)
+          $(element).css('background-color', element.dataset.color)
+        })
+        // TODO Active all purposes in sidebar
+        this.currentPurposes.forEach((purpose) => {
+          let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
+          purposeButton.dataset.filterActive = 'true'
+        })
+      }
+    })
   }
 }
 

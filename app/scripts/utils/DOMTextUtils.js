@@ -39,6 +39,15 @@ class DOMTextUtils {
     return textQuoteSelector
   }
 
+  /**
+   * Highlights the content which are pointed by the selectors in the DOM with corresponding class name, id and data
+   * @param selectors
+   * @param className
+   * @param id
+   * @param data
+   * @returns {NodeList}
+   * @throws TypeError
+   */
   static highlightContent (selectors, className, id, data) {
     let range = domAnchorTextQuote.toRange(document.body, selectors[3])
     if (range.startContainer === range.endContainer) {

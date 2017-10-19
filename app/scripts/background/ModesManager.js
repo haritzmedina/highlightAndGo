@@ -1,6 +1,7 @@
 const Modes = require('./Modes')
 const LanguageUtils = require('../utils/LanguageUtils')
 
+// const defaultMode = Modes.annotation // TODO By default it is original
 const defaultMode = Modes.original // By default it is original
 
 class ModesManager {

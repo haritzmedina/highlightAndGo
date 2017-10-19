@@ -3,9 +3,9 @@
   <div id="annotatorSidebarContainer">
     <div id="purposeContainer" class="card text-center">
       <div id="groupSelectorContainer" class="card-header" aria-hidden="true">
-        <div id="loggedInGroupContainer">
-          <div id="groupHeader" class="header">
-            <label for="groupSelector">Choose your group</label>
+        <div id="loggedInGroupContainer" class="sidebarContainer">
+          <div id="groupHeader" class="containerHeader">
+            <label>Choose your group</label>
           </div>
           <div id="groupBody" class="bodyContainer">
             <select id="groupSelector" class="dropdown">
@@ -13,22 +13,36 @@
           </div>
         </div>
         <div id="notLoggedInGroupContainer" aria-hidden="true">
-          <div id="hypothesisLogin" class="header">
+          <div id="hypothesisLogin" class="containerHeader">
             Please log in hypothesis
           </div>
           <div>
             <a href="https://hypothes.is/login" target="_blank">Log in</a> / <a href="https://hypothes.is/signup" target="_blank">Sign up</a>
           </div>
         </div>
-        <div id="purposesWrapper">
-          <template id="purposeButtonTemplate">
-            <button type="button" class="purposeButton">Purpose</button>
-          </template>
-          <div id="purposesHeader" class="header">
-            Purposes
+      </div>
+      <div id="optionsWrapper" class="sidebarContainer">
+        <div id="optionsHeader" class="containerHeader">
+          <label>Options</label>
+        </div>
+        <div class="bodyContainer">
+          <div class="optionsRow">
+            <label for="annotatorToggle">Annotate: </label>
+            <label class="switch">
+              <input id="annotatorToggle" type="checkbox">
+              <span class="slider round"></span>
+            </label>
           </div>
-          <div id="purposes" class="bodyContainer">
-          </div>
+        </div>
+      </div>
+      <div id="purposesWrapper"  class="sidebarContainer">
+        <template id="purposeButtonTemplate">
+          <button type="button" class="purposeButton">Purpose</button>
+        </template>
+        <div id="purposesHeader" class="containerHeader">
+          Purposes
+        </div>
+        <div id="purposes" class="bodyContainer">
         </div>
       </div>
     </div>

@@ -77,6 +77,7 @@
     "gulp-webdriver": "^2.0.3",
     "gulp-zip": "^4.x.x",
     "jasmine-core": "^2.6.3",
+    "js-yaml": "^3.10.0",
     "jsdom": "git+https://github.com/haritzmedina/jsdom.git#master",
     "karma": "^1.7.0",
     "karma-babel-preprocessor": "^6.0.1",

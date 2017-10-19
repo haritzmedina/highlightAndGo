@@ -7,12 +7,13 @@ class ContentScript {
   constructor () {
     this.editManager = null
     this.viewManager = null
+    this.annotatorManager = null
   }
 
   init () {
     // Get current mode and call the manager of this mode
     chrome.runtime.sendMessage({scope: 'extension', cmd: 'getCurrentMode'}, (currentMode) => {
-      console.log(currentMode)
+      console.debug(currentMode)
       if (currentMode.id === Modes.original.id) {
         // Nothing to do
       } else if (currentMode.id === Modes.edit.id) {

@@ -69,11 +69,7 @@ class DOM {
       // Iterator
       startNodeParentIterator = startNodeParentIterator.parentElement
     }
-    console.log('Nodes between')
-    console.log(nodesBetween)
     let startNext = DOM.getNextSiblings(startNodeParentIterator)
-    console.log('StartNext')
-    console.log(startNext)
     // End to init
     let endNodeParentIterator = endNode
     while (endNodeParentIterator.parentElement !== commonParent) {
@@ -82,11 +78,7 @@ class DOM {
       // Iterator
       endNodeParentIterator = endNodeParentIterator.parentElement
     }
-    console.log('Nodes between')
-    console.log(nodesBetween)
     let endPrevious = DOM.getPreviousSiblings(endNodeParentIterator)
-    console.log('endPrevious')
-    console.log(endPrevious)
     let intersection = DataUtils.intersectionNonEqual(startNext, endPrevious, (a, b) => {
       if (a.nodeType === b.nodeType) {
         if (a.nodeType === 1) {
@@ -98,8 +90,6 @@ class DOM {
         return false
       }
     })
-    console.log('Intersection')
-    console.log(intersection)
     nodesBetween = nodesBetween.concat(intersection)
     return nodesBetween
   }
