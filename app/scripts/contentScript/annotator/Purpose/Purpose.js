@@ -10,7 +10,7 @@ const highlightClassName = 'popupHighlight'
 const highlightFilteredClassName = 'popupHighlightFiltered'
 
 const selectedGroupNamespace = 'hypothesis.currentGroup'
-const reloadIntervalInSeconds = 600 // TODO Reload the group annotations every 60 seconds
+const reloadIntervalInSeconds = 60 // Reload the sidebar every 60 seconds
 const defaultGroup = {id: '__world__', name: 'Public', public: true}
 
 class Purpose {
@@ -94,6 +94,8 @@ class Purpose {
           let purpose = {name: purposeName}
           if (params && params.color) {
             purpose['color'] = params.color
+          } else {
+            purpose['color'] = 'rgba(200,200,200,0.8)'
           }
           purposes.push(purpose)
         })
@@ -199,9 +201,7 @@ class Purpose {
               Object.assign(purposeAnnotation, annotation)
               purposeAnnotation.purpose = annotation.tags[i].substr(8)
               let purpose = DataUtils.queryByExample(this.currentPurposes, {name: purposeAnnotation.purpose})[0]
-              if (purpose && purpose.color) {
-                purposeAnnotation.color = purpose.color || null
-              }
+              purposeAnnotation.color = purpose.color || 'rgba(200,200,200,0.8)'
               purposeAnnotations.push(purposeAnnotation)
               return
             }
@@ -420,7 +420,7 @@ class Purpose {
       elements.forEach(element => {
         $(element).removeClass(highlightFilteredClassName)
         $(element).addClass(highlightClassName)
-        $(element).css('background-color', opts.event.target.dataset.color)
+        this.setBackgroundColor(element, opts.event.target.dataset.color)
       })
     }
   }
