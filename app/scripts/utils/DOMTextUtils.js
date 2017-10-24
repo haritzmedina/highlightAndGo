@@ -83,6 +83,7 @@ class DOMTextUtils {
         if (nodeBetween.nodeType === 1) {
           $(nodeBetween).addClass(className)
           nodeBetween.dataset.annotationId = id
+        } else if (nodeBetween.nodeType === 8) { // Node type comment
         } else {
           let betweenWrapper = document.createElement('mark')
           $(betweenWrapper).addClass(className)
