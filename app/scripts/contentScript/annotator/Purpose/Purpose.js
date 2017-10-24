@@ -120,6 +120,8 @@ class Purpose {
       })
       // Set event handler for purpose buttons
       this.setHandlerForButtons()
+      // Active currently activated purposes
+      this.renderCurrentActivePurposes()
       console.debug('Reloaded purposes')
       // Callback
       if (LanguageUtils.isFunction(callback)) {
@@ -134,8 +136,8 @@ class Purpose {
     originalPurposes = originalPurposes.concat(this.currentPurposes)
     purposes.forEach(purpose => {
       let originalPurpose = DataUtils.queryByExample(originalPurposes, {name: purpose.name})[0]
-      if (originalPurpose && originalPurpose.activated) {
-        purpose.activated = true
+      if (originalPurpose && originalPurpose.active) {
+        purpose.active = true
       }
     })
     this.currentPurposes = purposes
@@ -390,7 +392,7 @@ class Purpose {
         selector: selectors
       }],
       text: '',
-      uri: window.location.href
+      uri: location.href.replace(location.hash, '')
     }
   }
 
@@ -474,11 +476,6 @@ class Purpose {
             this.setBackgroundColor(element)
           }
         })
-        // Active only purposes already actived in the purpose panel
-        this.currentPurposes.forEach((purpose) => {
-          let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
-          purposeButton.dataset.filterActive = purpose.active ? 'true' : 'false'
-        })
       } else {
         // Change the label text
         modeLabel.innerText = chrome.i18n.getMessage('annotating')
@@ -489,13 +486,26 @@ class Purpose {
           $(element).addClass(highlightClassName)
           this.setBackgroundColor(element, element.dataset.color)
         })
-        // Active all purposes in sidebar
-        this.currentPurposes.forEach((purpose) => {
-          let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
-          purposeButton.dataset.filterActive = 'true'
-        })
       }
+      this.renderCurrentActivePurposes()
     })
+  }
+
+  renderCurrentActivePurposes () {
+    let annotatorToggle = document.querySelector('#annotatorToggle')
+    if (annotatorToggle.checked) {
+      // Active all purposes in sidebar
+      this.currentPurposes.forEach((purpose) => {
+        let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
+        purposeButton.dataset.filterActive = 'true'
+      })
+    } else {
+      // Active only purposes already actived in the purpose panel
+      this.currentPurposes.forEach((purpose) => {
+        let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
+        purposeButton.dataset.filterActive = purpose.active ? 'true' : 'false'
+      })
+    }
   }
 }
 
