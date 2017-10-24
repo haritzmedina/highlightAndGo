@@ -455,7 +455,10 @@ class Purpose {
   setEventForAnnotationToggle () {
     let annotatorToggle = document.querySelector('#annotatorToggle')
     annotatorToggle.addEventListener('click', () => {
+      let modeLabel = document.querySelector('#modeLabel')
       if (!annotatorToggle.checked) {
+        // Change the label text
+        modeLabel.innerText = chrome.i18n.getMessage('locating')
         // Highlight only actived purposes
         let elements = document.querySelectorAll('.' + highlightClassName)
         elements.forEach(element => {
@@ -477,6 +480,8 @@ class Purpose {
           purposeButton.dataset.filterActive = purpose.active ? 'true' : 'false'
         })
       } else {
+        // Change the label text
+        modeLabel.innerText = chrome.i18n.getMessage('annotating')
         // Highlight all the filtered purposes
         let elements = document.querySelectorAll('.' + highlightFilteredClassName)
         elements.forEach(element => {

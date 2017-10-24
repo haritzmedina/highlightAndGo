@@ -5,7 +5,7 @@
       <div id="groupSelectorContainer" class="card-header" aria-hidden="true">
         <div id="loggedInGroupContainer" class="sidebarContainer">
           <div id="groupHeader" class="containerHeader">
-            <label>Choose your group</label>
+            <label>Reading task</label>
           </div>
           <div id="groupBody" class="bodyContainer">
             <select id="groupSelector" class="dropdown">
@@ -21,17 +21,17 @@
           </div>
         </div>
       </div>
-      <div id="optionsWrapper" class="sidebarContainer">
-        <div id="optionsHeader" class="containerHeader">
-          <label>Options</label>
+      <div id="modeWrapper" class="sidebarContainer">
+        <div id="modeHeader" class="containerHeader">
+          <label>Mode</label>
         </div>
         <div class="bodyContainer">
-          <div class="optionsRow">
-            <label for="annotatorToggle">Annotate: </label>
+          <div class="containerRow">
             <label class="switch">
               <input id="annotatorToggle" type="checkbox">
               <span class="slider round"></span>
             </label>
+            <label id="modeLabel" for="annotatorToggle">Locating</label>
           </div>
         </div>
       </div>
