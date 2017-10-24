@@ -342,6 +342,11 @@ class Purpose {
       console.debug('Current selection is empty') // TODO Show user message
       return
     }
+    // If selection is child of sidebar, return null
+    if ($(document.getSelection().anchorNode).parents('#annotatorSidebarWrapper').toArray().length !== 0) {
+      console.debug('Current selection is child of the annotator sidebar') // TODO Show user message
+      return
+    }
     let range = document.getSelection().getRangeAt(0)
     // Create FragmentSelector
     let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
