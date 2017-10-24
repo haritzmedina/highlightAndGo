@@ -25,18 +25,37 @@ class LanguageUtils {
     return jQuery.isEmptyObject(obj)
   }
 
+  /**
+   * Returns true if the object is instance of a Class
+   * @param obj
+   * @param classReference
+   * @returns {boolean}
+   */
   static isInstanceOf (obj, classReference) {
     return obj instanceof classReference
   }
 
+  /**
+   * Fill the object with the properties
+   * @param object
+   * @param properties
+   * @returns {*}
+   */
   static fillObject (object, properties) {
     return Object.assign(object, properties)
   }
 
-  static createCustomEvent (name, data) {
+  /**
+   * Create a custom event with the corresponding name, message and metadata
+   * @param name
+   * @param message
+   * @param data
+   * @returns {CustomEvent}
+   */
+  static createCustomEvent (name, message, data) {
     return (new CustomEvent(name, {
       detail: {
-        message: 'Song is changed',
+        message: message,
         data: data,
         time: new Date()
       },
@@ -45,6 +64,12 @@ class LanguageUtils {
     }))
   }
 
+  /**
+   * Renames an object's key
+   * @param o
+   * @param oldKey
+   * @param newKey
+   */
   static renameObjectKey (o, oldKey, newKey) {
     if (oldKey !== newKey) {
       Object.defineProperty(o, newKey,

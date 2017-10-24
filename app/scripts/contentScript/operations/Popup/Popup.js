@@ -2,7 +2,6 @@ const DOM = require('../../../utils/DOM')
 const DOMTextUtils = require('../../../utils/DOMTextUtils')
 const $ = require('jquery')
 require('qtip2')
-const domAnchorTextQuote = require('dom-anchor-text-quote')
 
 const retryIntervalInSeconds = 2
 
@@ -46,7 +45,7 @@ class Popup {
   whenTarget (callback) {
     let interval = setInterval(() => {
       console.debug(this)
-      let nodeElement = DOM.searchElement(this.annotation.target[0])
+      let nodeElement = DOM.searchElementByTarget(this.annotation.target[0])
       if (nodeElement) {
         clearInterval(interval)
         console.debug('Target element found')

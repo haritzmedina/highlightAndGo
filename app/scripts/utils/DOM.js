@@ -2,7 +2,7 @@ const $ = require('jquery')
 const DataUtils = require('./DataUtils')
 
 class DOM {
-  static searchElement (target) {
+  static searchElementByTarget (target) {
     // Check if current page corresponds to target source
     let currentLocation = location.href.replace(location.hash, '')
     if (target.source.includes(currentLocation)) {
