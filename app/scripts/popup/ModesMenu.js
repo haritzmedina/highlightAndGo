@@ -40,7 +40,7 @@ class ModesMenu {
     })
   }
 
-  static initializeSubMenu (mode) {
+  initializeSubMenu (mode) {
     console.log(mode)
     if (mode.id === Modes.annotation.id) {
       let annotatorMenu = new AnnotatorMenu()

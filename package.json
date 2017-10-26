@@ -29,6 +29,7 @@
     "dom-anchor-text-quote": "^4.0.2",
     "dom-node-iterator": "^3.5.0",
     "dom-seek": "^4.0.1",
+    "hypothesis": "^1.48.0",
     "jquery": "^3.2.1",
     "jquery-csv": "^0.8.3",
     "popper.js": "^1.12.5",
