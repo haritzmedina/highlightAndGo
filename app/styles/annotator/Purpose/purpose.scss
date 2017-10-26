@@ -24,6 +24,7 @@ html[data-sidebar-shown="true"]{
   * {
     min-width: unset;
   }
+  user-select: none;
 }
 
 #bucket-bar{

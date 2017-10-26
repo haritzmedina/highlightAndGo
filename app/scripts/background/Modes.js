@@ -7,7 +7,8 @@ const Modes = {
   view: {
     id: 'view',
     name: 'View',
-    description: 'View augmented site.'
+    description: 'View augmented site.',
+    initParamTags: ['Popup']
   },
   original: {
     id: 'original',
@@ -17,7 +18,8 @@ const Modes = {
   'annotation': {
     id: 'annotation',
     name: 'Annotation',
-    description: 'Annotate the web content using a custom annotator'
+    description: 'Annotate the web content using a custom annotator',
+    initParamTags: ['Purpose:']
   }
 }
 

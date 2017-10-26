@@ -28,7 +28,8 @@ class ModesMenu {
         chrome.runtime.sendMessage({
           scope: 'extension',
           cmd: 'setMode',
-          params: {mode: Modes[button.id]}}, (done) => {
+          params: {mode: Modes[button.id], reload: true}
+        }, (done) => {
           console.log(done)
           if (done) {
             console.log('Switched to mode %s', button.id)
@@ -39,7 +40,7 @@ class ModesMenu {
     })
   }
 
-  initializeSubMenu (mode) {
+  static initializeSubMenu (mode) {
     console.log(mode)
     if (mode.id === Modes.annotation.id) {
       let annotatorMenu = new AnnotatorMenu()
