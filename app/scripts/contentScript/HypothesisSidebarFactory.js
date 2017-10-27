@@ -1,5 +1,4 @@
 class HypothesisSidebarFactory {
-
   static insertHypothesisSidebar () {
     if (HypothesisSidebarFactory.Inserted) {
       console.debug('Hypothesis sidebar is already inserted')

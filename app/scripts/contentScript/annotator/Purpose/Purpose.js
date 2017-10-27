@@ -10,7 +10,7 @@ const highlightClassName = 'popupHighlight'
 const highlightFilteredClassName = 'popupHighlightFiltered'
 
 const selectedGroupNamespace = 'hypothesis.currentGroup'
-const reloadIntervalInSeconds = 6 // Reload the sidebar every 60 seconds
+const reloadIntervalInSeconds = 60 // Reload the sidebar every 60 seconds
 const defaultGroup = {id: '__world__', name: 'Public', public: true}
 
 class Purpose {
@@ -172,7 +172,7 @@ class Purpose {
   initSidebarButton () {
     let sidebarButton = document.querySelector('#sidebarButton')
     sidebarButton.addEventListener('click', () => {
-      Purpose.toggleSidebar()
+      this.toggleSidebar()
     })
   }
 
@@ -216,11 +216,11 @@ class Purpose {
         purposeButton.dataset.purpose = purpose.name
         purposeButton.dataset.color = purpose.color
         purposeButton.dataset.filterActive = purpose.activated || 'false'
-        Purpose.setBackgroundColor(purposeButton, purpose.color)
+        this.setBackgroundColor(purposeButton, purpose.color)
         purposeContainer.appendChild(purposeButton)
       })
       // Set event handler for purpose buttons
-      Purpose.setHandlerForButtons()
+      this.setHandlerForButtons()
       // Active currently activated purposes
       this.renderCurrentActivePurposes()
       console.debug('Reloaded purposes')
@@ -311,9 +311,9 @@ class Purpose {
               highlightedElements.forEach(highlightedElement => {
                 // If need to highlight, set the color corresponding to, in other case, maintain its original color
                 if (classNameToHighlight === highlightClassName) {
-                  Purpose.setBackgroundColor(highlightedElement, purposeAnnotation.color)
+                  this.setBackgroundColor(highlightedElement, purposeAnnotation.color)
                 } else {
-                  Purpose.setBackgroundColor(highlightedElement)
+                  this.setBackgroundColor(highlightedElement)
                 }
                 // Set purpose color
                 highlightedElement.dataset.color = purposeAnnotation.color
@@ -405,14 +405,14 @@ class Purpose {
     })
   }
 
-  static toggleSidebar () {
+  toggleSidebar () {
     let sidebarButton = document.querySelector('#sidebarButton')
     sidebarButton.dataset.toggled = sidebarButton.dataset.toggled !== 'true'
     document.documentElement.dataset.sidebarShown = sidebarButton.dataset.toggled
     document.querySelector('#annotatorSidebarContainer').dataset.shown = sidebarButton.dataset.toggled
   }
 
-  static setHandlerForButtons () {
+  setHandlerForButtons () {
     // TODO Substitute by JQuery On content added to #purposes
     let purposeButtons = document.querySelectorAll('.purposeButton')
     purposeButtons.forEach(purposeButton => {
@@ -474,7 +474,7 @@ class Purpose {
       let highlightedElements = DOMTextUtils.highlightContent(selectors, highlightClassName, annotationId, {})
       highlightedElements.forEach(highlightedElement => {
         // Set color
-        Purpose.setBackgroundColor(highlightedElement, opts.event.target.dataset.color)
+        this.setBackgroundColor(highlightedElement, opts.event.target.dataset.color)
         // Set data purpose
         highlightedElement.dataset.color = opts.event.target.dataset.color
         highlightedElement.dataset.tag = opts.event.target.dataset.tag
@@ -529,7 +529,7 @@ class Purpose {
     elements.forEach(element => {
       $(element).removeClass(highlightFilteredClassName)
       $(element).addClass(highlightClassName)
-      Purpose.setBackgroundColor(element, element.dataset.color)
+      this.setBackgroundColor(element, element.dataset.color)
     })
   }
 
@@ -538,7 +538,7 @@ class Purpose {
     elements.forEach(element => {
       $(element).removeClass(highlightClassName)
       $(element).addClass(highlightFilteredClassName)
-      Purpose.setBackgroundColor(element)
+      this.setBackgroundColor(element)
     })
   }
 
@@ -552,7 +552,7 @@ class Purpose {
     }
   }
 
-  static setBackgroundColor (elem, color) {
+  setBackgroundColor (elem, color) {
     if (color) {
       $(elem).css('background-color', color)
     } else {
@@ -594,11 +594,11 @@ class Purpose {
           if (elementPurpose.active) {
             $(element).removeClass(highlightFilteredClassName)
             $(element).addClass(highlightClassName)
-            Purpose.setBackgroundColor(element, element.dataset.color)
+            this.setBackgroundColor(element, element.dataset.color)
           } else {
             $(element).removeClass(highlightClassName)
             $(element).addClass(highlightFilteredClassName)
-            Purpose.setBackgroundColor(element)
+            this.setBackgroundColor(element)
           }
         })
       } else {
@@ -609,7 +609,7 @@ class Purpose {
         elements.forEach(element => {
           $(element).removeClass(highlightFilteredClassName)
           $(element).addClass(highlightClassName)
-          Purpose.setBackgroundColor(element, element.dataset.color)
+          this.setBackgroundColor(element, element.dataset.color)
         })
       }
       this.renderCurrentActivePurposes()
