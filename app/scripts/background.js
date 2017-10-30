@@ -9,11 +9,6 @@ chrome.tabs.onUpdated.addListener((tabId) => {
   chrome.pageAction.show(tabId)
 })
 
-<<<<<<< HEAD
-console.log(`'Allo 'Allo! Event Page for Page Action`)
-
-console.log('Hey')
-=======
 const HypothesisManager = require('./background/HypothesisManager')
 const ModesManager = require('./background/ModesManager')
 const SelectedAnnotatorManager = require('./background/SelectedAnnotatorManager')
@@ -41,4 +36,3 @@ class Background {
 
 window.background = new Background()
 window.background.init()
->>>>>>> develop
