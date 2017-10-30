@@ -1,5 +1,6 @@
 const HypothesisClient = require('../hypothesis/HypothesisClient')
 const Popup = require('./operations/Popup/Popup')
+const Linkage = require('./operations/Linkage/Linkage')
 class ViewManager {
   constructor () {
     this.hypothesisClient = null
@@ -31,6 +32,9 @@ class ViewManager {
     if (annotation.tags.includes('Popup')) {
       let popup = new Popup(annotation)
       popup.load()
+    } else if (annotation.tags.includes('Linkage')) {
+      let linkage = new Linkage(annotation)
+      linkage.load()
     }
   }
 }

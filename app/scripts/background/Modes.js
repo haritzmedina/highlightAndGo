@@ -8,7 +8,7 @@ const Modes = {
     id: 'view',
     name: 'View',
     description: 'View augmented site.',
-    initParamTags: ['Popup']
+    initParamTags: ['Popup', 'Linkage']
   },
   original: {
     id: 'original',
