@@ -192,7 +192,8 @@ class Purpose {
         // Set the color for each purpose
         let params = jsYaml.load(annotation.text)
         purposeNames.forEach(purposeName => {
-          let purpose = {name: purposeName}
+          let parsedPurposeName = this.parsePurposeName(purposeName)
+          let purpose = {name: purposeName, id: parsedPurposeName}
           if (params && params.color) {
             purpose['color'] = params.color
           } else {
@@ -213,7 +214,8 @@ class Purpose {
         purposeButton.title = purpose.name
         // Add metadata required for the button operations
         purposeButton.dataset.tag = 'Purpose:' + purpose.name
-        purposeButton.dataset.purpose = purpose.name
+        console.log(purpose.id)
+        purposeButton.dataset.purpose = purpose.id
         purposeButton.dataset.color = purpose.color
         purposeButton.dataset.filterActive = purpose.activated || 'false'
         this.setBackgroundColor(purposeButton, purpose.color)
@@ -296,6 +298,7 @@ class Purpose {
               purposeAnnotation.purpose = annotation.tags[i].substr(8)
               let purpose = DataUtils.queryByExample(this.currentPurposes, {name: purposeAnnotation.purpose})[0]
               purposeAnnotation.color = purpose.color || 'rgba(200,200,200,0.8)'
+              purposeAnnotation.id = purpose.id
               purposeAnnotations.push(purposeAnnotation)
               return
             }
@@ -318,7 +321,7 @@ class Purpose {
                 // Set purpose color
                 highlightedElement.dataset.color = purposeAnnotation.color
                 // Set data purpose
-                highlightedElement.dataset.purpose = purposeAnnotation.purpose
+                highlightedElement.dataset.purpose = purposeAnnotation.id
                 highlightedElement.dataset.tag = 'Purpose:' + purposeAnnotation.purpose
               })
             } catch (err) {
@@ -501,12 +504,12 @@ class Purpose {
 
   /**
    * Set purpose filtering, active or deactivated if locating mode is selected (if annotation mode is selected, the purpose button and highlights doesn't change)
-   * @param purpose String The name of the purpose
+   * @param purpose String The id of the purpose
    * @param filter Boolean True or false, if you want to active or deactivate the purpose filtering
    */
   setPurposeFiltering (purpose, filter) {
     // Change purpose
-    this.currentPurposes[DataUtils.queryIndexByExample(this.currentPurposes, {name: purpose})].active = filter
+    this.currentPurposes[DataUtils.queryIndexByExample(this.currentPurposes, {id: purpose})].active = filter
     let annotatorToggle = document.querySelector('#annotatorToggle')
     // If mode is locating, re-render the website
     if (!annotatorToggle.checked) {
@@ -590,7 +593,7 @@ class Purpose {
         let elements = document.querySelectorAll('.' + highlightClassName)
         elements.forEach(element => {
           // Retrieve if purpose is active or not
-          let elementPurpose = DataUtils.queryByExample(this.currentPurposes, {name: element.dataset.purpose})[0]
+          let elementPurpose = DataUtils.queryByExample(this.currentPurposes, {id: element.dataset.purpose})[0]
           if (elementPurpose.active) {
             $(element).removeClass(highlightFilteredClassName)
             $(element).addClass(highlightClassName)
@@ -621,16 +624,20 @@ class Purpose {
     if (annotatorToggle.checked) {
       // Active all purposes in sidebar
       this.currentPurposes.forEach((purpose) => {
-        let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
+        let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.id + '"')
         purposeButton.dataset.filterActive = 'true'
       })
     } else {
       // Active only purposes already actived in the purpose panel
       this.currentPurposes.forEach((purpose) => {
-        let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.name + '"')
+        let purposeButton = document.querySelector('.purposeButton[data-purpose="' + purpose.id + '"')
         purposeButton.dataset.filterActive = purpose.active ? 'true' : 'false'
       })
     }
+  }
+
+  parsePurposeName (purposeName) {
+    return purposeName.replace(/[^A-Za-z0-9]/g, '').replace(/[0-9]+/, '')
   }
 }
 
