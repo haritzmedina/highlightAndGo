@@ -1,0 +1,55 @@
+<div id="annotatorSidebarWrapper">
+  <div id="bucket-bar"></div>
+  <div id="annotatorSidebarContainer">
+    <div id="purposeContainer" class="card text-center">
+      <div id="groupSelectorContainer" class="card-header" aria-hidden="true">
+        <div id="loggedInGroupContainer" class="sidebarContainer">
+          <div id="groupHeader" class="containerHeader">
+            <label>Reading task</label>
+          </div>
+          <div id="groupBody" class="bodyContainer">
+            <select id="groupSelector" class="dropdown">
+            </select>
+          </div>
+        </div>
+        <div id="notLoggedInGroupContainer" aria-hidden="true">
+          <div id="hypothesisLogin" class="containerHeader">
+            Please log in hypothesis
+          </div>
+          <div>
+            <a href="https://hypothes.is/login" target="_blank">Log in</a> / <a href="https://hypothes.is/signup" target="_blank">Sign up</a>
+          </div>
+        </div>
+      </div>
+      <div id="modeWrapper" class="sidebarContainer">
+        <div id="modeHeader" class="containerHeader">
+          <label>Mode</label>
+        </div>
+        <div class="bodyContainer">
+          <div class="containerRow">
+            <label class="switch">
+              <input id="annotatorToggle" type="checkbox">
+              <span class="slider round"></span>
+            </label>
+            <label id="modeLabel" for="annotatorToggle">Locating</label>
+          </div>
+        </div>
+      </div>
+      <div id="purposesWrapper"  class="sidebarContainer">
+        <template id="purposeButtonTemplate">
+          <button type="button" class="purposeButton">Purpose</button>
+        </template>
+        <div id="purposesHeader" class="containerHeader">
+          Purposes
+        </div>
+        <div id="purposes" class="bodyContainer">
+        </div>
+      </div>
+    </div>
+  </div>
+  <button id="sidebarButton" data-toggled="false">
+    <span class="sidebarButtonIconBar navbar-btn"></span>
+    <span class="sidebarButtonIconBar navbar-btn"></span>
+    <span class="sidebarButtonIconBar navbar-btn"></span>
+  </button>
+</div>

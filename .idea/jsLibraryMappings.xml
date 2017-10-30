@@ -3,4 +3,8 @@
   <component name="JavaScriptLibraryMappings">
     <file url="PROJECT" libraries="{chrome-DefinitelyTyped}" />
   </component>
+<<<<<<< HEAD
 </project>
+=======
+</project>
+>>>>>>> develop

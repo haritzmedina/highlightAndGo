@@ -1,0 +1,27 @@
+@import '../../node_modules/bootstrap/dist/css/bootstrap.min';
+
+body{
+  min-width: 400px;
+  height: 100%;
+}
+
+#popupContainer{
+  margin: 0px;
+}
+
+.modeSwitcherButton{
+  cursor: pointer;
+}
+
+.modeSwitcherButton[aria-pressed='true']{
+  background-color: rgba(130,160,200,0.4);
+  cursor: default;
+}
+
+#annotationMenu[data-active="false"] {
+  display: none;
+}
+
+#annotationMenu[data-active="true"] {
+  display: block;
+}

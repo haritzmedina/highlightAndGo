@@ -2,7 +2,7 @@
   "name": "__MSG_appName__",
   "short_name": "__MSG_appShortName__",
   "description": "__MSG_appDescription__",
-  "version": "0.0.0",
+  "version": "0.0.4",
   "manifest_version": 2,
   "default_locale": "en",
   "icons": {
@@ -16,6 +16,21 @@
       "scripts/background.js"
     ]
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "scripts/contentScript.js"
+      ],
+      "css": [
+        "styles/contentScript.css"
+      ],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
   "page_action": {
     "default_icon": {
       "19": "images/icon-19.png",
@@ -30,6 +45,10 @@
     "chrome_style": true
   },
   "permissions": [
-    "contextMenus"
-  ]
+    "contextMenus",
+    "https://hypothes.is/",
+    "storage",
+    "tabs"
+  ],
+  "web_accessible_resources": ["pages/*.html"]
 }

@@ -12,6 +12,7 @@ before_install:
   - sh -e /etc/init.d/xvfb start # Start X-window to run chrome
 before_script:
   - npm install -g gulp-cli
+  - npm install babel-plugin-transform-es3-member-expression-literals # Fix a bug to compile dom-seek and dom-node-iterator
 script:
   - gulp
   - gulp test
@@ -19,4 +20,11 @@ cache:
   directories:
     - node_modules
 notifications:
-  email: false
+  email:
+    on_success: change
+    on_failure: always
+  slack:
+    on_success: change
+    on_failure: always
+    rooms:
+      secure: LrBfUQs1Wjr/zf0WZdQPWGBsKPjpu4D+MtcnD5uADMzlA8MZnBT+WUmV/FOsSFfIOlKbzGmw/NTPMyD4tHhfwD73Ljmko050Qh0nzC3g4K+eyrnXMnFN7wFoEzYCMJej2vHmPqIp+dx8WHmptpbz1td0BtmLqnQ1pIr8GPw9asoaaTN3Bl+DVAJQZXLZVeNQMhHr9n5CsO+z8eN7fQQR0KP9qiGfdOa1TwKZn4YWbLkQ6vvQVrj8NXbPw3scab1FE+iH/BfxCDMOGLAeR9QSh80MxmKuLeLt/D9OztYio63Vx8apXdIuu6LsXcdMbcUBnqIUZ/oYwJXLRMwppp7VzhBr0sVnZe+vKViIPw+W9VH3xNauDnifgzAFtdQD6yIlwq/0GPH24H65bnyEdVeU42NVTQ7REk1JnkC8rH0nxY/kL2pglxpgMy0ITor18j+Xuz5lkf3/OFBwqOkUC3v9XY+FruHE/SdtyaQBZwsIiPUA6fwvinZcSQcydsYItVvfsHovvZhwSpbkVeIcHOFRFX192eCrCzs6npLOjLnJjA8io438tCGNrfucq45LFP9MJUWZxeY8r41e00yoWAILuJUhkYh1owfUrcJhh+CtSQc+km7UY1vwkhqERY4ak7D3f453JS4PPcAT5Jj74P7kkAfK4ANRbH4qsKkvSaNPjxg=

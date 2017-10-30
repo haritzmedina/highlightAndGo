@@ -14,5 +14,13 @@
   "browserActionTitle": {
     "message": "annotation-based web augmentation",
     "description": "The title of the browser action button"
+  },
+  "locating": {
+    "message": "Locating",
+    "description": "Annotator:purpose mode label"
+  },
+  "annotating": {
+    "message": "Annotating",
+    "description": "Annotator:purpose mode label"
   }
 }

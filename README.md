@@ -2,6 +2,16 @@
 
 Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 
+# For End-users
+
+End users require a hypothesis account
+
+# For developers
+
+
+# For contributors
+
+
 ## Installation
 
 	$ npm install
@@ -69,7 +79,10 @@ if(process.env.NODE_ENV === 'development'){
 }
 ```
 
+## Testing
 
+To run the tests locally, it is required a Hypothesis Developer Token. You can get yours at: https://hypothes.is/account/developer
+Then, create an .env file and add it with name "HYPOTHESIS_TOKEN" (without commas)
 
 
 

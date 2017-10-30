@@ -1,0 +1,285 @@
+@function set-notification-text-color($color) {
+  @if (lightness($color) > 50) {
+    @return #000000; // Lighter backgorund, return dark color
+  } @else {
+    @return #ffffff; // Darker background, return light color
+  }
+}
+
+$zIndex: 2147483647;
+$sideBarWidth: 150px;
+$themeColor: #7952b3;
+$themeLightColor: #9972d3;
+
+/* html {
+  transition: all 0.5s ease;
+}
+
+html[data-sidebar-shown="true"]{
+  padding-left: $sideBarWidth;
+} */
+
+#annotatorSidebarWrapper {
+  all: initial;
+  * {
+    min-width: unset;
+  }
+  user-select: none;
+}
+
+#bucket-bar{
+  background-color: rgba(0,0,0,0.08);
+  width: 2em;
+  left: 0;
+  position: fixed;
+  height: 100%;
+  top: 0;
+  z-index: $zIndex - 1;
+}
+
+#annotatorSidebarContainer{
+  z-index: $zIndex;
+  position: fixed;
+  left: $sideBarWidth;
+  width: 0;
+  height: 100%;
+  margin-left: - $sideBarWidth;
+  overflow-y: auto;
+  transition: width 0.5s ease;
+  bottom: 0;
+  background-color: whitesmoke;
+  font-size: 14px;
+  font-family: sans-serif;
+  border-right: 1px solid black;
+}
+
+button {
+  font-size: 14px;
+  font-family: sans-serif;
+}
+
+select {
+  font-size: 14px;
+  font-family: sans-serif;
+}
+
+
+#annotatorSidebarContainer[data-shown="true"] {
+  width: $sideBarWidth;
+}
+
+.containerHeader{
+  background-color: rgba(150,150,150,0.5);
+  padding: 0.2rem;
+  border-top-left-radius: 0.2rem;
+  border-top-right-radius: 0.2rem;
+  min-width: calc( #{$sideBarWidth} - 0.5rem - 0.2rem);
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+}
+
+#loggedInGroupContainer[aria-hidden="true"]{
+  display: none;
+}
+
+#notLoggedInGroupContainer[aria-hidden="true"]{
+  display: none;
+}
+
+#purposesWrapper[aria-hidden="true"]{
+  display: none;
+}
+
+.bodyContainer {
+  background-color: #ececec;
+  min-width: calc( #{$sideBarWidth} - 0.5rem - 0.2rem);
+  padding: 0.4rem 0.2rem 0.4rem;
+}
+
+.bodyContainer[aria-hidden="true"]{
+  display: none;
+}
+
+#groupSelector {
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid $themeColor;
+  max-width: $sideBarWidth - 10px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.5s ease;
+}
+
+#groupSelector:hover {
+  background-color: $themeColor;
+  color: white;
+}
+
+.purposeButton {
+  cursor: pointer;
+  margin-bottom: 10px;
+  display: block;
+  border: 3px solid black;
+  background-color: rgba(200,200,200,0.8);
+  margin-left: auto;
+  margin-right: auto;
+  padding: 10px;
+  border-radius: 5px;
+  transition: background-color 0.5s ease;
+  color: black;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: $sideBarWidth - 10;
+  text-overflow: ellipsis;
+}
+
+.purposeButton:hover {
+  box-shadow: inset 0 0 100px 100px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.5s ease;
+}
+
+.purposeButton[data-filter-active='false']{
+  box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.5);
+  border: 1px solid grey;
+  color: black;
+}
+
+.purposeButton[data-filter-active='false']:hover{
+  box-shadow: inset 0 0 100px 100px rgba(0, 0, 0, 0.0);
+  color: black;
+  transition: box-shadow 0.5s ease;
+}
+
+.purposeButton:focus {
+  outline: none;
+}
+
+#sidebarButton{
+  width: 40px;
+  height: 40px;
+  background: #f5f5f5;
+  position: fixed;
+  padding: 0;
+  margin: 0;
+  z-index: calc( #{$zIndex} + 1);
+  top: 15px;
+  left: 15px;
+  transition: all 0.5s ease;
+}
+
+#sidebarButton[data-toggled="true"]{
+  margin-left: $sideBarWidth;
+}
+
+.sidebarButtonIconBar{
+  width: 80%;
+  height: 2px;
+  margin: 0 auto;
+  display: block;
+  background: #555;
+  transition: all 0.8s cubic-bezier(0.810, -0.330, 0.345, 1.375);
+}
+
+#sidebarButton span:first-of-type,
+#sidebarButton span:nth-of-type(2),
+#sidebarButton span:last-of-type {
+  transform: none;
+  opacity: 1;
+  margin: 5px auto;
+}
+
+#sidebarButton[data-toggled="true"] span {
+  margin: 0 auto;
+}
+#sidebarButton[data-toggled="true"] span:first-of-type {
+  transform: rotate(45deg) translate(2px, 2px);
+}
+#sidebarButton[data-toggled="true"] span:nth-of-type(2) {
+  opacity: 0;
+}
+#sidebarButton[data-toggled="true"] span:last-of-type {
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+.popupHighlight {
+  cursor: pointer;
+  text-decoration: wavy;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.popupHighlightFiltered {
+  color: inherit;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.containerRow{
+  height: 30px;
+}
+
+$switchSize: 48px;
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: $switchSize;
+  height: calc(#{$switchSize} * 34 / 60);
+  margin-bottom: -8px;
+}
+
+.switch input {
+  display:none;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:hover {
+  background-color: $themeLightColor;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: calc(#{$switchSize} * 26 / 60);
+  width: calc(#{$switchSize} * 26 / 60);
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: $themeColor;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px $themeColor;
+}
+
+input:checked + .slider:before {
+  transform: translateX(calc(#{$switchSize} * 26 / 60));
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: calc(#{$switchSize} * 34 / 60);
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
