@@ -24,6 +24,9 @@ html[data-sidebar-shown="true"]{
   * {
     min-width: unset;
   }
+  input[type=checkbox], input[type=radio] {
+    display: none
+  }
   user-select: none;
 }
 
