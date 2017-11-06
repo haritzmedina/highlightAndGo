@@ -119,6 +119,8 @@ class Purpose {
     $.get(sidebarURL, (html) => {
       // Append sidebar to content
       $('body').append($.parseHTML(html))
+      // Initialize sidebar labels
+      this.initSidebarLabels()
       // Initialize sidebar toggle button
       this.initSidebarButton()
       if (LanguageUtils.isFunction(callback)) {
@@ -178,8 +180,8 @@ class Purpose {
 
   reloadPurposes (callback) {
     console.debug('Reloading purposes')
-    // Retrieve annotations for url https://*/* and tag prefix Purpose:
-    this.hypothesisClient.searchAnnotations({uri: 'https://*/*', group: this.currentGroup.id}, (annotations) => {
+    // Retrieve annotations for url of the group in hypothesis and tag prefix Purpose:
+    this.hypothesisClient.searchAnnotations({uri: this.currentGroup.url, group: this.currentGroup.id}, (annotations) => {
       console.debug(annotations)
       let purposes = []
       annotations.forEach(annotation => {
@@ -292,7 +294,7 @@ class Purpose {
         let purposeAnnotations = []
         annotations.forEach(annotation => {
           for (let i = 0; i < annotation.tags.length; i++) {
-            if (annotation.tags[i].includes('Purpose:')) {
+            if (annotation.tags[i].toLowerCase().includes('purpose:')) {
               let purposeAnnotation = {}
               Object.assign(purposeAnnotation, annotation)
               purposeAnnotation.purpose = annotation.tags[i].substr(8)
@@ -638,6 +640,18 @@ class Purpose {
 
   parsePurposeName (purposeName) {
     return purposeName.replace(/[^A-Za-z0-9]/g, '').replace(/[0-9]+/, '')
+  }
+
+  initSidebarLabels () {
+    let sidebar = $('#annotatorSidebarContainer')
+    let readingTaskLabel = sidebar.find('#groupHeader label')
+    readingTaskLabel.text(chrome.i18n.getMessage('readingTask'))
+    let modeLabel = sidebar.find('#modeHeader label')
+    modeLabel.text(chrome.i18n.getMessage('mode'))
+    let purposesLabel = sidebar.find('#purposesHeader')
+    purposesLabel.text(chrome.i18n.getMessage('purposes'))
+    let modeSwitchLabel = sidebar.find('#modeLabel')
+    modeSwitchLabel.text(chrome.i18n.getMessage('locating'))
   }
 }
 

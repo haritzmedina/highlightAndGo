@@ -1,10 +1,10 @@
 {
   "appName": {
-    "message": "annotation-based web augmentation",
+    "message": "Anotaciones",
     "description": "The name of the application"
   },
   "appShortName": {
-    "message": "abwa",
+    "message": "anno",
     "description": "The short_name (maximum of 12 characters recommended) is a short version of the app's name."
   },
   "appDescription": {
@@ -16,23 +16,23 @@
     "description": "The title of the browser action button"
   },
   "locating": {
-    "message": "Locating",
+    "message": "localizar",
     "description": "Annotator:purpose mode label"
   },
   "annotating": {
-    "message": "Annotating",
+    "message": "anotar",
     "description": "Annotator:purpose mode label"
   },
   "readingTask": {
-    "message": "Reading task",
+    "message": "Tarea de lectura",
     "description": "Annotator:purpose reading task menu"
   },
   "mode": {
-    "message": "Mode",
+    "message": "Modo",
     "description": "Annotator:purpose mode menu"
   },
   "purposes": {
-    "message": "Purposes",
+    "message": "Proposito",
     "description": "Annotator:purpose purposes menu"
   }
 }
