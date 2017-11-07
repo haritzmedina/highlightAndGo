@@ -39,7 +39,7 @@
   "devDependencies": {
     "babel-cli": "6.x.x",
     "babel-core": "6.x.x",
-    "babel-eslint": "^8.0.1",
+    "babel-eslint": "^8.0.2",
     "babel-loader": "7.x.x",
     "babel-plugin-transform-es2015-modules-strip": "^0.1.1",
     "babel-plugin-transform-es3-property-literals": "^6.22.0",

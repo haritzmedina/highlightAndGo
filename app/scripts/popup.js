@@ -2,16 +2,18 @@
 import 'chromereload/devonly'
 import 'bootstrap/dist/js/bootstrap'
 
-const ModesMenu = require('./popup/ModesMenu')
-
 class Popup {
-  constructor () {
-    this.modesMenu = null
+  init () {
+    this.activateGlobalState()
   }
 
-  init () {
-    this.modesMenu = new ModesMenu()
-    this.modesMenu.init()
+  activateGlobalState () {
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, {action: 'openGlobalManager'}, (response) => {
+        chrome.pageAction.setIcon({tabId: tabs[0].id, path: 'images/icon-38-bw.png'})
+        window.close()
+      })
+    })
   }
 }
 
