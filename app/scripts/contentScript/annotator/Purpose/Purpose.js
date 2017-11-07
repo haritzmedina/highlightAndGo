@@ -82,7 +82,7 @@ class Purpose {
                 let purposesToActivate = []
                 annotations.forEach(annotation => {
                   annotation.tags.forEach(tag => {
-                    if (tag.includes('Purpose:')) {
+                    if (tag.toLowerCase().includes('purpose:')) {
                       // TODO Check if purpose exists in current selected group
                       // Add to the purposes
                       purposesToActivate.push(tag.substr(8))
@@ -187,7 +187,7 @@ class Purpose {
       annotations.forEach(annotation => {
         let purposeNames = [] // For each purpose in the annotation
         annotation.tags.forEach(tag => {
-          if (tag.includes('Purpose:')) {
+          if (tag.toLowerCase().includes('purpose:')) {
             purposeNames.push(tag.substr(8))
           }
         })
@@ -299,9 +299,11 @@ class Purpose {
               Object.assign(purposeAnnotation, annotation)
               purposeAnnotation.purpose = annotation.tags[i].substr(8)
               let purpose = DataUtils.queryByExample(this.currentPurposes, {name: purposeAnnotation.purpose})[0]
-              purposeAnnotation.color = purpose.color || 'rgba(200,200,200,0.8)'
-              purposeAnnotation.id = purpose.id
-              purposeAnnotations.push(purposeAnnotation)
+              if (purpose) {
+                purposeAnnotation.color = purpose.color || 'rgba(200,200,200,0.8)'
+                purposeAnnotation.id = purpose.id
+                purposeAnnotations.push(purposeAnnotation)
+              }
               return
             }
           }
@@ -652,6 +654,15 @@ class Purpose {
     purposesLabel.text(chrome.i18n.getMessage('purposes'))
     let modeSwitchLabel = sidebar.find('#modeLabel')
     modeSwitchLabel.text(chrome.i18n.getMessage('locating'))
+  }
+
+  includesTag (array, tag) {
+    for (let i = 0; i < array.length; i++) {
+      if (array[i].toLowerCase() === tag) {
+        return true
+      }
+    }
+    return false
   }
 }
 
