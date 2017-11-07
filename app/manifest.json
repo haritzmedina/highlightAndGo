@@ -32,9 +32,8 @@
     }
   ],
   "page_action": {
-    "icon": ["images/icon-38-bw.png"],
-    "default_title": "__MSG_browserActionTitle__",
-    "default_popup": "pages/popup.html"
+    "default_icon": "images/icon-38-bw.png",
+    "default_title": "__MSG_browserActionTitle__"
   },
   "options_page": "pages/options.html",
   "options_ui": {

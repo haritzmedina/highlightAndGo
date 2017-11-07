@@ -12,11 +12,13 @@ chrome.tabs.onUpdated.addListener((tabId) => {
 const HypothesisManager = require('./background/HypothesisManager')
 const ModesManager = require('./background/ModesManager')
 const SelectedAnnotatorManager = require('./background/SelectedAnnotatorManager')
+const Popup = require('./popup/Popup')
 
 class Background {
   constructor () {
     this.hypothesisManager = null
     this.modesManager = null
+    this.tabs = {}
   }
 
   init () {
@@ -31,6 +33,20 @@ class Background {
     // Initialize annotator manager
     this.selectedAnnotatorManager = new SelectedAnnotatorManager()
     this.selectedAnnotatorManager.init()
+
+    // Initialize page_action event handler
+    chrome.pageAction.onClicked.addListener((tab) => {
+      if (this.tabs[tab.id]) {
+        if (this.tabs[tab.id].activated) {
+          this.tabs[tab.id].deactivate()
+        } else {
+          this.tabs[tab.id].activate()
+        }
+      } else {
+        this.tabs[tab.id] = new Popup()
+        this.tabs[tab.id].activate()
+      }
+    })
   }
 }
 
