@@ -2,6 +2,7 @@ const DOM = require('../../../utils/DOM')
 const DOMTextUtils = require('../../../utils/DOMTextUtils')
 const $ = require('jquery')
 require('qtip2')
+const showdown = require('showdown')
 
 const retryIntervalInSeconds = 2
 
@@ -10,14 +11,17 @@ class Popup {
     this.annotation = annotation
   }
 
-  load (callback) {
-    this.whenTarget((node) => {
+  load () {
+    let converter = new showdown.Converter()
+    this.whenTarget(() => {
       // Wrap the annotated text only, not the entire node
       let wrappedNodes = DOMTextUtils.highlightContent(this.annotation.target[0].selector, 'popupHighlight', this.annotation.id, {})
+      // Markdown conversion of body
+      let newHTMLizedText = converter.makeHtml(this.annotation.text)
       wrappedNodes.forEach(wrappedNode => {
         $(wrappedNode).qtip({ // Grab some elements to apply the tooltip to
           content: {
-            text: this.annotation.text, // TODO Markdown
+            text: newHTMLizedText, // TODO Markdown
             button: 'Close'
           },
           show: {
