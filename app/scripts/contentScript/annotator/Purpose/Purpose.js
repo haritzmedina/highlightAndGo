@@ -6,8 +6,8 @@ const LanguageUtils = require('../../../utils/LanguageUtils')
 const DOMTextUtils = require('../../../utils/DOMTextUtils')
 const DataUtils = require('../../../utils/DataUtils')
 
-const highlightClassName = 'popupHighlight'
-const highlightFilteredClassName = 'popupHighlightFiltered'
+const highlightClassName = 'purposeHighlight'
+const highlightFilteredClassName = 'purposeHighlightFiltered'
 
 const selectedGroupNamespace = 'hypothesis.currentGroup'
 const reloadIntervalInSeconds = 60 // Reload the sidebar every 60 seconds
@@ -187,15 +187,21 @@ class Purpose {
       annotations.forEach(annotation => {
         let purposeNames = [] // For each purpose in the annotation
         annotation.tags.forEach(tag => {
-          if (tag.toLowerCase().includes('purpose:')) {
+          if (tag.toLowerCase().startsWith('purpose:')) {
             purposeNames.push(tag.substr(8))
           }
         })
-        // Set the color for each purpose
-        let params = jsYaml.load(annotation.text)
+        console.debug('Loaded purposes:')
+        console.debug(purposeNames)
+        // Load purpose params
+        let params
+        if (annotation.text) {
+          params = jsYaml.load(annotation.text)
+        }
         purposeNames.forEach(purposeName => {
           let parsedPurposeName = this.parsePurposeName(purposeName)
           let purpose = {name: purposeName, id: parsedPurposeName}
+          // Set the color for each purpose if exists
           if (params && params.color) {
             purpose['color'] = params.color
           } else {
@@ -216,7 +222,6 @@ class Purpose {
         purposeButton.title = purpose.name
         // Add metadata required for the button operations
         purposeButton.dataset.tag = 'Purpose:' + purpose.name
-        console.log(purpose.id)
         purposeButton.dataset.purpose = purpose.id
         purposeButton.dataset.color = purpose.color
         purposeButton.dataset.filterActive = purpose.activated || 'false'
@@ -301,7 +306,7 @@ class Purpose {
               let purpose = DataUtils.queryByExample(this.currentPurposes, {name: purposeAnnotation.purpose})[0]
               if (purpose) {
                 purposeAnnotation.color = purpose.color || 'rgba(200,200,200,0.8)'
-                purposeAnnotation.id = purpose.id
+                purposeAnnotation.purpose = purpose.id
                 purposeAnnotations.push(purposeAnnotation)
               }
               return
@@ -325,7 +330,7 @@ class Purpose {
                 // Set purpose color
                 highlightedElement.dataset.color = purposeAnnotation.color
                 // Set data purpose
-                highlightedElement.dataset.purpose = purposeAnnotation.id
+                highlightedElement.dataset.purpose = purposeAnnotation.purpose
                 highlightedElement.dataset.tag = 'Purpose:' + purposeAnnotation.purpose
               })
             } catch (err) {

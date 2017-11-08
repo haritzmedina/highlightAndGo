@@ -78,7 +78,7 @@ class HypothesisManager {
         console.error('The token is deleted after unsuccessful %s tries', maxTries)
       } else {
         this.tries += 1 // The token is unreachable, add a done try
-        console.debug('The token is unreachable for %s times, but is maintained %s', this.tries, this.token)
+        console.debug('The token is unreachable for %s time(s), but is maintained %s', this.tries, this.token)
       }
     } else {
       console.debug('User is logged in Hypothesis. His token is %s', token)
