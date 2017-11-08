@@ -494,7 +494,7 @@ class Purpose {
     return {
       group: this.currentGroup.id,
       permissions: {
-        read: ['group:__world__']
+        read: ['group:' + this.currentGroup.id]
       },
       references: [],
       tags: [tag],
