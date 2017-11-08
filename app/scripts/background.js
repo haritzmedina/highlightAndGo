@@ -47,6 +47,14 @@ class Background {
         this.tabs[tab.id].activate()
       }
     })
+    // On tab is reloaded
+    chrome.tabs.onUpdated.addListener((tabId) => {
+      if (this.tabs[tabId]) {
+        if (this.tabs[tabId].activated) {
+          this.tabs[tabId].activate()
+        }
+      }
+    })
   }
 }
 
