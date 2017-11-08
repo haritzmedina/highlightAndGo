@@ -35,7 +35,7 @@ class Purpose {
               // Initialize sidebar reloading
               this.initSidebarReloading(() => {
                 if (LanguageUtils.isFunction(callback)) {
-                  callback()
+                  callback(this.currentGroup)
                 }
               })
             })

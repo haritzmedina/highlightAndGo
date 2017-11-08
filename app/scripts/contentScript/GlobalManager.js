@@ -8,7 +8,8 @@ class GlobalManager {
     this.purposeAnnotator = new Purpose()
     this.linkage = new Linkage()
     this.popup = new Popup()
-    this.purposeAnnotator.init(() => {
+    this.purposeAnnotator.init((currentGroup) => {
+      this.currentGroup = currentGroup
       this.retrieveAnnotations(callback)
     })
   }
@@ -28,7 +29,7 @@ class GlobalManager {
     // Retrieve current token if available
     chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
       this.hypothesisClient = new HypothesisClient(token)
-      this.hypothesisClient.searchAnnotations({uri: window.location.href}, callback)
+      this.hypothesisClient.searchAnnotations({uri: window.location.href, group: this.currentGroup.id}, callback)
     })
   }
 
