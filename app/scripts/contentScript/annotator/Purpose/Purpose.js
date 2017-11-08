@@ -492,6 +492,7 @@ class Purpose {
         highlightedElement.dataset.tag = opts.event.target.dataset.tag
         highlightedElement.dataset.purpose = opts.event.target.dataset.purpose
       })
+      window.getSelection().removeAllRanges()
     })
   }
 
