@@ -8,7 +8,7 @@
     "description": "The short_name (maximum of 12 characters recommended) is a short version of the app's name."
   },
   "appDescription": {
-    "message": "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "message": "Augmente web browsing experience using web annotations over Hypothes.is. Currently supported augmentations are:\n- Augment web content using operations: Popup creates a popup window with the content of the text body and Linkage convert textual content in links.\n- Purpose-based annotation: define your own purposes to conduct a guided anotation on the web.\nMore info at: https://docs.google.com/document/d/1q_i9UwmUTTMYA9YMRTR8QW6LsF9-qponVmq6FDK6Mhw/edit?usp=sharing",
     "description": "The description of the application"
   },
   "browserActionTitle": {
