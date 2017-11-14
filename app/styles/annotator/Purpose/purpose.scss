@@ -240,7 +240,7 @@ $switchSize: 48px;
   display:none;
 }
 
-.slider {
+.annotatorToggleSlider {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -251,11 +251,11 @@ $switchSize: 48px;
   transition: .4s;
 }
 
-.slider:hover {
+.annotatorToggleSlider:hover {
   background-color: $themeLightColor;
 }
 
-.slider:before {
+.annotatorToggleSlider:before {
   position: absolute;
   content: "";
   height: calc(#{$switchSize} * 26 / 60);
