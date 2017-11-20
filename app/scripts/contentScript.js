@@ -1,17 +1,12 @@
-const GlobalManager = require('./contentScript/GlobalManager')
+const ContentScriptManager = require('./contentScript/ContentScriptManager')
 
-class GlobalContentScript {
-  init () {
-    chrome.extension.onMessage.addListener((msg, sender, sendResponse) => {
-      if (msg.action === 'openGlobalManager') {
-        let globalManager = new GlobalManager()
-        globalManager.init()
-      }
-    })
-  }
-}
+window.abwa = {} // Global namespace for variables
 
 window.addEventListener('load', () => {
-  window.contentScript = new GlobalContentScript()
-  window.contentScript.init()
+  chrome.extension.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.action === 'initContentScript') {
+      let contentScriptManager = new ContentScriptManager()
+      contentScriptManager.init()
+    }
+  })
 })

@@ -32,6 +32,7 @@
     "hypothesis": "^1.48.0",
     "jquery": "^3.2.1",
     "jquery-csv": "^0.8.3",
+    "lodash": "^4.17.4",
     "popper.js": "^1.12.6",
     "qtip2": "^3.0.3",
     "showdown": "^1.8.1",
@@ -61,7 +62,7 @@
     "eslint-plugin-standard": "^3.0.1",
     "gulp": "3.x.x",
     "gulp-bump": "^2.8.0",
-    "gulp-cache": "^0.5.0",
+    "gulp-cache": "^1.0.1",
     "gulp-clean-css": "^3.9.0",
     "gulp-filter": "^5.x.x",
     "gulp-git": "^2.x.x",
@@ -82,7 +83,7 @@
     "js-yaml": "^3.10.0",
     "jsdom": "git+https://github.com/haritzmedina/jsdom.git#master",
     "karma": "^1.7.0",
-    "karma-babel-preprocessor": "^6.0.1",
+    "karma-babel-preprocessor": "^7.0.0",
     "karma-chrome-launcher": "^2.1.1",
     "karma-coverage": "^1.1.1",
     "karma-jasmine": "^1.1.0",
@@ -97,7 +98,7 @@
     "wdio-webpack-service": "^1.0.1",
     "webdriverio": "^4.8.0",
     "webpack": "^3.8.1",
-    "webpack-stream": "3.x.x",
-    "yargs": "^8.x.x"
+    "webpack-stream": "4.x.x",
+    "yargs": "^10.x.x"
   }
 }
