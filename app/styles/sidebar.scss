@@ -18,7 +18,7 @@ $themeLightColor: #9972d3;
 
 #abwaBucketBar{
   background-color: rgba(0,0,0,0.08);
-  width: 2em;
+  width: 1em;
   left: 0;
   position: fixed;
   height: 100%;
@@ -56,8 +56,8 @@ $themeLightColor: #9972d3;
   padding: 0;
   margin: 0;
   z-index: calc( #{$zIndex} + 1);
-  top: 15px;
-  left: 15px;
+  top: 1em;
+  left: 1em;
   transition: all 0.5s ease;
 }
 
@@ -93,4 +93,31 @@ $themeLightColor: #9972d3;
 }
 #abwaSidebarButton[data-toggled="true"] span:last-of-type {
   transform: rotate(-45deg) translate(1px, -1px);
+}
+
+
+/* Sidebar container common styles */
+.sidebarContainer[aria-hidden="true"]{
+  display: none;
+}
+
+.containerHeader{
+  background-color: rgba(150,150,150,0.5);
+  padding: 0.2rem;
+  border-top-left-radius: 0.2rem;
+  border-top-right-radius: 0.2rem;
+  min-width: calc( #{$sideBarWidth} - 0.5rem - 0.2rem);
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.bodyContainer {
+  background-color: #ececec;
+  min-width: calc( #{$sideBarWidth} - 0.5rem - 0.2rem);
+  padding: 0.4rem 0.2rem 0.4rem;
+}
+
+.bodyContainer[aria-hidden="true"]{
+  display: none;
 }

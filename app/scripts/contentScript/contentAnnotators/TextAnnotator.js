@@ -10,10 +10,10 @@ class TextAnnotator extends ContentAnnotator {
           this.openSidebar()
         }
       } else {
-        console.debug('Current selection is empty') // TODO Show user message
+        console.debug('Current selection is empty')
         // If selection is child of sidebar, return null
         if ($(event.target).parents('#abwaSidebarWrapper').toArray().length === 0) {
-          console.debug('Current selection is child of the annotator sidebar') // TODO Show user message
+          console.debug('Current selection is not child of the annotator sidebar')
           this.closeSidebar()
         }
       }
