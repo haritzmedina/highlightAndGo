@@ -53,6 +53,7 @@ class DOMTextUtils {
     if (range.startContainer === range.endContainer) {
       let wrapper = document.createElement('mark')
       $(wrapper).addClass(className)
+      wrapper.dataset.highlightClassName = className
       wrapper.dataset.annotationId = id
       wrapper.innerHTML = range.startContainer.nodeValue.slice(range.startOffset, range.endOffset)
       let newStringifiedContent = range.startContainer.nodeValue.slice(0, range.startOffset) + wrapper.outerHTML + range.startContainer.nodeValue.slice(range.endOffset, range.startContainer.nodeValue.length)
@@ -63,6 +64,7 @@ class DOMTextUtils {
       $(startWrapper).addClass(className)
       startWrapper.dataset.annotationId = id
       startWrapper.dataset.startNode = ''
+      startWrapper.dataset.highlightClassName = className
       startWrapper.innerHTML = range.startContainer.nodeValue.slice(range.startOffset, range.startContainer.nodeValue.length)
       let nonHighlightedText = range.startContainer.nodeValue.slice(0, range.startOffset)
       this.replaceContent(range.startContainer, nonHighlightedText + startWrapper.outerHTML)
@@ -72,6 +74,7 @@ class DOMTextUtils {
       $(endWrapper).addClass(className)
       endWrapper.dataset.annotationId = id
       endWrapper.dataset.endNode = ''
+      endWrapper.dataset.highlightClassName = className
       endWrapper.innerHTML = range.endContainer.nodeValue.slice(0, range.endOffset)
       nonHighlightedText = range.endContainer.nodeValue.slice(range.endOffset, range.endContainer.nodeValue.length)
       this.replaceContent(range.endContainer, endWrapper.outerHTML + nonHighlightedText)
@@ -83,11 +86,13 @@ class DOMTextUtils {
         if (nodeBetween.nodeType === 1) {
           $(nodeBetween).addClass(className)
           nodeBetween.dataset.annotationId = id
+          nodeBetween.dataset.highlightClassName = className
         } else if (nodeBetween.nodeType === 8) { // Node type comment
         } else {
           let betweenWrapper = document.createElement('mark')
           $(betweenWrapper).addClass(className)
           betweenWrapper.dataset.annotationId = id
+          betweenWrapper.dataset.highlightClassName = className
           betweenWrapper.innerHTML = nodeBetween.nodeValue
           nodeBetween.replaceWith(betweenWrapper)
         }
@@ -107,6 +112,10 @@ class DOMTextUtils {
   static unHighlightAllContent (className) {
     // Remove highlighted elements
     let highlightElements = document.querySelectorAll('.' + className)
+    DOMTextUtils.unHighlightElements(highlightElements)
+  }
+
+  static unHighlightElements (highlightElements) {
     highlightElements.forEach((highlightElement) => {
       if (highlightElement.tagName === 'MARK') {
         if (highlightElement.textContent.length === 0) {
@@ -118,7 +127,7 @@ class DOMTextUtils {
         }
       } else {
         // Remove the highlight class
-        $(highlightElement).removeClass(className)
+        $(highlightElement).removeClass(highlightElement.dataset.highlightClassName)
       }
     })
     //  Remove highlight helpers maintaining its content
@@ -126,6 +135,11 @@ class DOMTextUtils {
     highlightHelpers.forEach(highlightHelper => {
       $(highlightHelper.firstChild).unwrap()
     })
+  }
+
+  static unHighlightById (id) {
+    let highlightElements = document.querySelectorAll('[data-annotation-id=\'' + id + '\']')
+    DOMTextUtils.unHighlightElements(highlightElements)
   }
 }
 
