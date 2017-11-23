@@ -46,5 +46,5 @@
     "storage",
     "tabs"
   ],
-  "web_accessible_resources": ["pages/*.html"]
+  "web_accessible_resources": ["pages/*.html", "content/*"]
 }
