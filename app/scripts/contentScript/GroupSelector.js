@@ -1,4 +1,5 @@
 const ChromeStorage = require('../utils/ChromeStorage')
+const LanguageUtils = require('../utils/LanguageUtils')
 const _ = require('lodash')
 const $ = require('jquery')
 
@@ -128,9 +129,23 @@ class GroupSelector {
     let menu = document.querySelector('#groupSelector')
     $(menu).change(() => {
       let selectedGroup = $('#groupSelector').find('option:selected').get(0)
-      this.updateCurrentGroup(selectedGroup.dataset.groupId)
+      this.updateCurrentGroupHandler(selectedGroup.dataset.groupId)
+    })
+  }
+
+  updateCurrentGroupHandler (groupId) {
+    this.currentGroup = _.find(this.user.groups, (group) => { return groupId === group.id })
+    ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.currentGroup)}, ChromeStorage.local, () => {
+      console.debug('Group updated. Name: %s id: %s', this.currentGroup.name, this.currentGroup.id)
+      // Dispatch event
+      LanguageUtils.dispatchCustomEvent(GroupSelector.eventGroupChange, {
+        group: this.currentGroup,
+        time: new Date()
+      })
     })
   }
 }
+
+GroupSelector.eventGroupChange = 'hypothesisGroupChanged'
 
 module.exports = GroupSelector
