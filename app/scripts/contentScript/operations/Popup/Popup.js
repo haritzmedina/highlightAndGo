@@ -9,16 +9,18 @@ const retryIntervalInSeconds = 2
 class Popup {
   constructor (annotation) {
     this.annotation = annotation
+    this.targetCheckingInterval = null
+    this.targetNode = null
   }
 
   load () {
     let converter = new showdown.Converter()
     this.whenTarget(() => {
       // Wrap the annotated text only, not the entire node
-      let wrappedNodes = DOMTextUtils.highlightContent(this.annotation.target[0].selector, 'popupHighlight', this.annotation.id, {})
+      this.targetNode = DOMTextUtils.highlightContent(this.annotation.target[0].selector, 'popupHighlight', this.annotation.id, {})
       // Markdown conversion of body
       let newHTMLizedText = converter.makeHtml(this.annotation.text)
-      wrappedNodes.forEach(wrappedNode => {
+      this.targetNode.forEach(wrappedNode => {
         $(wrappedNode).qtip({ // Grab some elements to apply the tooltip to
           content: {
             text: newHTMLizedText, // TODO Markdown
@@ -47,17 +49,31 @@ class Popup {
    * @param callback - The callback that handles the when element is found.
    */
   whenTarget (callback) {
-    let interval = setInterval(() => {
+    this.targetCheckingInterval = setInterval(() => {
       console.debug(this)
       let nodeElement = DOM.searchElementByTarget(this.annotation.target[0])
       if (nodeElement) {
-        clearInterval(interval)
+        clearInterval(this.targetCheckingInterval)
         console.debug('Target element found')
         callback(nodeElement)
       } else {
         console.debug('Target not found. Trying in %s seconds', retryIntervalInSeconds)
       }
     }, retryIntervalInSeconds * 1000)
+  }
+
+  destroy () {
+    // Remove interval is element is pending to be found
+    if (this.targetCheckingInterval) {
+      clearInterval(this.targetCheckingInterval)
+    }
+    if (this.targetNode) {
+      // Remove popup element
+      let qtipNumber = this.targetNode[0].dataset.hasqtip
+      let popupWindow = document.querySelector('#qtip-' + qtipNumber)
+      $(popupWindow).remove()
+      DOMTextUtils.unHighlightById(this.annotation.id)
+    }
   }
 }
 
