@@ -1,22 +1,20 @@
 const Config = {
   purposeReading: {
+    namespace: 'purpose',
     sidebar: {
-      tags: {
-        namespace: 'purpose'
-      },
+      tags: {},
       location: true
     },
     contentAnnotator: 'text'
   },
   slrDataExtraction: {
+    namespace: 'slr',
     sidebar: {
       tags: {
-        namespace: 'mappingStudy',
         grouped: {
           group: 'dimension',
           subgroup: 'category',
-          relation: 'isCategoryOf',
-          recursive: false
+          relation: 'isCategoryOf'
         }
       }
     },
