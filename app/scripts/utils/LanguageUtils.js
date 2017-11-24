@@ -77,6 +77,22 @@ class LanguageUtils {
       delete o[oldKey]
     }
   }
+
+  /**
+   * Dispatches a custom event with the given name
+   * @param eventName
+   * @param metadata
+   */
+  static dispatchCustomEvent (eventName, metadata) {
+    let event = new CustomEvent(
+      eventName, {
+        detail: metadata,
+        bubbles: true,
+        cancelable: true
+      }
+    )
+    document.body.dispatchEvent(event)
+  }
 }
 
 module.exports = LanguageUtils

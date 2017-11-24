@@ -4,7 +4,7 @@ const $ = require('jquery')
 const _ = require('lodash')
 
 class TextAnnotator extends ContentAnnotator {
-  constructor () {
+  constructor (config) {
     super()
     this.events = {}
     this.events.mouseUpOnDocumentHandler = null
@@ -12,10 +12,13 @@ class TextAnnotator extends ContentAnnotator {
 
   init (callback) {
     this.initSelectionEvents(() => {
-      this.loadAnnotations(() => {
-        if (_.isFunction(callback)) {
-          callback()
-        }
+      this.initGroupChangeHandler(() => {
+        // TODO Load annotations for first time
+        this.loadAnnotations(() => {
+          if (_.isFunction(callback)) {
+            callback()
+          }
+        })
       })
     })
   }
@@ -28,13 +31,25 @@ class TextAnnotator extends ContentAnnotator {
     }
   }
 
-  loadAnnotations () {
+  initGroupChangeHandler (callback) {
+    this.events.hypothesisGroupChangedHandler = this.hypothesisGroupChangedHandlerConstructor()
     document.addEventListener(GroupSelector.eventGroupChange, this.hypothesisGroupChangedHandler, false)
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
-  hypothesisGroupChangedHandler (event) {
-    console.log('HypothesisGroupChanged')
-    console.log(event.detail)
+  hypothesisGroupChangedHandlerConstructor () {
+    return (event) => {
+      console.log('HypothesisGroupChanged')
+      console.log(event.detail)
+    }
+  }
+
+  loadAnnotations (callback) {
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
   mouseUpOnDocumentHandlerConstructor () {
@@ -65,8 +80,8 @@ class TextAnnotator extends ContentAnnotator {
 
   destroy () {
     // Remove event listener
-    document.removeEventListener(GroupSelector.eventGroupChange, this.events.mouseUpOnDocumentHandler)
-    document.removeEventListener('mouseup', this.mouseUpOnDocumentHandler)
+    document.removeEventListener(GroupSelector.eventGroupChange, this.events.hypothesisGroupChangedHandler)
+    document.removeEventListener('mouseup', this.events.mouseUpOnDocumentHandler)
   }
 }
 

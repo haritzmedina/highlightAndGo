@@ -1,24 +1,25 @@
 const Config = {
   purposeReading: {
+    contentAnnotator: 'text',
     namespace: 'purpose',
     sidebar: {
-      tags: {},
-      location: true
     },
-    contentAnnotator: 'text'
+    location: true,
+    tags: {}
   },
   slrDataExtraction: {
+    contentAnnotator: 'text',
     namespace: 'slr',
-    sidebar: {
-      tags: {
-        grouped: {
-          group: 'dimension',
-          subgroup: 'category',
-          relation: 'isCategoryOf'
-        }
-      }
-    },
-    contentAnnotator: 'text'
+    sidebar: {},
+    location: true,
+    tags: {
+      grouped: {
+        group: 'dimension',
+        subgroup: 'category',
+        relation: 'isCategoryOf'
+      },
+      default: ['doi']
+    }
   }
 }
 
