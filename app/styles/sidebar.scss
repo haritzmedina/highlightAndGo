@@ -1,15 +1,12 @@
-$zIndex: 2147483647;
-$sideBarWidth: 150px;
-$themeColor: #7952b3;
-$themeLightColor: #9972d3;
+@import "./variables";
 
 /* Sidebar wrapper */
 
 #abwaSidebarWrapper {
   all: initial;
-  * {
+  /* * {
     min-width: unset;
-  }
+  }*/
   input[type=checkbox], input[type=radio] {
     display: none
   }
@@ -23,11 +20,11 @@ $themeLightColor: #9972d3;
   position: fixed;
   height: 100%;
   top: 0;
-  z-index: $zIndex - 1;
+  z-index: $sidebarZIndex - 1;
 }
 
 #abwaSidebarContainer {
-  z-index: $zIndex;
+  z-index: $sidebarZIndex;
   position: fixed;
   left: $sideBarWidth;
   width: 0;
@@ -55,7 +52,7 @@ $themeLightColor: #9972d3;
   position: fixed;
   padding: 0;
   margin: 0;
-  z-index: calc( #{$zIndex} + 1);
+  z-index: calc( #{$sidebarZIndex} + 1);
   top: 1em;
   left: 1em;
   transition: all 0.5s ease;
@@ -113,7 +110,7 @@ $themeLightColor: #9972d3;
 }
 
 .bodyContainer {
-  background-color: #ececec;
+  background-color: $sidebarBackgroundColor;
   min-width: calc( #{$sideBarWidth} - 0.5rem - 0.2rem);
   padding: 0.4rem 0.2rem 0.4rem;
 }

@@ -21,7 +21,7 @@ class Tag {
     }
     tagButton.dataset.tags = this.tags
     tagButton.role = 'annotation'
-    // TODO Set handler for button
+    // Set handler for button
     tagButton.addEventListener('click', (event) => {
       if (event.target.role === 'annotation') {
         LanguageUtils.dispatchCustomEvent('annotate', {tags: this.tags})
@@ -40,6 +40,11 @@ class TagGroup {
   createPanel () {
     let tagGroupTemplate = document.querySelector('#tagGroupTemplate')
     let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
+    let groupNameSpan = tagGroup.querySelector('.groupName')
+    groupNameSpan.innerText = this.name
+    for (let j = 0; j < this.tags.length; j++) {
+      tagGroup.append(this.tags[j].createButton())
+    }
     return tagGroup
   }
 }
@@ -102,10 +107,6 @@ class TagManager {
     })
   }
 
-  annotationHandlerCreate () {
-    return () => {}
-  }
-
   hasANamespace (annotation, namespace) {
     return _.findIndex(annotation.tags, (annotationTag) => {
       return _.startsWith(annotationTag.toLowerCase(), (namespace + ':').toLowerCase())
@@ -123,6 +124,21 @@ class TagManager {
   }
 
   createTagsBasedOnAnnotationsGrouped () {
+    let tagGroupsAnnotations = {}
+    for (let i = 0; i < this.tagAnnotations.length; i++) {
+      let groupTag = this.retrieveTagNameByPrefix(this.tagAnnotations[i], (this.namespace + this.config.group))
+      if (groupTag) {
+        tagGroupsAnnotations[groupTag] = {annotation: this.tagAnnotations[i], tags: []}
+      }
+    }
+    for(let i = 0; i < this.tagAnnotations.length; i++) {
+      let tagName = this.retrieveTagNameByPrefix(this.tagAnnotations[i], (this.namespace + this.config.subgroup))
+      let groupBelongedTo = this.retrieveTagNameByPrefix(this.tagAnnotations[i], (this.namespace + this.config.relation))
+      if (tagName && groupBelongedTo) {
+        tagGroupsAnnotations[groupBelongedTo].tags = tagName
+      }
+    }
+    debugger
     // TODO
     return [new TagGroup({name: 'dim1'}, [
       new Tag({name: 'cat1.1', namespace: this.namespace, options: {}}),
@@ -139,7 +155,17 @@ class TagManager {
     $('#tagsWrapper').remove()
   }
 
-  createTagButtons () {
+  retrieveTagNameByPrefix (annotationTags, prefix) {
+    for (let i = 0; i < annotationTags.length; i++) {
+      if (_.startsWith(annotationTags[i].toLowerCase(), prefix.toLowerCase())) {
+        annotationTags[i].replace()
+        return tagName
+      }
+    }
+    return null
+  }
+
+  createTagButtons (callback) {
     // If it is an array is not grouped
     if (this.tags.length > 0) {
       if (LanguageUtils.isInstanceOf(this.tags[0], Tag)) {
@@ -149,15 +175,14 @@ class TagManager {
           this.tagsContainer.append(tagButton)
         }
       } else if (LanguageUtils.isInstanceOf(this.tags[0], TagGroup)) {
-        debugger
         for (let i = 0; i < this.tags.length; i++) {
           let tagGroupElement = this.tags[i].createPanel()
-          for (let j = 0; j < tagGroupElement.tags.length; j++) {
-            tagGroupElement.append(tagGroupElement.tags[j].createButton())
-          }
           this.tagsContainer.append(tagGroupElement)
         }
       }
+    }
+    if (_.isFunction(callback)) {
+      callback()
     }
   }
 }

@@ -4,5 +4,6 @@
 @import '../scripts/contentScript/operations/Linkage/linkage';
 
 /* @import './annotator/Purpose/purpose'; /* TODO This is related to annotator:purpose */
-@import './sidebar';
 @import './groupSelection';
+@import './tagWrapper';
+@import './sidebar';
