@@ -63,12 +63,12 @@ class ContentScriptManager {
     window.abwa.contentAnnotator.init()
   }
 
-  reloadTagsManager (config) {
+  reloadTagsManager (config, callback) {
     // Destroy current tag manager
     this.destroyTagsManager()
     // Create a new tag manager for the current group
     window.abwa.tagManager = new TagManager(config.namespace, config.tags) // TODO Depending on the type of annotator
-    window.abwa.tagManager.init()
+    window.abwa.tagManager.init(callback)
   }
 
   reloadAugmentationOperations (config) {

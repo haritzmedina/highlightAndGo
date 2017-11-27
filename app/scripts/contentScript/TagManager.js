@@ -2,6 +2,7 @@ const _ = require('lodash')
 const $ = require('jquery')
 const jsYaml = require('js-yaml')
 const LanguageUtils = require('../utils/LanguageUtils')
+const Events = require('./Events')
 
 class Tag {
   constructor (config) {
@@ -21,10 +22,13 @@ class Tag {
     }
     tagButton.dataset.tags = this.tags
     tagButton.role = 'annotation'
+    if (this.options && this.options.color) {
+      $(tagButton).css('background-color', this.options.color)
+    }
     // Set handler for button
     tagButton.addEventListener('click', (event) => {
       if (event.target.role === 'annotation') {
-        LanguageUtils.dispatchCustomEvent('annotate', {tags: this.tags})
+        LanguageUtils.dispatchCustomEvent(Events.annotate, {tags: this.tags})
       }
     })
     return tagButton
@@ -34,18 +38,24 @@ class Tag {
 class TagGroup {
   constructor (config, tags) {
     this.name = config.name
-    this.tags = tags
+    this.tags = tags || []
   }
 
   createPanel () {
-    let tagGroupTemplate = document.querySelector('#tagGroupTemplate')
-    let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
-    let groupNameSpan = tagGroup.querySelector('.groupName')
-    groupNameSpan.innerText = this.name
-    for (let j = 0; j < this.tags.length; j++) {
-      tagGroup.append(this.tags[j].createButton())
+    if (this.tags.length > 0) {
+      let tagGroupTemplate = document.querySelector('#tagGroupTemplate')
+      let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
+      let groupNameSpan = tagGroup.querySelector('.groupName')
+      groupNameSpan.innerText = this.name
+      groupNameSpan.title = this.name
+      for (let j = 0; j < this.tags.length; j++) {
+        tagGroup.append(this.tags[j].createButton())
+      }
+      return tagGroup
+    } else {
+      console.debug('No tags for %s group', this.name)
+      return null
     }
-    return tagGroup
   }
 }
 
@@ -126,28 +136,29 @@ class TagManager {
   createTagsBasedOnAnnotationsGrouped () {
     let tagGroupsAnnotations = {}
     for (let i = 0; i < this.tagAnnotations.length; i++) {
-      let groupTag = this.retrieveTagNameByPrefix(this.tagAnnotations[i], (this.namespace + this.config.group))
+      let groupTag = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.group))
       if (groupTag) {
-        tagGroupsAnnotations[groupTag] = {annotation: this.tagAnnotations[i], tags: []}
+        tagGroupsAnnotations[groupTag] = new TagGroup({name: groupTag})
       }
     }
-    for(let i = 0; i < this.tagAnnotations.length; i++) {
-      let tagName = this.retrieveTagNameByPrefix(this.tagAnnotations[i], (this.namespace + this.config.subgroup))
-      let groupBelongedTo = this.retrieveTagNameByPrefix(this.tagAnnotations[i], (this.namespace + this.config.relation))
+    for (let i = 0; i < this.tagAnnotations.length; i++) {
+      let tagName = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.subgroup))
+      let groupBelongedTo = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.relation))
       if (tagName && groupBelongedTo) {
-        tagGroupsAnnotations[groupBelongedTo].tags = tagName
+        if (_.isArray(tagGroupsAnnotations[groupBelongedTo].tags)) {
+          tagGroupsAnnotations[groupBelongedTo].tags.push(new Tag({
+            name: tagName,
+            namespace: this.namespace,
+            options: {},
+            tags: [
+              this.namespace + ':' + this.config.grouped.relation + ':' + groupBelongedTo,
+              this.namespace + ':' + this.config.grouped.subgroup + ':' + tagName]
+          }))
+        }
       }
     }
-    debugger
-    // TODO
-    return [new TagGroup({name: 'dim1'}, [
-      new Tag({name: 'cat1.1', namespace: this.namespace, options: {}}),
-      new Tag({name: 'cat1.2', namespace: this.namespace, options: {}}),
-      new Tag({name: 'cat1.3', namespace: this.namespace, options: {}})
-    ]), new TagGroup({name: 'dim2'}, [
-      new Tag({name: 'cat2.1', namespace: this.namespace, options: {}}),
-      new Tag({name: 'cat2.2', namespace: this.namespace, options: {}})
-    ])]
+    // Hash to array
+    return _.values(tagGroupsAnnotations)
   }
 
   destroy () {
@@ -158,7 +169,7 @@ class TagManager {
   retrieveTagNameByPrefix (annotationTags, prefix) {
     for (let i = 0; i < annotationTags.length; i++) {
       if (_.startsWith(annotationTags[i].toLowerCase(), prefix.toLowerCase())) {
-        annotationTags[i].replace()
+        let tagName = _.replace(annotationTags[i], prefix + ':', '')
         return tagName
       }
     }
@@ -177,7 +188,9 @@ class TagManager {
       } else if (LanguageUtils.isInstanceOf(this.tags[0], TagGroup)) {
         for (let i = 0; i < this.tags.length; i++) {
           let tagGroupElement = this.tags[i].createPanel()
-          this.tagsContainer.append(tagGroupElement)
+          if (tagGroupElement) {
+            this.tagsContainer.append(tagGroupElement)
+          }
         }
       }
     }
