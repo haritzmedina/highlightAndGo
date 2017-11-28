@@ -92,6 +92,7 @@ class LanguageUtils {
       }
     )
     document.body.dispatchEvent(event)
+    return event
   }
 }
 

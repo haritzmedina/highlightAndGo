@@ -4,10 +4,11 @@ class Popup {
   }
 
   deactivate () {
+    this.activated = false
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-      chrome.tabs.update(tabs[0].id, {url: tabs[0].url})
-      chrome.pageAction.setIcon({tabId: tabs[0].id, path: 'images/icon-38-bw.png'})
-      this.activated = false
+      chrome.tabs.sendMessage(tabs[0].id, {action: 'destroyContentScript'}, (response) => {
+        chrome.pageAction.setIcon({tabId: tabs[0].id, path: 'images/icon-38-bw.png'})
+      })
     })
   }
 
