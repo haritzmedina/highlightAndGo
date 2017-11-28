@@ -16,24 +16,28 @@ class Tag {
 
   createButton () {
     let tagButtonTemplate = document.querySelector('#tagButtonTemplate')
-    let tagButton = $(tagButtonTemplate.content.firstElementChild).clone().get(0)
-    tagButton.innerText = this.name
-    tagButton.title = this.name
+    this.tagButton = $(tagButtonTemplate.content.firstElementChild).clone().get(0)
+    this.tagButton.innerText = this.name
+    this.tagButton.title = this.name
     for (let key in this.options) {
-      tagButton.dataset[key] = this.options[key]
+      this.tagButton.dataset[key] = this.options[key]
     }
-    tagButton.dataset.tags = this.tags
-    tagButton.role = 'annotation'
+    this.tagButton.dataset.tags = this.tags
+    this.tagButton.setAttribute('role', 'annotation')
     if (this.color) {
-      $(tagButton).css('background-color', this.color)
+      $(this.tagButton).css('background-color', this.color)
     }
     // Set handler for button
-    tagButton.addEventListener('click', (event) => {
-      if (event.target.role === 'annotation') {
+    this.tagButton.addEventListener('click', (event) => {
+      if (event.target.getAttribute('role') === 'annotation') {
         LanguageUtils.dispatchCustomEvent(Events.annotate, {tags: this.tags})
       }
     })
-    return tagButton
+    return this.tagButton
+  }
+
+  changeRol (newRole) {
+    this.tagButton.setAttribute('role', newRole)
   }
 }
 
