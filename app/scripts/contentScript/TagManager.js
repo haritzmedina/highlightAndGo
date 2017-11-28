@@ -51,11 +51,12 @@ class TagGroup {
     if (this.tags.length > 0) {
       let tagGroupTemplate = document.querySelector('#tagGroupTemplate')
       let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
+      let tagButtonContainer = $(tagGroup).find('.tagButtonContainer')
       let groupNameSpan = tagGroup.querySelector('.groupName')
       groupNameSpan.innerText = this.name
       groupNameSpan.title = this.name
       for (let j = 0; j < this.tags.length; j++) {
-        tagGroup.append(this.tags[j].createButton())
+        tagButtonContainer.append(this.tags[j].createButton())
       }
       return tagGroup
     } else {
