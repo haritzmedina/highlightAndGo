@@ -66,7 +66,7 @@ class DOMTextUtils {
       startWrapper.dataset.annotationId = id
       startWrapper.dataset.startNode = ''
       startWrapper.dataset.highlightClassName = className
-      startWrapper.innerHTML = range.startContainer.nodeValue.slice(range.startOffset, range.startContainer.nodeValue.length)
+      startWrapper.innerText = range.startContainer.nodeValue.slice(range.startOffset, range.startContainer.nodeValue.length)
       let nonHighlightedText = range.startContainer.nodeValue.slice(0, range.startOffset)
       this.replaceContent(range.startContainer, nonHighlightedText + startWrapper.outerHTML)
       // End node
@@ -76,7 +76,7 @@ class DOMTextUtils {
       endWrapper.dataset.annotationId = id
       endWrapper.dataset.endNode = ''
       endWrapper.dataset.highlightClassName = className
-      endWrapper.innerHTML = range.endContainer.nodeValue.slice(0, range.endOffset)
+      endWrapper.innerText = range.endContainer.nodeValue.slice(0, range.endOffset)
       nonHighlightedText = range.endContainer.nodeValue.slice(range.endOffset, range.endContainer.nodeValue.length)
       this.replaceContent(range.endContainer, endWrapper.outerHTML + nonHighlightedText)
       // Nodes between
