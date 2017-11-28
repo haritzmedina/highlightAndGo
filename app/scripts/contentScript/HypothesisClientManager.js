@@ -7,12 +7,13 @@ class HypothesisClientManager {
   constructor () {
     this.hypothesisClient = null
     this.hypothesisToken = null
+    this.reloadInterval = null
   }
 
   init (callback) {
     this.reloadHypothesisClient(() => {
       // Start reloading of client
-      setInterval(() => {
+      this.reloadInterval = setInterval(() => {
         this.reloadHypothesisClient()
       }, reloadIntervalInSeconds * 1000)
       if (_.isFunction(callback)) {
@@ -39,6 +40,12 @@ class HypothesisClientManager {
 
   isLoggedIn () {
     return !_.isEmpty(this.hypothesisToken)
+  }
+
+  destroy () {
+    if (this.reloadInterval) {
+      clearInterval(this.reloadInterval)
+    }
   }
 }
 

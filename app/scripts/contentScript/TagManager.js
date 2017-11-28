@@ -2,6 +2,7 @@ const _ = require('lodash')
 const $ = require('jquery')
 const jsYaml = require('js-yaml')
 const LanguageUtils = require('../utils/LanguageUtils')
+const ColorUtils = require('../utils/ColorUtils')
 const Events = require('./Events')
 
 class Tag {
@@ -9,6 +10,7 @@ class Tag {
     this.name = config.name
     this.namespace = config.namespace
     this.tags = config.tags || [config.namespace + ':' + config.name]
+    this.color = config.options.color || ColorUtils.getHashColor(this.name)
     this.options = config.options
   }
 
@@ -22,8 +24,8 @@ class Tag {
     }
     tagButton.dataset.tags = this.tags
     tagButton.role = 'annotation'
-    if (this.options && this.options.color) {
-      $(tagButton).css('background-color', this.options.color)
+    if (this.color) {
+      $(tagButton).css('background-color', this.color)
     }
     // Set handler for button
     tagButton.addEventListener('click', (event) => {
@@ -64,7 +66,7 @@ class TagManager {
     this.namespace = namespace
     this.config = config
     this.tagAnnotations = []
-    this.tags = []
+    this.currentTags = []
   }
 
   init (callback) {
@@ -96,6 +98,60 @@ class TagManager {
     }
   }
 
+  getTagsList () {
+    if (this.currentTags.length > 0) {
+      if (LanguageUtils.isInstanceOf(this.currentTags[0], Tag)) {
+        return this.currentTags
+      } else if (LanguageUtils.isInstanceOf(this.currentTags[0], TagGroup)) {
+        let tags = []
+        for (let i = 0; i < this.currentTags.length; i++) {
+          tags = tags.concat(this.currentTags[i].tags)
+        }
+        return tags
+      }
+    } else {
+      return [] // No tags for current group
+    }
+  }
+
+  retrieveTagByAnnotation (annotation) {
+    if (annotation.tags.length > 0) {
+      if (this.currentTags.length > 0) {
+        if (LanguageUtils.isInstanceOf(this.currentTags[0], Tag)) {
+          for (let i = 0; i < annotation.tags.length; i++) {
+            let tag = _.find(this.currentTags, {name: annotation.tags[i]})
+            if (tag) {
+              return tag
+            }
+          }
+        } else {
+          for (let i = 0; i < annotation.tags.length; i++) {
+            for (let j = 0; j < this.currentTags.length; j++) {
+              let tag = _.find(this.currentTags[j].tags, {name: annotation.tags[i]})
+              if (tag) {
+                return tag
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  static retrieveTagForAnnotation (annotation, tagList) {
+    for (let i = 0; i < tagList.length; i++) {
+      let difference = _.differenceWith(
+        tagList[i].tags,
+        annotation.tags,
+        (tag1, tag2) => {
+          return tag1.toLowerCase() === tag2.toLowerCase()
+        })
+      if (difference.length === 0) {
+        return tagList[i]
+      }
+    }
+  }
+
   initTags (callback) {
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url}, (annotations) => {
       // Retrieve tags of the namespace
@@ -105,10 +161,10 @@ class TagManager {
       // Retrieve tag annotations
       // If annotations are grouped
       if (!_.isEmpty(this.config.grouped)) {
-        this.tags = this.createTagsBasedOnAnnotationsGrouped(annotations, this.config.grouped)
+        this.currentTags = this.createTagsBasedOnAnnotationsGrouped(annotations, this.config.grouped)
       } else {
         // Create tags based on annotations
-        this.tags = this.createTagsBasedOnAnnotations(this.tagAnnotations)
+        this.currentTags = this.createTagsBasedOnAnnotations(this.tagAnnotations)
       }
       this.createTagButtons()
       if (_.isFunction(callback)) {
@@ -178,16 +234,16 @@ class TagManager {
 
   createTagButtons (callback) {
     // If it is an array is not grouped
-    if (this.tags.length > 0) {
-      if (LanguageUtils.isInstanceOf(this.tags[0], Tag)) {
-        for (let i = 0; i < this.tags.length; i++) {
+    if (this.currentTags.length > 0) {
+      if (LanguageUtils.isInstanceOf(this.currentTags[0], Tag)) {
+        for (let i = 0; i < this.currentTags.length; i++) {
           // Append each element
-          let tagButton = this.tags[i].createButton()
+          let tagButton = this.currentTags[i].createButton()
           this.tagsContainer.append(tagButton)
         }
-      } else if (LanguageUtils.isInstanceOf(this.tags[0], TagGroup)) {
-        for (let i = 0; i < this.tags.length; i++) {
-          let tagGroupElement = this.tags[i].createPanel()
+      } else if (LanguageUtils.isInstanceOf(this.currentTags[0], TagGroup)) {
+        for (let i = 0; i < this.currentTags.length; i++) {
+          let tagGroupElement = this.currentTags[i].createPanel()
           if (tagGroupElement) {
             this.tagsContainer.append(tagGroupElement)
           }

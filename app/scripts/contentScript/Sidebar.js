@@ -54,6 +54,10 @@ class Sidebar {
     document.documentElement.dataset.sidebarShown = sidebarButton.dataset.toggled
     document.querySelector('#abwaSidebarContainer').dataset.shown = sidebarButton.dataset.toggled
   }
+
+  destroy () {
+    $('#abwaSidebarWrapper').remove()
+  }
 }
 
 module.exports = Sidebar

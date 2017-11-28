@@ -144,6 +144,12 @@ class GroupSelector {
       })
     })
   }
+
+  destroy (callback) {
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
 }
 
 GroupSelector.eventGroupChange = 'hypothesisGroupChanged'

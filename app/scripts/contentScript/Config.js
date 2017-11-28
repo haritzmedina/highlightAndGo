@@ -17,8 +17,7 @@ const Config = {
         group: 'dimension',
         subgroup: 'category',
         relation: 'isCategoryOf'
-      },
-      default: ['doi']
+      }
     }
   }
 }

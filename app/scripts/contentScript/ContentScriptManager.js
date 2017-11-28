@@ -9,6 +9,10 @@ const HypothesisClientManager = require('./HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
 class ContentScriptManager {
+  constructor () {
+    this.events = {}
+  }
+
   init () {
     window.abwa.hypothesisClientManager = new HypothesisClientManager()
     window.abwa.hypothesisClientManager.init(() => {
@@ -26,9 +30,14 @@ class ContentScriptManager {
   }
 
   initListenerForGroupChange () {
-    document.addEventListener(GroupSelector.eventGroupChange, (event) => {
+    this.events.groupChangedEvent = this.groupChangedEventHandlerCreator()
+    document.addEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent, false)
+  }
+
+  groupChangedEventHandlerCreator () {
+    return (event) => {
       this.reloadContentByGroup()
-    })
+    }
   }
 
   reloadContentByGroup () {
@@ -97,6 +106,18 @@ class ContentScriptManager {
     if (!_.isEmpty(window.abwa.augmentationManager)) {
       window.abwa.augmentationManager.destroy()
     }
+  }
+
+  destroy () {
+    this.destroyAugmentationOperations()
+    this.destroyTagsManager()
+    this.destroyContentAnnotator()
+    window.abwa.groupSelector.destroy(() => {
+      window.abwa.sidebar.destroy(() => {
+        window.abwa.hypothesisClientManager.destroy()
+      })
+    })
+    document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
   }
 }
 
