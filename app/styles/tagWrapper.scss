@@ -5,26 +5,22 @@
   width: calc( #{$sideBarWidth} - 0.4rem - 10px );
   margin-left: 5px;
   margin-right: 5px;
-  padding: 0;
   margin-bottom: 10px;
   border-radius: 5px;
+  padding: 0;
 }
 
-.tagGroup h1{
+.groupName{
+  background: $subContainerHeaderBackgroundColor;
+  color:white;
+  font-size: 1rem;
   text-align: center;
-  margin-top: -15px;
-  height: 15px;
-  line-height: 20px;
-  font-size: 15px;
-  border-bottom: none;
+  padding-top: 3px;
+  padding-bottom: 3px;
 }
 
-.tagGroup h1 span {
-  background-color: $sidebarBackgroundColor;
-  padding-left: 5px;
-  padding-right: 5px;
-  text-overflow: ellipsis;
-  max-width: calc( #{$sideBarWidth} - 0.4rem - 10px );
+.tagButtonContainer {
+  padding: 5px 0 0;
 }
 
 .tagButton {

@@ -99,7 +99,8 @@
 }
 
 .containerHeader{
-  background-color: rgba(150,150,150,0.5);
+  background-color: $containerHeaderBackgroundColor;
+  color: $containerHeaderFontColor;
   padding: 0.2rem;
   border-top-left-radius: 0.2rem;
   border-top-right-radius: 0.2rem;
