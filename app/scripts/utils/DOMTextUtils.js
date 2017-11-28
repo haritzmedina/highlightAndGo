@@ -4,6 +4,7 @@ const xpathRange = require('xpath-range')
 const DOM = require('./DOM')
 const LanguageUtils = require('./LanguageUtils')
 const $ = require('jquery')
+const _ = require('lodash')
 
 class DOMTextUtils {
   static getFragmentSelector (range) {
@@ -83,18 +84,16 @@ class DOMTextUtils {
       let endNode = range.commonAncestorContainer.querySelector('[data-annotation-id="' + id + '"][data-end-node]')
       let nodesBetween = DOM.getNodesBetween(startNode, endNode, range.commonAncestorContainer)
       nodesBetween.forEach(nodeBetween => {
-        if (nodeBetween.nodeType === 1) {
-          $(nodeBetween).addClass(className)
-          nodeBetween.dataset.annotationId = id
-          nodeBetween.dataset.highlightClassName = className
-        } else if (nodeBetween.nodeType === 8) { // Node type comment
-        } else {
-          let betweenWrapper = document.createElement('mark')
-          $(betweenWrapper).addClass(className)
-          betweenWrapper.dataset.annotationId = id
-          betweenWrapper.dataset.highlightClassName = className
-          betweenWrapper.innerHTML = nodeBetween.nodeValue
-          nodeBetween.replaceWith(betweenWrapper)
+        let leafNodes = this.retrieveLeafNodes(nodeBetween)
+        for (let i = 0; i < leafNodes.length; i++) {
+          if (leafNodes[i].textContent.length > 0) {
+            let wrapper = document.createElement('mark')
+            $(wrapper).addClass(className)
+            wrapper.dataset.annotationId = id
+            wrapper.dataset.endNode = ''
+            wrapper.dataset.highlightClassName = className
+            $(leafNodes[i]).wrap(wrapper)
+          }
         }
       })
     }
@@ -102,11 +101,24 @@ class DOMTextUtils {
   }
 
   static replaceContent (oldNode, newNode) {
-    // TODO Find a better solution which not creates new elements
+    // Find a better solution which not creates new elements
     let span = document.createElement('span')
-    span.className = 'highlightHelper'
     span.innerHTML = newNode
     oldNode.replaceWith(span)
+    $(span.childNodes).unwrap()
+  }
+
+  static retrieveLeafNodes (element) {
+    let childNodes = []
+    if (element.childNodes.length > 0) {
+      for (let i = 0; i < element.childNodes.length; i++) {
+        let childNode = element.childNodes[i]
+        childNodes = childNodes.concat(this.retrieveLeafNodes(childNode))
+      }
+    } else {
+      childNodes = [element]
+    }
+    return childNodes
   }
 
   static unHighlightAllContent (className) {
@@ -116,25 +128,12 @@ class DOMTextUtils {
   }
 
   static unHighlightElements (highlightElements) {
-    highlightElements.forEach((highlightElement) => {
-      if (highlightElement.tagName === 'MARK') {
-        if (highlightElement.textContent.length === 0) {
-          // If element content is empty, just remove the mark
-          $(highlightElement).remove()
-        } else {
-          // If element content is not empty, unwrap maintaining its content
-          $(highlightElement.firstChild).unwrap()
-        }
-      } else {
-        // Remove the highlight class
-        $(highlightElement).removeClass(highlightElement.dataset.highlightClassName)
-      }
-    })
-    //  Remove highlight helpers maintaining its content
-    let highlightHelpers = document.querySelectorAll('.highlightHelper')
-    highlightHelpers.forEach(highlightHelper => {
-      $(highlightHelper.firstChild).unwrap()
-    })
+    if (_.isArray(highlightElements)) {
+      highlightElements.forEach((highlightElement) => {
+        // If element content is not empty, unwrap maintaining its content
+        $(highlightElement.firstChild).unwrap()
+      })
+    }
   }
 
   static unHighlightById (id) {
