@@ -111,8 +111,11 @@ class DOMTextUtils {
         let fragmentElement = document.querySelector('#' + fragmentSelector.value)
         range = domAnchorTextQuote.toRange(fragmentElement.parentNode, textQuoteSelector)
       } catch (e) {
-        range = domAnchorTextQuote.toRange(document.body, textQuoteSelector)
+        console.error(e)
       }
+    }
+    if (_.isEmpty(range)) {
+      range = domAnchorTextQuote.toRange(document.body, textQuoteSelector)
     }
     return range
   }
