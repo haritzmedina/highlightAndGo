@@ -8,6 +8,8 @@ const AugmentationManager = require('./AugmentationManager')
 const HypothesisClientManager = require('./HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
+const SLRDataExtractionContentScript = require('../specific/slrDataExtraction/SLRDataExtractionContentScript')
+
 class ContentScriptManager {
   constructor () {
     this.events = {}
@@ -40,27 +42,30 @@ class ContentScriptManager {
     }
   }
 
-  reloadContentByGroup () {
+  reloadContentByGroup (callback) {
     ConfigDecisionHelper.decideWhichConfigApplyToTheGroup(window.abwa.groupSelector.currentGroup, (config) => {
       // If not configuration is found
       if (_.isEmpty(config)) {
-        // TODO Inform user no defined configuration
+        // TODO Inform user no defined configuration found
         console.debug('No supported configuration found for this group')
         this.destroyAugmentationOperations()
         this.destroyTagsManager()
         this.destroyContentAnnotator()
+        this.destroySpecificContentManager()
       } else {
         console.debug('Loaded supported configuration %s', config.namespace)
         // Tags manager should go before content annotator, depending on the tags manager, the content annotator can change
         this.reloadTagsManager(config, () => {
-          this.reloadContentAnnotator(config)
+          this.reloadContentAnnotator(config, () => {
+            this.reloadSpecificContentManager(config)
+          })
         })
         this.reloadAugmentationOperations(config)
       }
     })
   }
 
-  reloadContentAnnotator (config) {
+  reloadContentAnnotator (config, callback) {
     // Destroy current content annotator
     this.destroyContentAnnotator()
     // Create a new content annotator for the current group
@@ -69,7 +74,7 @@ class ContentScriptManager {
     } else {
       window.abwa.contentAnnotator = new TextAnnotator() // TODO Depending on the type of annotator
     }
-    window.abwa.contentAnnotator.init()
+    window.abwa.contentAnnotator.init(callback)
   }
 
   reloadTagsManager (config, callback) {
@@ -80,7 +85,7 @@ class ContentScriptManager {
     window.abwa.tagManager.init(callback)
   }
 
-  reloadAugmentationOperations (config) {
+  reloadAugmentationOperations (config, callback) {
     // Destroy current augmentation operations
     this.destroyAugmentationOperations()
     // Create augmentation operations for the current group
@@ -118,6 +123,21 @@ class ContentScriptManager {
       })
     })
     document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
+  }
+
+  reloadSpecificContentManager (config, callback) {
+    // Destroy current specific content manager
+    this.destroySpecificContentManager()
+    if (config.namespace === 'slr') {
+      window.abwa.specificContentManager = new SLRDataExtractionContentScript(config)
+      window.abwa.specificContentManager.init()
+    }
+  }
+
+  destroySpecificContentManager () {
+    if (window.abwa.specificContentManager) {
+      window.abwa.specificContentManager.destroy()
+    }
   }
 }
 
