@@ -3,7 +3,7 @@ const _ = require('lodash')
 
 class ConfigDecisionHelper {
   static decideWhichConfigApplyToTheGroup (group, callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({group: group.id, order: 'asc'}, (annotations) => {
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({group: group.id, order: 'asc', limit: 20}, (annotations) => {
       console.log(annotations)
       for (let i = 0; i < annotations.length; i++) {
         // For each annotation, check if any of the tags is given a supported namespace

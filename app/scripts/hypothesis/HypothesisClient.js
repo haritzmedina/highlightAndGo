@@ -116,7 +116,7 @@ class HypothesisClient {
     if (this.token) {
       headers['authorization'] = 'Bearer ' + this.token
     }
-    if (_.isEmpty(data.limit)) {
+    if (!_.isNumber(data.limit)) {
       data.limit = 200 // TODO
     }
     let settings = {
