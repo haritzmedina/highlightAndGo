@@ -1,4 +1,6 @@
 const $ = require('jquery')
+const _ = require('lodash')
+const rangy = require('rangy')
 const DataUtils = require('./DataUtils')
 
 class DOM {
@@ -41,62 +43,35 @@ class DOM {
     })
   }
 
-  /**
-   * Retrieve nodes between two nodes in the DOM tree (they are not in order)
-   * @param startNode
-   * @param endNode
-   * @param commonParent
-   * @returns {*} A list of nodes
-   */
-  static getNodesBetween (startNode, endNode, commonParent) {
-    // startNode and endNode exist
-    if (!_.isElement(startNode) || !_.isElement(endNode)) {
-      return []
+  static getNextNode (node, skipChildren, endNode) {
+    // if there are child nodes and we didn't come from a child node
+    if (endNode === node) {
+      return null
     }
-    // startNode and endNode is the same
-    if (startNode === endNode) {
-      return []
+    if (node.firstChild && !skipChildren) {
+      return node.firstChild
     }
-    // startNode is child of endNode
-    if ($.contains(endNode, startNode)) {
-      return []
+    if (!node.parentNode) {
+      return null
     }
-    // endNode is child of startNode
-    if ($.contains(startNode, endNode)) {
-      return []
+    return node.nextSibling || DOM.getNextNode(node.parentNode, true, endNode)
+  }
+
+  static getLeafNodesInRange (range) {
+    let startNode = range.startContainer.childNodes[range.startOffset] || range.startContainer // it's a text node
+    let endNode = range.endContainer.childNodes[range.endOffset] || range.endContainer
+
+    if (startNode === endNode && startNode.childNodes.length === 0) {
+      return [startNode]
     }
-    // startNode and endNode are in different subtrees
-    let nodesBetween = []
-    let startNodeParentIterator = startNode
-    while (startNodeParentIterator.parentElement !== commonParent) {
-      // Next elements
-      nodesBetween = nodesBetween.concat(DOM.getNextSiblings(startNodeParentIterator))
-      // Iterator
-      startNodeParentIterator = startNodeParentIterator.parentElement
-    }
-    let startNext = DOM.getNextSiblings(startNodeParentIterator)
-    // End to init
-    let endNodeParentIterator = endNode
-    while (endNodeParentIterator.parentElement !== commonParent) {
-      // Previous elements
-      nodesBetween = nodesBetween.concat(DOM.getPreviousSiblings(endNodeParentIterator))
-      // Iterator
-      endNodeParentIterator = endNodeParentIterator.parentElement
-    }
-    let endPrevious = DOM.getPreviousSiblings(endNodeParentIterator)
-    let intersection = DataUtils.intersectionNonEqual(startNext, endPrevious, (a, b) => {
-      if (a.nodeType === b.nodeType) {
-        if (a.nodeType === 1) {
-          return a.outerHTML === b.outerHTML
-        } else {
-          return a.nodeValue === b.nodeValue
-        }
-      } else {
-        return false
+    let leafNodes = []
+    do {
+      // If it is a leaf node, push it
+      if (startNode.childNodes.length === 0) {
+        leafNodes.push(startNode)
       }
-    })
-    nodesBetween = nodesBetween.concat(intersection)
-    return nodesBetween
+    } while (startNode = DOM.getNextNode(startNode, false, endNode))
+    return leafNodes
   }
 
   static getNextSiblings (currentNode) {

@@ -51,57 +51,53 @@ class DOMTextUtils {
    */
   static highlightContent (selectors, className, id, data) {
     let range = this.retrieveRange(selectors)
-    let startContainer = null
-    if (range.startContainer.childNodes.length > 0) {
-      startContainer = this.retrieveFirstTextNode(range.startContainer)
-    } else {
-      startContainer = range.startContainer
-    }
-    if (range.startContainer === range.endContainer) {
-      let wrapper = document.createElement('mark')
-      $(wrapper).addClass(className)
-      wrapper.dataset.highlightClassName = className
-      wrapper.dataset.annotationId = id
-      wrapper.innerHTML = startContainer.nodeValue.slice(range.startOffset, range.endOffset)
-      let newStringifiedContent = startContainer.nodeValue.slice(0, range.startOffset) + wrapper.outerHTML + startContainer.nodeValue.slice(range.endOffset, startContainer.nodeValue.length)
-      DOMTextUtils.replaceContent(startContainer, newStringifiedContent)
-    } else {
-      // Start node
-      let startWrapper = document.createElement('mark')
-      $(startWrapper).addClass(className)
-      startWrapper.dataset.annotationId = id
-      startWrapper.dataset.startNode = ''
-      startWrapper.dataset.highlightClassName = className
-      startWrapper.innerText = startContainer.nodeValue.slice(range.startOffset, startContainer.nodeValue.length)
-      let nonHighlightedText = startContainer.nodeValue.slice(0, range.startOffset)
-      this.replaceContent(startContainer, nonHighlightedText + startWrapper.outerHTML)
-      // End node
-      range = this.retrieveRange(selectors)
-      let endWrapper = document.createElement('mark')
-      $(endWrapper).addClass(className)
-      endWrapper.dataset.annotationId = id
-      endWrapper.dataset.endNode = ''
-      endWrapper.dataset.highlightClassName = className
-      endWrapper.innerText = range.endContainer.nodeValue.slice(0, range.endOffset)
-      nonHighlightedText = range.endContainer.nodeValue.slice(range.endOffset, range.endContainer.nodeValue.length)
-      this.replaceContent(range.endContainer, endWrapper.outerHTML + nonHighlightedText)
-      // Nodes between
-      let startNode = range.commonAncestorContainer.querySelector('[data-annotation-id="' + id + '"][data-start-node]')
-      let endNode = range.commonAncestorContainer.querySelector('[data-annotation-id="' + id + '"][data-end-node]')
-      let nodesBetween = DOM.getNodesBetween(startNode, endNode, range.commonAncestorContainer)
-      nodesBetween.forEach(nodeBetween => {
-        let leafNodes = this.retrieveLeafNodes(nodeBetween)
-        for (let i = 0; i < leafNodes.length; i++) {
-          if (leafNodes[i].textContent.length > 0) {
-            let wrapper = document.createElement('mark')
-            $(wrapper).addClass(className)
-            wrapper.dataset.annotationId = id
-            wrapper.dataset.endNode = ''
-            wrapper.dataset.highlightClassName = className
-            $(leafNodes[i]).wrap(wrapper)
+    let nodes = DOM.getLeafNodesInRange(range)
+    if (nodes.length > 0) {
+      let startNode = nodes.shift()
+      if (nodes.length > 0) { // start and end nodes are not the same
+        let endNode = nodes.pop()
+        let nodesBetween = nodes
+        // Start node
+        let startWrapper = document.createElement('mark')
+        $(startWrapper).addClass(className)
+        startWrapper.dataset.annotationId = id
+        startWrapper.dataset.startNode = ''
+        startWrapper.dataset.highlightClassName = className
+        startWrapper.innerText = startNode.nodeValue.slice(range.startOffset, startNode.nodeValue.length)
+        let nonHighlightedText = startNode.nodeValue.slice(0, range.startOffset)
+        this.replaceContent(startNode, nonHighlightedText + startWrapper.outerHTML)
+        // End node
+        let endWrapper = document.createElement('mark')
+        $(endWrapper).addClass(className)
+        endWrapper.dataset.annotationId = id
+        endWrapper.dataset.endNode = ''
+        endWrapper.dataset.highlightClassName = className
+        endWrapper.innerText = endNode.nodeValue.slice(0, range.endOffset)
+        nonHighlightedText = endNode.nodeValue.slice(range.endOffset, endNode.nodeValue.length)
+        this.replaceContent(endNode, endWrapper.outerHTML + nonHighlightedText)
+        // Nodes between
+        nodesBetween.forEach(nodeBetween => {
+          let leafNodes = this.retrieveLeafNodes(nodeBetween)
+          for (let i = 0; i < leafNodes.length; i++) {
+            if (leafNodes[i].textContent.length > 0 && (leafNodes[i].parentNode !== endNode && leafNodes[i].parentNode !== startNode)) {
+              let wrapper = document.createElement('mark')
+              $(wrapper).addClass(className)
+              wrapper.dataset.annotationId = id
+              wrapper.dataset.endNode = ''
+              wrapper.dataset.highlightClassName = className
+              $(leafNodes[i]).wrap(wrapper)
+            }
           }
-        }
-      })
+        })
+      } else {
+        let wrapper = document.createElement('mark')
+        $(wrapper).addClass(className)
+        wrapper.dataset.highlightClassName = className
+        wrapper.dataset.annotationId = id
+        wrapper.innerHTML = startNode.nodeValue.slice(range.startOffset, range.endOffset)
+        let newStringifiedContent = startNode.nodeValue.slice(0, range.startOffset) + wrapper.outerHTML + startNode.nodeValue.slice(range.endOffset, startNode.nodeValue.length)
+        DOMTextUtils.replaceContent(startNode, newStringifiedContent)
+      }
     }
     return document.querySelectorAll('[data-annotation-id=\'' + id + '\']')
   }
@@ -111,8 +107,8 @@ class DOMTextUtils {
     let textQuoteSelector = _.find(selectors, (selector) => { return selector.type === 'TextQuoteSelector' })
     let range = null
     if (fragmentSelector) {
-      let fragmentElement = document.querySelector('#' + fragmentSelector.value)
       try {
+        let fragmentElement = document.querySelector('#' + fragmentSelector.value)
         range = domAnchorTextQuote.toRange(fragmentElement.parentNode, textQuoteSelector)
       } catch (e) {
         range = domAnchorTextQuote.toRange(document.body, textQuoteSelector)
