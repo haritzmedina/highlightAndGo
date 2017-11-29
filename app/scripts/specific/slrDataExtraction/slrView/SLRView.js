@@ -166,14 +166,22 @@ class SLRView {
       }
     }
     for (let key in primaryStudies) {
-      primaryStudies[key] = new PrimaryStudy(primaryStudies[key])
+      let publicationDetails = primaryStudies[key]
+      publicationDetails['uri'] = key
+      primaryStudies[key] = new PrimaryStudy(publicationDetails)
     }
     // Retrieve primary studies classification details
     for (let i = 0; i < categoryAnnotations.length; i++) {
       let categoryAnnotation = categoryAnnotations[i]
       let uri = categoryAnnotation.uri
+      let primaryStudiesArray = _.values(primaryStudies)
+      let primaryStudy = _.find(primaryStudiesArray, (primaryStudy) => {
+        let primaryStudyUriNoProtocol = primaryStudy.uri.replace(/^https?\:\/\//i, '')
+        let categoryUriNoProtocol = uri.replace(/^https?\:\/\//i, '')
+        return _.startsWith(categoryUriNoProtocol, primaryStudyUriNoProtocol)
+      })
       // If classification doesn't have a primary study instance (doi, title or whatever), the classification is ommited
-      if (!_.isEmpty(primaryStudies[uri])) {
+      if (!_.isEmpty(primaryStudy)) {
         // Retrieve category of
         let isCategoryOfTag = _.find(categoryAnnotation.tags, (tag) => {
           return tag.includes('slr:isCategoryOf:')
@@ -184,7 +192,7 @@ class SLRView {
         let categoryEvidence = new CategoryEvidence(categoryAnnotation)
         categoryEvidence.category = _.replace(categoryNameTag, 'slr:category:', '')
         categoryEvidence.dimension = _.replace(isCategoryOfTag, 'slr:isCategoryOf:', '')
-        primaryStudies[uri].addCategoryEvidence(categoryEvidence)
+        primaryStudies[primaryStudy.uri].addCategoryEvidence(categoryEvidence)
       }
     }
     return primaryStudies
@@ -211,7 +219,11 @@ class SLRView {
     // TODO Generic for all publication details inserted
     // DOI
     let doiCell = slrViewTableRow.querySelector('th[data-column="doi"]')
-    doiCell.innerText = primaryStudy.doi
+    let linkToDoi = document.createElement('a')
+    linkToDoi.href = 'http://dx.doi.org/' + primaryStudy.doi
+    linkToDoi.target = '_blank'
+    linkToDoi.innerText = primaryStudy.doi
+    doiCell.appendChild(linkToDoi)
     // Title
     let titleCell = slrViewTableRow.querySelector('td[data-column="title"]')
     titleCell.innerText = primaryStudy.title
