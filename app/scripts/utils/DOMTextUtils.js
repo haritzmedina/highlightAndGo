@@ -50,15 +50,21 @@ class DOMTextUtils {
    * @throws TypeError
    */
   static highlightContent (selectors, className, id, data) {
-    let range = domAnchorTextQuote.toRange(document.body, selectors[3])
+    let range = this.retrieveRange(selectors)
+    let startContainer = null
+    if (range.startContainer.childNodes.length > 0) {
+      startContainer = this.retrieveFirstTextNode(range.startContainer)
+    } else {
+      startContainer = range.startContainer
+    }
     if (range.startContainer === range.endContainer) {
       let wrapper = document.createElement('mark')
       $(wrapper).addClass(className)
       wrapper.dataset.highlightClassName = className
       wrapper.dataset.annotationId = id
-      wrapper.innerHTML = range.startContainer.nodeValue.slice(range.startOffset, range.endOffset)
-      let newStringifiedContent = range.startContainer.nodeValue.slice(0, range.startOffset) + wrapper.outerHTML + range.startContainer.nodeValue.slice(range.endOffset, range.startContainer.nodeValue.length)
-      DOMTextUtils.replaceContent(range.startContainer, newStringifiedContent)
+      wrapper.innerHTML = startContainer.nodeValue.slice(range.startOffset, range.endOffset)
+      let newStringifiedContent = startContainer.nodeValue.slice(0, range.startOffset) + wrapper.outerHTML + startContainer.nodeValue.slice(range.endOffset, startContainer.nodeValue.length)
+      DOMTextUtils.replaceContent(startContainer, newStringifiedContent)
     } else {
       // Start node
       let startWrapper = document.createElement('mark')
@@ -66,11 +72,11 @@ class DOMTextUtils {
       startWrapper.dataset.annotationId = id
       startWrapper.dataset.startNode = ''
       startWrapper.dataset.highlightClassName = className
-      startWrapper.innerText = range.startContainer.nodeValue.slice(range.startOffset, range.startContainer.nodeValue.length)
-      let nonHighlightedText = range.startContainer.nodeValue.slice(0, range.startOffset)
-      this.replaceContent(range.startContainer, nonHighlightedText + startWrapper.outerHTML)
+      startWrapper.innerText = startContainer.nodeValue.slice(range.startOffset, startContainer.nodeValue.length)
+      let nonHighlightedText = startContainer.nodeValue.slice(0, range.startOffset)
+      this.replaceContent(startContainer, nonHighlightedText + startWrapper.outerHTML)
       // End node
-      range = domAnchorTextQuote.toRange(document.body, selectors[3])
+      range = this.retrieveRange(selectors)
       let endWrapper = document.createElement('mark')
       $(endWrapper).addClass(className)
       endWrapper.dataset.annotationId = id
@@ -100,12 +106,37 @@ class DOMTextUtils {
     return document.querySelectorAll('[data-annotation-id=\'' + id + '\']')
   }
 
+  static retrieveRange (selectors) {
+    let fragmentSelector = _.find(selectors, (selector) => { return selector.type === 'FragmentSelector' })
+    let textQuoteSelector = _.find(selectors, (selector) => { return selector.type === 'TextQuoteSelector' })
+    let range = null
+    if (fragmentSelector) {
+      let fragmentElement = document.querySelector('#' + fragmentSelector.value)
+      try {
+        range = domAnchorTextQuote.toRange(fragmentElement.parentNode, textQuoteSelector)
+      } catch (e) {
+        range = domAnchorTextQuote.toRange(document.body, textQuoteSelector)
+      }
+    }
+    return range
+  }
+
   static replaceContent (oldNode, newNode) {
     // Find a better solution which not creates new elements
     let span = document.createElement('span')
     span.innerHTML = newNode
     oldNode.replaceWith(span)
     $(span.childNodes).unwrap()
+  }
+
+  static retrieveFirstTextNode (element) {
+    if (element.nodeType === Node.TEXT_NODE) {
+      return element
+    } else {
+      if (element.firstChild) {
+        return DOMTextUtils.retrieveFirstTextNode(element.firstChild)
+      }
+    }
   }
 
   static retrieveLeafNodes (element) {

@@ -45,9 +45,14 @@ class DOM {
    * Retrieve nodes between two nodes in the DOM tree (they are not in order)
    * @param startNode
    * @param endNode
+   * @param commonParent
    * @returns {*} A list of nodes
    */
   static getNodesBetween (startNode, endNode, commonParent) {
+    // startNode and endNode exist
+    if (!_.isElement(startNode) || !_.isElement(endNode)) {
+      return []
+    }
     // startNode and endNode is the same
     if (startNode === endNode) {
       return []
