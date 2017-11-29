@@ -1,3 +1,5 @@
+const _ = require('lodash')
+
 let $
 if (typeof window === 'undefined') {
   $ = require('jquery')(global.window)
@@ -30,7 +32,7 @@ class HypothesisClient {
     }
 
     $.ajax(settings).done((response) => {
-      callback(response.id)
+      callback(response)
     })
   }
 
@@ -113,6 +115,9 @@ class HypothesisClient {
     }
     if (this.token) {
       headers['authorization'] = 'Bearer ' + this.token
+    }
+    if (_.isEmpty(data.limit)) {
+      data.limit = 200 // TODO
     }
     let settings = {
       'async': true,
