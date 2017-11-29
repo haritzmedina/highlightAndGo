@@ -1,7 +1,4 @@
 const $ = require('jquery')
-const _ = require('lodash')
-const rangy = require('rangy')
-const DataUtils = require('./DataUtils')
 
 class DOM {
   static searchElementByTarget (target) {
@@ -70,7 +67,8 @@ class DOM {
       if (startNode.childNodes.length === 0) {
         leafNodes.push(startNode)
       }
-    } while (startNode = DOM.getNextNode(startNode, false, endNode))
+      startNode = DOM.getNextNode(startNode, false, endNode)
+    } while (startNode)
     return leafNodes
   }
 
