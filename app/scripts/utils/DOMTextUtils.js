@@ -107,15 +107,21 @@ class DOMTextUtils {
     let textQuoteSelector = _.find(selectors, (selector) => { return selector.type === 'TextQuoteSelector' })
     let range = null
     if (fragmentSelector) {
-      try {
-        let fragmentElement = document.querySelector('#' + fragmentSelector.value)
-        range = domAnchorTextQuote.toRange(fragmentElement.parentNode, textQuoteSelector)
-      } catch (e) {
-        console.error(e)
-      }
+      let fragmentElement = document.querySelector('#' + fragmentSelector.value)
+      range = DOMTextUtils.tryRetrieveRangeTextSelector(fragmentElement, textQuoteSelector)
     }
-    if (_.isEmpty(range)) {
-      range = domAnchorTextQuote.toRange(document.body, textQuoteSelector)
+    return range
+  }
+
+  static tryRetrieveRangeTextSelector (fragmentElement, textQuoteSelector) {
+    if (fragmentElement === document) {
+      return null
+    }
+    let range = null
+    try {
+      range = domAnchorTextQuote.toRange(fragmentElement.parentNode, textQuoteSelector)
+    } catch (e) {
+      range = DOMTextUtils.tryRetrieveRangeTextSelector(fragmentElement.parentNode, textQuoteSelector)
     }
     return range
   }
