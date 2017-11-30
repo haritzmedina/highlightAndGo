@@ -1,5 +1,6 @@
 const _ = require('lodash')
 
+const ContentTypeManager = require('./ContentTypeManager')
 const Sidebar = require('./Sidebar')
 const TagManager = require('./TagManager')
 const GroupSelector = require('./GroupSelector')
@@ -16,16 +17,18 @@ class ContentScriptManager {
   }
 
   init () {
-    window.abwa.hypothesisClientManager = new HypothesisClientManager()
-    window.abwa.hypothesisClientManager.init(() => {
-      window.abwa.sidebar = new Sidebar()
-      window.abwa.sidebar.init(() => {
-        window.abwa.groupSelector = new GroupSelector()
-        window.abwa.groupSelector.init(() => {
-          // Reload for first time the content by group
-          this.reloadContentByGroup()
-          // Initialize listener for group change to reload the content
-          this.initListenerForGroupChange()
+    this.loadContentTypeManager(() => {
+      window.abwa.hypothesisClientManager = new HypothesisClientManager()
+      window.abwa.hypothesisClientManager.init(() => {
+        window.abwa.sidebar = new Sidebar()
+        window.abwa.sidebar.init(() => {
+          window.abwa.groupSelector = new GroupSelector()
+          window.abwa.groupSelector.init(() => {
+            // Reload for first time the content by group
+            this.reloadContentByGroup()
+            // Initialize listener for group change to reload the content
+            this.initListenerForGroupChange()
+          })
         })
       })
     })
@@ -138,6 +141,15 @@ class ContentScriptManager {
     if (window.abwa.specificContentManager) {
       window.abwa.specificContentManager.destroy()
     }
+  }
+
+  loadContentTypeManager (callback) {
+    window.abwa.contentTypeManager = new ContentTypeManager()
+    window.abwa.contentTypeManager.init(() => {
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    })
   }
 }
 
