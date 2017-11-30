@@ -1,14 +1,19 @@
+const _ = require('lodash')
+
 class PrimaryStudy {
   constructor (publicationDetails, classification) {
     this.uri = publicationDetails.uri // TODO Check if has a URI
     this.doi = publicationDetails.doi || ''
     this.title = publicationDetails.title || ''
     this.author = publicationDetails.author || []
-    this.classification = classification || []
+    this.classification = classification || {}
   }
 
   addCategoryEvidence (categoryEvidence) {
-    this.classification.push(categoryEvidence) // TODO Review same dimension multiple category
+    if (_.isEmpty(this.classification[categoryEvidence.dimension])) {
+      this.classification[categoryEvidence.dimension] = []
+    }
+    this.classification[categoryEvidence.dimension].push(categoryEvidence)
   }
 }
 

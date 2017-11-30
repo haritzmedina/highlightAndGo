@@ -176,8 +176,8 @@ class SLRView {
       let uri = categoryAnnotation.uri
       let primaryStudiesArray = _.values(primaryStudies)
       let primaryStudy = _.find(primaryStudiesArray, (primaryStudy) => {
-        let primaryStudyUriNoProtocol = primaryStudy.uri.replace(/^https?\:\/\//i, '')
-        let categoryUriNoProtocol = uri.replace(/^https?\:\/\//i, '')
+        let primaryStudyUriNoProtocol = primaryStudy.uri.replace(/^https?:\/\//i, '')
+        let categoryUriNoProtocol = uri.replace(/^https?:\/\//i, '')
         return _.startsWith(categoryUriNoProtocol, primaryStudyUriNoProtocol)
       })
       // If classification doesn't have a primary study instance (doi, title or whatever), the classification is ommited
@@ -247,18 +247,39 @@ class SLRView {
   }
 
   fillCellsForEachDimension (slrViewTableRow, classification) {
-    for (let i = 0; i < classification.length; i++) {
-      let categoryEvidence = classification[i]
-      let dimension = categoryEvidence.dimension
-      let category = categoryEvidence.category
+    let classificationDimensions = _.values(classification)
+    for (let i = 0; i < classificationDimensions.length; i++) {
+      let classificationDimension = classificationDimensions[i]
+      let dimension = classificationDimension[0].dimension
       let cell = slrViewTableRow.querySelector('td[data-column="' + dimension + '"]')
-      // Create link to evidence
-      let link = document.createElement('a')
-      link.target = '_blank'
-      link.href = categoryEvidence.annotation.uri + '#annotations:' + categoryEvidence.annotation.id
-      link.innerText = category
-      cell.appendChild(link)
+      let categoryEvidences = _.values(_.groupBy(classificationDimension, 'category'))
+      for (let j = 0; j < categoryEvidences.length; j++) {
+        let categoryWrapper = document.createElement('div')
+        let category = categoryEvidences[j][0].category
+        // For first evidence, add a name
+        cell.appendChild(this.getLinkForEvidence(categoryEvidences[j][0], category))
+        if (categoryEvidences[j].length > 1) {
+          cell.appendChild(document.createTextNode('[')) // Open brackets
+          // For each other evidence add a number
+          for (let k = 1; k < categoryEvidences[j].length; k++) {
+            cell.appendChild(this.getLinkForEvidence(categoryEvidences[j][k], k))
+            cell.appendChild(document.createTextNode(',')) // Add commas for each evidence
+          }
+          cell.removeChild(cell.lastChild) // Remove last comma
+          cell.appendChild(document.createTextNode(']')) // Close brackets
+        }
+        cell.appendChild(categoryWrapper)
+      }
     }
+  }
+
+  getLinkForEvidence (categoryEvidence, text) {
+    // Create link to evidence
+    let link = document.createElement('a')
+    link.target = '_blank'
+    link.href = categoryEvidence.annotation.uri + '#annotations:' + categoryEvidence.annotation.id
+    link.innerText = text
+    return link
   }
 }
 
