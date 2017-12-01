@@ -12,7 +12,7 @@ const TOKEN = process.env.HYPOTHESIS_TOKEN
 
 const WEBSITE_URL = 'https://haritzmedina.com'
 
-let annotationId = null
+let annotation = null
 let hypothesisClient = new HypothesisClient(TOKEN)
 
 describe('Popup test', function () {
@@ -52,8 +52,8 @@ describe('Popup test', function () {
         'uri': WEBSITE_URL,
         'motivation': 'highlighting'
       }, (response) => {
-        annotationId = response
-        console.log('Created annotation with id: ' + annotationId)
+        annotation = response
+        console.log('Created annotation with id: ' + annotation.id)
         browser.url(WEBSITE_URL)
         resolve()
       })
@@ -62,7 +62,7 @@ describe('Popup test', function () {
 
   it('Tool creates a popup using annotation', async function () {
     browser.call(() => new Promise((resolve) => {
-      hypothesisClient.fetchAnnotation(annotationId, (response) => {
+      hypothesisClient.fetchAnnotation(annotation.id, (response) => {
         expect(response.uri).toBe(WEBSITE_URL)
         resolve()
       })
@@ -71,8 +71,8 @@ describe('Popup test', function () {
 
   afterAll(() => {
     browser.call(() => new Promise((resolve) => {
-      hypothesisClient.deleteAnnotation(annotationId, () => {
-        console.log('Deleted annotation ' + annotationId)
+      hypothesisClient.deleteAnnotation(annotation.id, () => {
+        console.log('Deleted annotation ' + annotation.id)
         resolve()
       })
     }))
