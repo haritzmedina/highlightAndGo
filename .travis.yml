@@ -7,7 +7,7 @@ addons:
 before_install:
   - sudo apt-get update
   - sudo apt-get install g++ build-essential # Build essential to compile the integration-test platform
-  - sudo apt-get install oracle-java8-set-default # Java instalation for webdriverio
+  - sudo apt-get install oracle-java9-set-default # Java instalation for webdriverio
   - CHROME_BIN=google-chrome # Set chrome bin path for karma tests runner
   - export DISPLAY=:99.0 # Display size
   - sh -e /etc/init.d/xvfb start # Start X-window to run chrome
