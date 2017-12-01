@@ -67,7 +67,8 @@ class DOM {
       if (startNode.childNodes.length === 0) {
         leafNodes.push(startNode)
       }
-    } while (startNode = DOM.getNextNode(startNode, false, endNode))
+      startNode = DOM.getNextNode(startNode, false, endNode)
+    } while (startNode)
     return leafNodes
   }
 
