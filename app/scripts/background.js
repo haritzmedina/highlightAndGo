@@ -44,6 +44,15 @@ class Background {
         }
       }
     })
+
+    // Initialize message manager
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.scope === 'extension') {
+        if (request.cmd === 'whoiam') {
+          sendResponse(sender)
+        }
+      }
+    })
   }
 }
 
