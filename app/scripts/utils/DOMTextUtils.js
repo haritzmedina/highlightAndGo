@@ -105,10 +105,13 @@ class DOMTextUtils {
   static retrieveRange (selectors) {
     let fragmentSelector = _.find(selectors, (selector) => { return selector.type === 'FragmentSelector' })
     let textQuoteSelector = _.find(selectors, (selector) => { return selector.type === 'TextQuoteSelector' })
+    let textPositionSelector = _.find(selectors, (selector) => { return selector.type === 'TextPositionSelector' })
     let range = null
-    if (fragmentSelector) {
+    if (fragmentSelector) { // It is an element of DOM
       let fragmentElement = document.querySelector('#' + fragmentSelector.value)
       range = DOMTextUtils.tryRetrieveRangeTextSelector(fragmentElement, textQuoteSelector)
+    } else if (textQuoteSelector && textPositionSelector) { // It is a text of PDF
+      range = DOMTextUtils.tryRetrieveRangeTextSelector(document.body, textQuoteSelector)
     }
     return range
   }
