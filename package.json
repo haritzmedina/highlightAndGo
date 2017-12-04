@@ -25,6 +25,7 @@
   "dependencies": {
     "babel-plugin-transform-es3-member-expression-literals": "^6.22.0",
     "bootstrap": "^4.0.0-beta.2",
+    "color": "^2.0.1",
     "color-hash": "^1.0.3",
     "dom-anchor-text-position": "^4.0.0",
     "dom-anchor-text-quote": "^4.0.2",
