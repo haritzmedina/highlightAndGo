@@ -94,7 +94,7 @@ class TextAnnotator extends ContentAnnotator {
         selector: selectors
       }],
       text: '',
-      uri: location.href.replace(location.hash, '')
+      uri: window.abwa.contentTypeManager.originalDocumentURI
     }
   }
 
@@ -109,7 +109,7 @@ class TextAnnotator extends ContentAnnotator {
   loadAnnotations (callback) {
     // Retrieve annotations for current url and group
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-      url: window.location.href,
+      url: window.abwa.contentTypeManager.originalDocumentURI,
       group: window.abwa.groupSelector.currentGroup.id
     }, (annotations) => {
       // Search tagged annotations

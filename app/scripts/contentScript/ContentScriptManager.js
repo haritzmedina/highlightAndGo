@@ -117,15 +117,17 @@ class ContentScriptManager {
   }
 
   destroy () {
-    this.destroyAugmentationOperations()
-    this.destroyTagsManager()
-    this.destroyContentAnnotator()
-    window.abwa.groupSelector.destroy(() => {
-      window.abwa.sidebar.destroy(() => {
-        window.abwa.hypothesisClientManager.destroy()
+    this.destroyContentTypeManager(() => {
+      this.destroyAugmentationOperations()
+      this.destroyTagsManager()
+      this.destroyContentAnnotator()
+      window.abwa.groupSelector.destroy(() => {
+        window.abwa.sidebar.destroy(() => {
+          window.abwa.hypothesisClientManager.destroy()
+        })
       })
+      document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
     })
-    document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
   }
 
   reloadSpecificContentManager (config, callback) {
@@ -150,6 +152,16 @@ class ContentScriptManager {
         callback()
       }
     })
+  }
+
+  destroyContentTypeManager (callback) {
+    if (window.abwa.contentTypeManager) {
+      window.abwa.contentTypeManager.destroy(() => {
+        if (_.isFunction(callback)) {
+          callback()
+        }
+      })
+    }
   }
 }
 
