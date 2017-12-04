@@ -10,7 +10,11 @@ class Tag {
     this.name = config.name
     this.namespace = config.namespace
     this.tags = config.tags || [config.namespace + ':' + config.name]
-    this.color = config.options.color || ColorUtils.getHashColor(this.name)
+    if (config.options.color) {
+      this.color = ColorUtils.setAlphaToColor(config.options.color, 0.5) // Set a 0.5 alpha to all colors
+    } else {
+      this.color = ColorUtils.getHashColor(this.name)
+    }
     this.options = config.options
   }
 
