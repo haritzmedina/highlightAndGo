@@ -52,24 +52,33 @@ class TextAnnotator extends ContentAnnotator {
       }
       let range = document.getSelection().getRangeAt(0)
       // Create FragmentSelector
-      let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
-      if (fragmentSelector) {
-        selectors.push(fragmentSelector)
+      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'FragmentSelector' }) !== -1) {
+        let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
+        if (fragmentSelector) {
+          selectors.push(fragmentSelector)
+        }
       }
       // Create RangeSelector
-      let rangeSelector = DOMTextUtils.getRangeSelector(range)
-      if (rangeSelector) {
-        selectors.push(rangeSelector)
+      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'RangeSelector' }) !== -1) {
+        let rangeSelector = DOMTextUtils.getRangeSelector(range)
+        if (rangeSelector) {
+          selectors.push(rangeSelector)
+        }
       }
       // Create TextPositionSelector
-      let textPositionSelector = DOMTextUtils.getTextPositionSelector(range)
-      if (textPositionSelector) {
-        selectors.push(textPositionSelector)
+      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextPositionSelector' }) !== -1) {
+        let rootElement = window.abwa.contentTypeManager.getDocumentRootElement()
+        let textPositionSelector = DOMTextUtils.getTextPositionSelector(range, rootElement)
+        if (textPositionSelector) {
+          selectors.push(textPositionSelector)
+        }
       }
       // Create TextQuoteSelector
-      let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
-      if (textQuoteSelector) {
-        selectors.push(textQuoteSelector)
+      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextQuoteSelector' }) !== -1) {
+        let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
+        if (textQuoteSelector) {
+          selectors.push(textQuoteSelector)
+        }
       }
       // Construct the annotation to send to hypothesis
       let annotation = this.constructAnnotation(selectors, event.detail.tags)

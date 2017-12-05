@@ -12,7 +12,7 @@ class ContentTypeManager {
   init (callback) {
     if (document.querySelector('embed[type="application/pdf"][name="plugin"]')) {
       this.saveCurrentURI(() => {
-        window.location = chrome.extension.getURL('content/pdfjs/web/viewer.html') + '?file=' + window.location.href
+        window.location = chrome.extension.getURL('content/pdfjs/web/viewer.html') + '?file=' + encodeURIComponent(window.location.href)
       })
     } else {
       // If current web is pdf viewer.html, set document type as pdf
@@ -93,11 +93,25 @@ class ContentTypeManager {
       })
     })
   }
+
+  getDocumentRootElement () {
+    if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+      return document.querySelector('#viewer')
+    } else if (this.documentType === ContentTypeManager.documentTypes.html) {
+      return document.body
+    }
+  }
 }
 
 ContentTypeManager.documentTypes = {
-  html: 'html',
-  pdf: 'pdf'
+  html: {
+    name: 'html',
+    selectors: ['FragmentSelector', 'RangeSelector']
+  },
+  pdf: {
+    name: 'pdf',
+    selectors: ['TextPositionSelector', 'TextQuoteSelector']
+  }
 }
 
 module.exports = ContentTypeManager
