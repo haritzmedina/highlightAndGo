@@ -14,9 +14,12 @@ const SLRDataExtractionContentScript = require('../specific/slrDataExtraction/SL
 class ContentScriptManager {
   constructor () {
     this.events = {}
+    this.status = ContentScriptManager.status.notInitialized
   }
 
   init () {
+    console.log('Initializing content script manager')
+    this.status = ContentScriptManager.status.initializing
     this.loadContentTypeManager(() => {
       window.abwa.hypothesisClientManager = new HypothesisClientManager()
       window.abwa.hypothesisClientManager.init(() => {
@@ -28,6 +31,8 @@ class ContentScriptManager {
             this.reloadContentByGroup()
             // Initialize listener for group change to reload the content
             this.initListenerForGroupChange()
+            this.status = ContentScriptManager.status.initialized
+            console.log('Initialized content script manager')
           })
         })
       })
@@ -117,13 +122,16 @@ class ContentScriptManager {
   }
 
   destroy () {
+    console.log('Destroying content script manager')
     this.destroyContentTypeManager(() => {
       this.destroyAugmentationOperations()
       this.destroyTagsManager()
       this.destroyContentAnnotator()
       window.abwa.groupSelector.destroy(() => {
         window.abwa.sidebar.destroy(() => {
-          window.abwa.hypothesisClientManager.destroy()
+          window.abwa.hypothesisClientManager.destroy(() => {
+            this.status = ContentScriptManager.status.notInitialized
+          })
         })
       })
       document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
@@ -163,6 +171,12 @@ class ContentScriptManager {
       })
     }
   }
+}
+
+ContentScriptManager.status = {
+  initializing: 'initializing',
+  initialized: 'initialized',
+  notInitialized: 'notInitialized'
 }
 
 module.exports = ContentScriptManager
