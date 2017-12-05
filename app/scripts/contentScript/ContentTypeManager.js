@@ -106,7 +106,7 @@ class ContentTypeManager {
 ContentTypeManager.documentTypes = {
   html: {
     name: 'html',
-    selectors: ['FragmentSelector', 'RangeSelector']
+    selectors: ['FragmentSelector', 'RangeSelector', 'TextPositionSelector', 'TextQuoteSelector']
   },
   pdf: {
     name: 'pdf',
