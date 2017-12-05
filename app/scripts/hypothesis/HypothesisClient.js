@@ -109,6 +109,22 @@ class HypothesisClient {
   }
 
   searchAnnotations (data, callback) {
+    let annotations = []
+    this.searchBunchAnnotations(data, 0, (response) => {
+      let total = response.total
+      annotations.push(response.rows)
+      // Retrieve the rest of annotations
+      let promises = []
+      promises.push(new Promise(() => {
+        // TODO Create a promise for each request to do and run all of them
+      }))
+      if (_.isFunction(callback)) {
+        callback(annotations)
+      }
+    })
+  }
+
+  searchBunchAnnotations (data, offset, callback) {
     let url = this.baseURI + '/search'
     let headers = {
       'cache-control': 'no-cache'
@@ -119,6 +135,7 @@ class HypothesisClient {
     if (!_.isNumber(data.limit)) {
       data.limit = 200 // TODO
     }
+    data.offset = offset
     let settings = {
       'async': true,
       'crossDomain': true,
@@ -128,7 +145,9 @@ class HypothesisClient {
       'data': data
     }
     $.ajax(settings).done((response) => {
-      callback(response.rows)
+      if (_.isFunction(callback)) {
+        callback(response)
+      }
     })
   }
 }
