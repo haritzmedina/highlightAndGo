@@ -10,6 +10,7 @@ chrome.tabs.onUpdated.addListener((tabId) => {
 })
 
 const HypothesisManager = require('./background/HypothesisManager')
+const GoogleSheetsManager = require('./background/GoogleSheetsManager')
 const Popup = require('./popup/Popup')
 
 class Background {
@@ -22,6 +23,10 @@ class Background {
     // Initialize hypothesis manager
     this.hypothesisManager = new HypothesisManager()
     this.hypothesisManager.init()
+
+    // Initialize google sheets manager
+    this.googleSheetsManager = new GoogleSheetsManager()
+    this.googleSheetsManager.init()
 
     // Initialize page_action event handler
     chrome.pageAction.onClicked.addListener((tab) => {
