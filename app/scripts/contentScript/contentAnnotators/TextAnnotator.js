@@ -6,6 +6,8 @@ const DOMTextUtils = require('../../utils/DOMTextUtils')
 const $ = require('jquery')
 const _ = require('lodash')
 
+const TRY_RECOVERING_ANNOTATION_INTERVAL_IN_SECONDS = 3
+
 class TextAnnotator extends ContentAnnotator {
   constructor (config) {
     super()
@@ -173,7 +175,13 @@ class TextAnnotator extends ContentAnnotator {
       // Append currently highlighted elements
       this.currentlyHighlightedElements = $.merge(this.currentlyHighlightedElements, highlightedElements)
     } catch (err) {
-      throw err
+      // If annotation target is not found try it again until found
+      let interval = setInterval(() => {
+        console.log('Trying to recover annotation')
+        this.highlightAnnotation(annotation, () => {
+          clearInterval(interval)
+        })
+      }, TRY_RECOVERING_ANNOTATION_INTERVAL_IN_SECONDS * 1000)
     } finally {
       if (_.isFunction(callback)) {
         callback()
