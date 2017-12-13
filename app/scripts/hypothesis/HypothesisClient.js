@@ -148,7 +148,6 @@ class HypothesisClient {
         }
         // Execute all the promises
         Promise.all(promises).then(() => {
-          console.log(annotations)
           if (_.isFunction(callback)) {
             callback(annotations)
           }
@@ -187,10 +186,8 @@ class HypothesisClient {
       'error': function () {
         this.retryCount++
         if (this.retryCount <= this.retryLimit) {
-          console.log('Retrying for ' + offset)
           $.ajax(this)
         } else {
-          console.log('No more retries for ' + offset)
           if (_.isFunction(callback)) {
             callback(new Error(), [])
           }
