@@ -1,5 +1,7 @@
 const _ = require('lodash')
 
+const MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH = 5000
+
 let $
 if (typeof window === 'undefined') {
   $ = require('jquery')(global.window)
@@ -110,16 +112,47 @@ class HypothesisClient {
 
   searchAnnotations (data, callback) {
     let annotations = []
-    this.searchBunchAnnotations(data, 0, (response) => {
-      let total = response.total
-      annotations.push(response.rows)
-      // Retrieve the rest of annotations
-      let promises = []
-      promises.push(new Promise(() => {
-        // TODO Create a promise for each request to do and run all of them
-      }))
-      if (_.isFunction(callback)) {
-        callback(annotations)
+    this.searchBunchAnnotations(data, 0, (err, response) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(annotations)
+        }
+      } else {
+        // Concat first time done annotations
+        annotations = annotations.concat(response.rows)
+        // Set maximum of queries
+        let total = data.limit || response.total
+        if (total > MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH) {
+          total = MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH // Limit the number of results
+        }
+        // Retrieve the rest of annotations
+        let promises = []
+        for (let i = annotations.length; i < total; i += 200) {
+          let iterationData = Object.assign({}, data)
+          if (total < i + 200) {
+            iterationData.limit = total % 200
+          } else {
+            iterationData.limit = 200
+          }
+          // Create a promise for each request to do
+          promises.push(new Promise((resolve) => {
+            this.searchBunchAnnotations(iterationData, i, (err, response) => {
+              if (err) {
+                resolve() // TODO Manage error
+              } else {
+                annotations = annotations.concat(response.rows)
+                resolve()
+              }
+            })
+          }))
+        }
+        // Execute all the promises
+        Promise.all(promises).then(() => {
+          console.log(annotations)
+          if (_.isFunction(callback)) {
+            callback(annotations)
+          }
+        })
       }
     })
   }
@@ -142,13 +175,29 @@ class HypothesisClient {
       'url': url,
       'method': 'GET',
       'headers': headers,
-      'data': data
-    }
-    $.ajax(settings).done((response) => {
-      if (_.isFunction(callback)) {
-        callback(response)
+      'data': data,
+      'retryCount': 0,
+      'retryLimit': 5,
+      'created': Date.now(),
+      'success': (response) => {
+        if (_.isFunction(callback)) {
+          callback(null, response)
+        }
+      },
+      'error': function () {
+        this.retryCount++
+        if (this.retryCount <= this.retryLimit) {
+          console.log('Retrying for ' + offset)
+          $.ajax(this)
+        } else {
+          console.log('No more retries for ' + offset)
+          if (_.isFunction(callback)) {
+            callback(new Error(), [])
+          }
+        }
       }
-    })
+    }
+    $.ajax(settings)
   }
 }
 
