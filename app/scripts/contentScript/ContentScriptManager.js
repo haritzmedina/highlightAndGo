@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const $ = require('jquery')
 
 const ContentTypeManager = require('./ContentTypeManager')
 const Sidebar = require('./Sidebar')

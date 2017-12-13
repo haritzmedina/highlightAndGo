@@ -5,7 +5,8 @@ const uriChromeStorageNamespace = 'ContentTypeManagerURI'
 
 class ContentTypeManager {
   constructor () {
-    this.originalDocumentURI = location.href.replace(location.hash, '')
+    this.pdfFingerprint = null
+    this.pdfURL = null
     this.documentType = ContentTypeManager.documentTypes.html // By default document type is html
   }
 
@@ -17,6 +18,8 @@ class ContentTypeManager {
     } else {
       // If current web is pdf viewer.html, set document type as pdf
       if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
+        this.pdfFingerprint = window.PDFViewerApplication.pdfDocument.pdfInfo.fingerprint
+        this.pdfURL = window.PDFViewerApplication.url
         this.documentType = ContentTypeManager.documentTypes.pdf
         // Load current document URI
         this.getOriginalURI(() => {
