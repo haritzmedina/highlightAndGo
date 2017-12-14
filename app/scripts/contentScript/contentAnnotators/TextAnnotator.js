@@ -105,7 +105,7 @@ class TextAnnotator extends ContentAnnotator {
         selector: selectors
       }],
       text: '',
-      uri: window.abwa.contentTypeManager.originalDocumentURI
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
     }
   }
 
@@ -120,7 +120,7 @@ class TextAnnotator extends ContentAnnotator {
   loadAnnotations (callback) {
     // Retrieve annotations for current url and group
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-      url: window.abwa.contentTypeManager.originalDocumentURI,
+      url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
       group: window.abwa.groupSelector.currentGroup.id
     }, (annotations) => {
       // Search tagged annotations
