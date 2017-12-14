@@ -3,6 +3,7 @@ const GroupSelector = require('../GroupSelector')
 const TagManager = require('../TagManager')
 const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
+const LanguageUtils = require('../../utils/LanguageUtils')
 const $ = require('jquery')
 const _ = require('lodash')
 
@@ -85,6 +86,8 @@ class TextAnnotator extends ContentAnnotator {
       // Construct the annotation to send to hypothesis
       let annotation = this.constructAnnotation(selectors, event.detail.tags)
       window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(annotation, (annotation) => {
+        // Send event annotation is created
+        LanguageUtils.dispatchCustomEvent(Events.annotationCreated, {annotation: annotation})
         console.debug('Created annotation with ID: ' + annotation.id)
         this.highlightAnnotation(annotation, () => {
           window.getSelection().removeAllRanges()
@@ -121,6 +124,7 @@ class TextAnnotator extends ContentAnnotator {
     // Retrieve annotations for current url and group
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
       url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
       group: window.abwa.groupSelector.currentGroup.id
     }, (annotations) => {
       // Search tagged annotations
