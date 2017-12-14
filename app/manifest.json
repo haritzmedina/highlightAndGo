@@ -27,8 +27,8 @@
     },
     {
       "matches": ["https://docs.google.com/spreadsheets/d/*"],
-      "exclude_matches": ["*://*/*"],
-      "js": ["scripts/googleSheetsContentScript.js"]
+      "js": ["scripts/googleSheetsContentScript.js"],
+      "run_at": "document_end"
     }
   ],
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwVx+afjMFI3C3S1mcCUo/0sI96b4tACRqYK435DjH8YoDtVMViVA6jb9sVzGcG83AyU7M8q/HHLn5z7WnFTRal4vlqwhnpCCA8Pg+wfCrCAQcm4ewZk4YFmzPbXdf9TjP/st5pcOhCsYwezbELfJhbVrNool/ou3f68Sc4RBVUosKfDOOK1xgzIRyTJxHlwzRUO+ghYxay6P9fNx6mEJkVqyqBPWpIM1AhvR1xvhAW9uQQVaUvsCTMA069xohFNB/5v59tmi+RQ3yzr57QencsrwYMtpP1i7wRp3jkY52GG4lssNCiOS90UG60AXG91R6WrDkoFg32S3ajCGq16O8wIDAQAB",
