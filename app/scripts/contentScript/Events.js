@@ -1,5 +1,6 @@
 const Events = {
-  annotate: 'annotate'
+  annotate: 'annotate',
+  annotationCreated: 'annotationCreated'
 }
 
 module.exports = Events
