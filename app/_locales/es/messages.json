@@ -8,31 +8,15 @@
     "description": "The short_name (maximum of 12 characters recommended) is a short version of the app's name."
   },
   "appDescription": {
-    "message": "Permite realizar aumentaciones utilizando anotaciones web de Hypothes.is.",
+    "message": "Highlight your primary studies and go!",
     "description": "The description of the application"
   },
   "browserActionTitle": {
     "message": "Highlight&Go",
     "description": "The title of the browser action button"
   },
-  "locating": {
-    "message": "localizar",
-    "description": "Annotator:purpose mode label"
-  },
-  "annotating": {
-    "message": "anotar",
-    "description": "Annotator:purpose mode label"
-  },
-  "readingTask": {
-    "message": "Tarea de lectura",
-    "description": "Annotator:purpose reading task menu"
-  },
   "mode": {
     "message": "Modo",
     "description": "Annotator:purpose mode menu"
-  },
-  "purposes": {
-    "message": "Proposito",
-    "description": "Annotator:purpose purposes menu"
   }
 }

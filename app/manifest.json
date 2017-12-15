@@ -2,14 +2,11 @@
   "name": "__MSG_appName__",
   "short_name": "__MSG_appShortName__",
   "description": "__MSG_appDescription__",
-  "version": "0.1.1",
+  "version": "0.0.1",
   "manifest_version": 2,
   "default_locale": "en",
   "icons": {
-    "16": "images/icon-16.png",
-    "38": "images/icon-38.png",
-    "128": "images/icon-128.png",
-    "512": "images/icon-512.png"
+    "256": "images/icon-256.png"
   },
   "background": {
     "scripts": [
@@ -31,7 +28,6 @@
       "run_at": "document_end"
     }
   ],
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwVx+afjMFI3C3S1mcCUo/0sI96b4tACRqYK435DjH8YoDtVMViVA6jb9sVzGcG83AyU7M8q/HHLn5z7WnFTRal4vlqwhnpCCA8Pg+wfCrCAQcm4ewZk4YFmzPbXdf9TjP/st5pcOhCsYwezbELfJhbVrNool/ou3f68Sc4RBVUosKfDOOK1xgzIRyTJxHlwzRUO+ghYxay6P9fNx6mEJkVqyqBPWpIM1AhvR1xvhAW9uQQVaUvsCTMA069xohFNB/5v59tmi+RQ3yzr57QencsrwYMtpP1i7wRp3jkY52GG4lssNCiOS90UG60AXG91R6WrDkoFg32S3ajCGq16O8wIDAQAB",
   "page_action": {
     "default_icon": "images/icon-38-bw.png",
     "default_title": "__MSG_browserActionTitle__"
@@ -49,7 +45,7 @@
     "tabs"
   ],
   "oauth2": {
-    "client_id": "259919144328-4lrhqm3ornh8o0m23l7ks6f2a6f30k0r.apps.googleusercontent.com",
+    "client_id": "1008657588862-k3t7glpcvdrtc43dsmktkjudufh9m5ho.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/spreadsheets"
     ]
