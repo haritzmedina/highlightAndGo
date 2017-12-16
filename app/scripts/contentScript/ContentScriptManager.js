@@ -6,7 +6,7 @@ const TagManager = require('./TagManager')
 const GroupSelector = require('./GroupSelector')
 const ConfigDecisionHelper = require('./ConfigDecisionHelper')
 const AugmentationManager = require('./AugmentationManager')
-const HypothesisClientManager = require('./HypothesisClientManager')
+const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
 const SLRDataExtractionContentScript = require('../specific/slrDataExtraction/SLRDataExtractionContentScript')

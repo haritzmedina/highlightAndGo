@@ -1,4 +1,4 @@
-const HypothesisClient = require('../hypothesis/HypothesisClient')
+const HypothesisClient = require('./HypothesisClient')
 const _ = require('lodash')
 
 const reloadIntervalInSeconds = 10 // Reload the hypothesis client every 10 seconds
@@ -28,12 +28,12 @@ class HypothesisClientManager {
         this.hypothesisToken = token
         if (this.hypothesisToken) {
           this.hypothesisClient = new HypothesisClient(token)
-        } else {
-          this.hypothesisClient = new HypothesisClient()
         }
-        if (_.isFunction(callback)) {
-          callback()
-        }
+      } else {
+        this.hypothesisClient = new HypothesisClient()
+      }
+      if (_.isFunction(callback)) {
+        callback()
       }
     })
   }

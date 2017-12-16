@@ -1,4 +1,4 @@
-const HypothesisClientManager = require('../../../contentScript/HypothesisClientManager')
+const HypothesisClientManager = require('../../../hypothesis/HypothesisClientManager')
 const ChromeStorage = require('../../../utils/ChromeStorage')
 const _ = require('lodash')
 const $ = require('jquery')

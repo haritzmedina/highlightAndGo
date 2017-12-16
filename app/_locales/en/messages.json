@@ -15,24 +15,12 @@
     "message": "Highlight&Go",
     "description": "The title of the browser action button"
   },
-  "locating": {
-    "message": "Locating",
-    "description": "Annotator:purpose mode label"
+  "HypothesisLoginRequired": {
+    "message": "You are not logged in hypothesis, please login in Hypothes.is.",
+    "description": "Message to show when hypothesis login is required"
   },
-  "annotating": {
-    "message": "Annotating",
-    "description": "Annotator:purpose mode label"
-  },
-  "readingTask": {
-    "message": "Reading task",
-    "description": "Annotator:purpose reading task menu"
-  },
-  "mode": {
-    "message": "Mode",
-    "description": "Annotator:purpose mode menu"
-  },
-  "purposes": {
-    "message": "Purposes",
-    "description": "Annotator:purpose purposes menu"
+  "GoogleSheetLoginRequired": {
+    "message": "You need to give permissions to access your Google Spreadsheet.",
+    "description": "Message to show when Google Sheets permission is required"
   }
 }

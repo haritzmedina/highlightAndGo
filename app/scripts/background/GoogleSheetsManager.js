@@ -7,6 +7,11 @@ class GoogleSheetsManager {
             sendResponse(token)
           })
           return true
+        } else if (request.cmd === 'getTokenSilent') {
+          chrome.identity.getAuthToken({ 'interactive': false }, function (token) {
+            sendResponse(token)
+          })
+          return true
         }
       }
     })

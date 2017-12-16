@@ -2,6 +2,7 @@ const DOM = require('../utils/DOM')
 const $ = require('jquery')
 
 const checkHypothesisLoggedIntervalInSeconds = 20 // fetch token every X seconds
+const checkHypothesisLoggedInWhenPromptInSeconds = 0.5 // When user is prompted to login, the checking should be with higher period
 const maxTries = 10 // max tries before deleting the token
 
 class HypothesisManager {
@@ -21,14 +22,11 @@ class HypothesisManager {
     // Create an observer to check if user is logged to hypothesis
     this.retryHypothesisTokenRetrieve()
 
+    // Initialize replier for login form authentication
+    this.initShowHypothesisLoginForm()
+
     // Initialize replier for requests of hypothesis related metadata
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.scope === 'hypothesis') {
-        if (request.cmd === 'getToken') {
-          sendResponse(this.token)
-        }
-      }
-    })
+    this.initResponserForGetToken()
   }
 
   retryHypothesisTokenRetrieve () {
@@ -85,6 +83,44 @@ class HypothesisManager {
       this.token = token
       this.tries = 0
     }
+  }
+
+  initShowHypothesisLoginForm () {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.scope === 'hypothesis') {
+        if (request.cmd === 'userLoginForm') {
+          // Create new tab on google chrome
+          chrome.tabs.create({url: 'https://hypothes.is/login'}, (tab) => {
+            // Retrieve hypothesis token periodically
+            let interval = setInterval(() => {
+              this.retrieveHypothesisToken((err, token) => {
+                if (err) {
+                  console.log('Checking again in %s seconds', checkHypothesisLoggedInWhenPromptInSeconds)
+                } else {
+                  // Once logged in, take the token and close the tab
+                  this.token = token
+                  chrome.tabs.remove(tab.id, () => {
+                    clearInterval(interval)
+                    sendResponse(this.token)
+                  })
+                }
+              })
+            }, checkHypothesisLoggedInWhenPromptInSeconds * 1000)
+          })
+        }
+      }
+      return true
+    })
+  }
+
+  initResponserForGetToken () {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.scope === 'hypothesis') {
+        if (request.cmd === 'getToken') {
+          sendResponse(this.token)
+        }
+      }
+    })
   }
 }
 

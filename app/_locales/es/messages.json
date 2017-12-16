@@ -18,5 +18,13 @@
   "mode": {
     "message": "Modo",
     "description": "Annotator:purpose mode menu"
+  },
+  "HypothesisLoginRequired": {
+    "message": "No estás logueado en Hypothes.is, por favor, inicia sesión.",
+    "description": "Message to show when hypothesis login is required"
+  },
+  "GoogleSheetLoginRequired": {
+    "message": "Necesitamos permisos para acceder a tu hoja de cálculo.",
+    "description": "Message to show when Google Sheets permission is required"
   }
 }

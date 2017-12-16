@@ -13,6 +13,8 @@ const HypothesisManager = require('./background/HypothesisManager')
 const GoogleSheetsManager = require('./background/GoogleSheetsManager')
 const Popup = require('./popup/Popup')
 
+const _ = require('lodash')
+
 class Background {
   constructor () {
     this.hypothesisManager = null
@@ -55,6 +57,12 @@ class Background {
       if (request.scope === 'extension') {
         if (request.cmd === 'whoiam') {
           sendResponse(sender)
+        } else if (request.cmd === 'deactivatePopup') {
+          console.log(this.tabs)
+          if (!_.isEmpty(this.tabs) && !_.isEmpty(this.tabs[sender.tab.id])) {
+            this.tabs[sender.tab.id].deactivate()
+          }
+          sendResponse(true)
         }
       }
     })
