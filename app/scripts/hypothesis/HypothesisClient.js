@@ -196,6 +196,57 @@ class HypothesisClient {
     }
     $.ajax(settings)
   }
+
+  createHypothesisGroup (groupName, callback) {
+    let opts = {
+      method: 'GET',
+      url: 'https://hypothes.is/groups/new',
+      headers: {
+        'Authorization': 'Bearer ' + this.token
+      }
+    }
+    $.ajax(opts).done((response) => {
+      let a = document.createElement('div')
+      a.innerHTML = response
+      let aux = a.querySelector('#deformField1')
+      if (aux !== null) {
+        let csrfToken = aux.getAttribute('value')
+        let data = `-----------------------------sep
+Content-Disposition: form-data; name="__formid__"
+
+deform
+-----------------------------sep
+Content-Disposition: form-data; name="csrf_token"
+
+` + csrfToken + `
+-----------------------------sep
+Content-Disposition: form-data; name="name"
+
+` + groupName + `
+-----------------------------sep
+Content-Disposition: form-data; name="description"
+
+
+-----------------------------sep
+Content-Disposition: form-data; name="submit"
+
+submit
+-----------------------------sep--
+`
+        let req = new XMLHttpRequest()
+        req.open('POST', 'https://hypothes.is/groups/new', true)
+        req.setRequestHeader('Content-Type', 'multipart/form-data; boundary=---------------------------sep')
+        req.onload = function () {
+          let groupId = req.responseURL.replace('https://hypothes.is/groups/', '').split('/')[0]
+          console.log(groupId)
+          if (_.isFunction(callback)) {
+            callback(groupId)
+          }
+        }
+        req.send(data)
+      }
+    })
+  }
 }
 
 module.exports = HypothesisClient
