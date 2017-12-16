@@ -24,7 +24,11 @@ class GoogleSheetParser {
       }))
       Promise.all(promises).then((promisesResults) => {
         if (_.isFunction(callback)) {
-          callback(null, {dimensions: promisesResults[0], title: promisesResults[1]})
+          callback(null, {
+            dimensions: promisesResults[0],
+            title: promisesResults[1],
+            gSheetId: this.spreadsheetId
+          })
         }
       })
     })
@@ -98,7 +102,7 @@ class GoogleSheetParser {
             let categories = _.map(values[i].dataValidation.condition.values, 'userEnteredValue')
             dimensions[dimensionName] = categories
           } else {
-            dimensions[dimensionName] = null
+            dimensions[dimensionName] = []
           }
         }
         if (_.isFunction(callback)) {

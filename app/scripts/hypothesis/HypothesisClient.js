@@ -38,6 +38,21 @@ class HypothesisClient {
     })
   }
 
+  createNewAnnotations (annotations, callback) {
+    let promises = []
+    for (let i = 0; i < annotations.length; i++) {
+      promises.push(new Promise((resolve) => {
+        this.createNewAnnotation(annotations[i], (response) => {
+          resolve(response)
+        })
+        return true
+      }))
+    }
+    Promise.all(promises).then((responses) => {
+      callback(null, responses)
+    })
+  }
+
   getUserProfile (callback) {
     let url = this.baseURI + '/profile'
     let settings = {
@@ -222,7 +237,7 @@ Content-Disposition: form-data; name="csrf_token"
 -----------------------------sep
 Content-Disposition: form-data; name="name"
 
-` + groupName + `
+` + groupName.substr(0, 24) + `
 -----------------------------sep
 Content-Disposition: form-data; name="description"
 
@@ -238,12 +253,20 @@ submit
         req.setRequestHeader('Content-Type', 'multipart/form-data; boundary=---------------------------sep')
         req.onload = function () {
           let groupId = req.responseURL.replace('https://hypothes.is/groups/', '').split('/')[0]
-          console.log(groupId)
           if (_.isFunction(callback)) {
-            callback(groupId)
+            callback(null, {
+              id: groupId,
+              name: groupName.substr(0, 24),
+              url: req.responseURL,
+              public: false
+            })
           }
         }
         req.send(data)
+      } else {
+        if (_.isFunction(callback)) {
+          callback(new Error('Unable to create hypothesis group'))
+        }
       }
     })
   }

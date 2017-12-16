@@ -15,7 +15,7 @@ class GoogleSheetContentScriptManager {
           console.debug('Correctly logged in to hypothesis: %s', tokens.hypothesis)
           console.debug('Correctly logged in to gSheet: %s', tokens.gSheet)
           this.initGoogleSheetParsing(() => {
-            debugger
+
           })
         }
       })
@@ -59,6 +59,8 @@ class GoogleSheetContentScriptManager {
       if (err) {
         console.error(err)
       } else {
+        console.debug('Parsed data from gSheet')
+        console.debug(parsedSheetData)
         window.hag.HypothesisGroupInitializer = new HypothesisGroupInitializer()
         window.hag.HypothesisGroupInitializer.init(parsedSheetData, () => {
           if (_.isFunction(callback)) {
