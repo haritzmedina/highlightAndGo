@@ -26,5 +26,9 @@
   "GoogleSheetLoginRequired": {
     "message": "Necesitamos permisos para acceder a tu hoja de cálculo.",
     "description": "Message to show when Google Sheets permission is required"
+  },
+  "ShareHypothesisGroup": {
+    "message": "Copia y comparte el grupo con el resto de revisores del mapping study para empezar a trabajar colaborativamente.",
+    "description": "Message to show when hypothesis group is created"
   }
 }

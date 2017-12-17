@@ -22,5 +22,9 @@
   "GoogleSheetLoginRequired": {
     "message": "You need to give permissions to access your Google Spreadsheet.",
     "description": "Message to show when Google Sheets permission is required"
+  },
+  "ShareHypothesisGroup": {
+    "message": "Copy and share the group with the rest of the reviewers to start data extraction collaboratively.",
+    "description": "Message to show when hypothesis group is created"
   }
 }
