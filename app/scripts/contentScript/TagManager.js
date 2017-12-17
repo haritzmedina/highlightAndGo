@@ -252,7 +252,6 @@ class TagManager {
     }
     // For groups without sub elements
     let emptyGroups = _.filter(tagGroupsAnnotations, (group) => { return group.tags.length === 0 })
-    debugger
     for (let j = 0; j < emptyGroups.length; j++) {
       tagGroupsAnnotations[emptyGroups[j].config.name].tags.push(new Tag({
         name: emptyGroups[j].config.name,
@@ -290,7 +289,6 @@ class TagManager {
           this.tagsContainer.append(tagButton)
         }
       } else if (LanguageUtils.isInstanceOf(this.currentTags[0], TagGroup)) {
-
         for (let i = 0; i < this.currentTags.length; i++) {
           let tagGroupElement = this.currentTags[i].createPanel()
           if (tagGroupElement) {
@@ -316,7 +314,7 @@ class TagManager {
     this.removeTags()
     if (event.detail.mode === ModeManager.modes.highlight) {
       // Show all the tags
-      this.initAllTags()
+      this.createTagButtons()
     } else if (event.detail.mode === ModeManager.modes.index) {
       this.initFilteredTags()
     }
@@ -328,7 +326,12 @@ class TagManager {
       url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
       uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
       group: window.abwa.groupSelector.currentGroup.id}, (annotations) => {
+      this.retrieveGroupOrSubGroupTags(annotations)
     })
+  }
+
+  retrieveGroupOrSubGroupTags (annotations) {
+    // TODO Create tags only annotated
   }
 
   removeTags () {
