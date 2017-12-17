@@ -1,6 +1,7 @@
 const _ = require('lodash')
 
 const ContentTypeManager = require('./ContentTypeManager')
+const ModeManager = require('./ModeManager')
 const Sidebar = require('./Sidebar')
 const TagManager = require('./TagManager')
 const GroupSelector = require('./GroupSelector')
@@ -27,12 +28,15 @@ class ContentScriptManager {
         window.abwa.sidebar.init(() => {
           window.abwa.groupSelector = new GroupSelector()
           window.abwa.groupSelector.init(() => {
-            // Reload for first time the content by group
-            this.reloadContentByGroup()
-            // Initialize listener for group change to reload the content
-            this.initListenerForGroupChange()
-            this.status = ContentScriptManager.status.initialized
-            console.log('Initialized content script manager')
+            window.abwa.modeManager = new ModeManager()
+            window.abwa.modeManager.init(() => {
+              // Reload for first time the content by group
+              this.reloadContentByGroup()
+              // Initialize listener for group change to reload the content
+              this.initListenerForGroupChange()
+              this.status = ContentScriptManager.status.initialized
+              console.log('Initialized content script manager')
+            })
           })
         })
       })

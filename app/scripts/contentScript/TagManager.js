@@ -1,6 +1,7 @@
 const _ = require('lodash')
 const $ = require('jquery')
 const jsYaml = require('js-yaml')
+const ModeManager = require('./ModeManager')
 const LanguageUtils = require('../utils/LanguageUtils')
 const ColorUtils = require('../utils/ColorUtils')
 const Events = require('./Events')
@@ -10,7 +11,7 @@ class Tag {
     this.name = config.name
     this.namespace = config.namespace
     this.tags = config.tags || [config.namespace + ':' + config.name]
-    if (config.options.color) {
+    if (config.options && config.options.color) {
       this.color = ColorUtils.setAlphaToColor(config.options.color, 0.5) // Set a 0.5 alpha to all colors
     } else {
       this.color = ColorUtils.getHashColor(this.name)
@@ -47,7 +48,7 @@ class Tag {
 
 class TagGroup {
   constructor (config, tags) {
-    this.name = config.name
+    this.config = config
     this.tags = tags || []
   }
 
@@ -57,15 +58,21 @@ class TagGroup {
       let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
       let tagButtonContainer = $(tagGroup).find('.tagButtonContainer')
       let groupNameSpan = tagGroup.querySelector('.groupName')
-      groupNameSpan.innerText = this.name
-      groupNameSpan.title = this.name
+      groupNameSpan.innerText = this.config.name
+      groupNameSpan.title = this.config.name
       for (let j = 0; j < this.tags.length; j++) {
         tagButtonContainer.append(this.tags[j].createButton())
       }
       return tagGroup
     } else {
-      console.debug('No tags for %s group', this.name)
-      return null
+      let dimensionTag = new Tag({
+        name: this.config.name,
+        namespace: this.config.namespace,
+        options: {},
+        tags: [
+          this.config.namespace + ':' + this.config.group + ':' + this.config.name]
+      })
+      return dimensionTag.createButton()
     }
   }
 }
@@ -76,14 +83,25 @@ class TagManager {
     this.config = config
     this.tagAnnotations = []
     this.currentTags = []
+    this.events = {}
   }
 
   init (callback) {
     this.initTagsStructure(() => {
       this.initReloadHandlers(() => {
-        this.initTags(() => {
-          if (_.isFunction(callback)) {
-            callback()
+        this.initEventHandlers(() => {
+          if (window.abwa.modeManager.mode === ModeManager.modes.highlight) {
+            this.initAllTags(() => {
+              if (_.isFunction(callback)) {
+                callback()
+              }
+            })
+          } else {
+            this.initFilteredTags(() => {
+              if (_.isFunction(callback)) {
+                callback()
+              }
+            })
           }
         })
       })
@@ -161,13 +179,16 @@ class TagManager {
     }
   }
 
-  initTags (callback) {
+  initAllTags (callback) {
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url}, (annotations) => {
       // Retrieve tags of the namespace
       this.tagAnnotations = _.filter(annotations, (annotation) => {
         return this.hasANamespace(annotation, this.namespace)
       })
-      // Retrieve tag annotations
+      // Remove slr:spreadsheet annotation ONLY for SLR case
+      this.tagAnnotations = _.filter(this.tagAnnotations, (annotation) => {
+        return !this.hasATag(annotation, 'slr:spreadsheet')
+      })
       // If annotations are grouped
       if (!_.isEmpty(this.config.grouped)) {
         this.currentTags = this.createTagsBasedOnAnnotationsGrouped(annotations, this.config.grouped)
@@ -188,6 +209,12 @@ class TagManager {
     }) !== -1
   }
 
+  hasATag (annotation, tag) {
+    return _.findIndex(annotation.tags, (annotationTag) => {
+      return _.startsWith(annotationTag.toLowerCase(), tag.toLowerCase())
+    }) !== -1
+  }
+
   createTagsBasedOnAnnotations () {
     let tags = []
     for (let i = 0; i < this.tagAnnotations.length; i++) {
@@ -203,10 +230,11 @@ class TagManager {
     for (let i = 0; i < this.tagAnnotations.length; i++) {
       let groupTag = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.group))
       if (groupTag) {
-        tagGroupsAnnotations[groupTag] = new TagGroup({name: groupTag})
+        tagGroupsAnnotations[groupTag] = new TagGroup({name: groupTag, namespace: this.namespace, group: this.config.grouped.group})
       }
     }
     for (let i = 0; i < this.tagAnnotations.length; i++) {
+      let tagAnnotation = this.tagAnnotations[i]
       let tagName = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.subgroup))
       let groupBelongedTo = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.relation))
       if (tagName && groupBelongedTo) {
@@ -214,13 +242,24 @@ class TagManager {
           tagGroupsAnnotations[groupBelongedTo].tags.push(new Tag({
             name: tagName,
             namespace: this.namespace,
-            options: {},
+            options: jsYaml.load(tagAnnotation.text),
             tags: [
               this.namespace + ':' + this.config.grouped.relation + ':' + groupBelongedTo,
               this.namespace + ':' + this.config.grouped.subgroup + ':' + tagName]
           }))
         }
       }
+    }
+    // For groups without sub elements
+    let emptyGroups = _.filter(tagGroupsAnnotations, (group) => { return group.tags.length === 0 })
+    debugger
+    for (let j = 0; j < emptyGroups.length; j++) {
+      tagGroupsAnnotations[emptyGroups[j].config.name].tags.push(new Tag({
+        name: emptyGroups[j].config.name,
+        namespace: emptyGroups[j].namespace,
+        options: {},
+        tags: [emptyGroups[j].config.namespace + ':' + emptyGroups[j].config.group + ':' + emptyGroups[j].config.name]
+      }))
     }
     // Hash to array
     return _.values(tagGroupsAnnotations)
@@ -251,6 +290,7 @@ class TagManager {
           this.tagsContainer.append(tagButton)
         }
       } else if (LanguageUtils.isInstanceOf(this.currentTags[0], TagGroup)) {
+
         for (let i = 0; i < this.currentTags.length; i++) {
           let tagGroupElement = this.currentTags[i].createPanel()
           if (tagGroupElement) {
@@ -262,6 +302,38 @@ class TagManager {
     if (_.isFunction(callback)) {
       callback()
     }
+  }
+
+  initEventHandlers (callback) {
+    document.addEventListener(Events.modeChanged, (event) => { this.modeChangeHandler(event) }, false)
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
+
+  modeChangeHandler (event) {
+    // Remove all tags
+    this.removeTags()
+    if (event.detail.mode === ModeManager.modes.highlight) {
+      // Show all the tags
+      this.initAllTags()
+    } else if (event.detail.mode === ModeManager.modes.index) {
+      this.initFilteredTags()
+    }
+  }
+
+  initFilteredTags () {
+    // Check which tags has annotations
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+      url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+      group: window.abwa.groupSelector.currentGroup.id}, (annotations) => {
+    })
+  }
+
+  removeTags () {
+    let tagPanel = document.querySelector('#tags')
+    tagPanel.innerHTML = ''
   }
 }
 

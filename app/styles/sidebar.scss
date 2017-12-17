@@ -40,7 +40,7 @@
 }
 
 #abwaSidebarContainer[data-shown="true"] {
-  width: $sideBarWidth;
+  width: $sideBarWidth + 10px;
 }
 
 /* Sidebar button */
@@ -59,7 +59,7 @@
 }
 
 #abwaSidebarButton[data-toggled="true"]{
-  margin-left: $sideBarWidth;
+  margin-left: $sideBarWidth + 10px;
 }
 
 .abwaSidebarButtonIconBar {

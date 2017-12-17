@@ -26,5 +26,21 @@
   "ShareHypothesisGroup": {
     "message": "Copy and share the group with the rest of the reviewers to start data extraction collaboratively.",
     "description": "Message to show when hypothesis group is created"
+  },
+  "Mode": {
+    "message": "Mode",
+    "description": "Sidebar mode header"
+  },
+  "Highlight": {
+    "message": "Highlight",
+    "description": "Sidebar highlight label"
+  },
+  "Index": {
+    "message": "Index",
+    "description": "Sidebar index label"
+  },
+  "Dimensions": {
+    "message": "Facets",
+    "description": "Sidebar dimensions header"
   }
 }

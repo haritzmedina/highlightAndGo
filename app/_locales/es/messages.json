@@ -30,5 +30,21 @@
   "ShareHypothesisGroup": {
     "message": "Copia y comparte el grupo con el resto de revisores del mapping study para empezar a trabajar colaborativamente.",
     "description": "Message to show when hypothesis group is created"
+  },
+  "Mode": {
+    "message": "Mode",
+    "description": "Sidebar mode header"
+  },
+  "Highlight": {
+    "message": "Subrayar",
+    "description": "Sidebar highlight label"
+  },
+  "Index": {
+    "message": "Indexar",
+    "description": "Sidebar index label"
+  },
+  "Dimensions": {
+    "message": "Facets",
+    "description": "Sidebar dimensions header"
   }
 }
