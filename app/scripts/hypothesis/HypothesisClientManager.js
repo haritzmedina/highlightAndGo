@@ -28,12 +28,12 @@ class HypothesisClientManager {
         this.hypothesisToken = token
         if (this.hypothesisToken) {
           this.hypothesisClient = new HypothesisClient(token)
+        } else {
+          this.hypothesisClient = new HypothesisClient()
         }
-      } else {
-        this.hypothesisClient = new HypothesisClient()
-      }
-      if (_.isFunction(callback)) {
-        callback()
+        if (_.isFunction(callback)) {
+          callback()
+        }
       }
     })
   }
