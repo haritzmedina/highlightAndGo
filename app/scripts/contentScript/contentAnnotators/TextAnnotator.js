@@ -1,5 +1,6 @@
 const ContentAnnotator = require('./ContentAnnotator')
 const GroupSelector = require('../GroupSelector')
+const ContentTypeManager = require('../ContentTypeManager')
 const TagManager = require('../TagManager')
 const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
@@ -97,7 +98,7 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   constructAnnotation (selectors, tags) {
-    return {
+    let data = {
       group: window.abwa.groupSelector.currentGroup.id,
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
@@ -110,6 +111,19 @@ class TextAnnotator extends ContentAnnotator {
       text: '',
       uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
     }
+    // For pdf files it is also send the relationship between pdf fingerprint and web url
+    if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+      let pdfFingerprint = window.abwa.contentTypeManager.pdfFingerprint
+      data.document = {
+        documentFingerprint: pdfFingerprint,
+        link: [{
+          href: 'urn:x-pdf:' + pdfFingerprint
+        }, {
+          href: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+        }]
+      }
+    }
+    return data
   }
 
   initSelectionEvents (callback) {
