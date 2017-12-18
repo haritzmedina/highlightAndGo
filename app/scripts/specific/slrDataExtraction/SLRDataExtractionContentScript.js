@@ -71,11 +71,12 @@ class SLRDataExtractionContentScript {
               let data = result.sheets[0].data[0].rowData
               let primaryStudyRow = 0
               // Retrieve primary study row
+              let currentURL = window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis().replace(/(^\w+:|^)\/\//, '')
               for (let i = 1; i < data.length && primaryStudyRow === 0; i++) {
                 if (!_.isEmpty(data[i].values[0].userEnteredValue) && !_.isEmpty(data[i].values[0].userEnteredValue.formulaValue)) {
                   let value = data[i].values[0].userEnteredValue.formulaValue
-                  let link = value.match(/=hyperlink\("([^"]+)"/i)[1]
-                  if (link === window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()) {
+                  let link = value.match(/=hyperlink\("([^"]+)"/i)[1].replace(/(^\w+:|^)\/\//, '')
+                  if (currentURL.includes(link)) {
                     primaryStudyRow = i
                   }
                 }
