@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const TextUtils = require('../utils/TextUtils')
 
 class ContentTypeManager {
   constructor () {
@@ -11,6 +12,9 @@ class ContentTypeManager {
     if (document.querySelector('embed[type="application/pdf"][name="plugin"]')) {
       window.location = chrome.extension.getURL('content/pdfjs/web/viewer.html') + '?file=' + encodeURIComponent(window.location.href)
     } else {
+      // Load publication metadata
+      this.tryToLoadDoi()
+      this.tryToLoadPublicationPDF()
       // If current web is pdf viewer.html, set document type as pdf
       if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
         this.waitUntilPDFViewerLoad(() => {
@@ -51,6 +55,32 @@ class ContentTypeManager {
         }
       }
     }, 500)
+  }
+
+  tryToLoadDoi () {
+    // If current web is pdf viewer.html, set document type as pdf
+    if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
+      let decodedUri = decodeURIComponent(window.location.href)
+      let params = TextUtils.extractHashParamsFromUrl(decodedUri)
+      if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
+        this.doi = params.doi
+      }
+    } else {
+      // Try to load doi from page metadata
+      try {
+        this.doi = document.querySelector('meta[name="citation_doi"]').content
+      } catch (e) {
+        console.log('Doi not found for this document')
+      }
+    }
+  }
+
+  tryToLoadPublicationPDF () {
+    try {
+      this.citationPdf = document.querySelector('meta[name="citation_pdf_url"]').content
+    } catch (e) {
+      console.log('citation pdf url not found')
+    }
   }
 
   getDocumentRootElement () {

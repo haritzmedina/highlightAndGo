@@ -123,6 +123,21 @@ class TextAnnotator extends ContentAnnotator {
         }]
       }
     }
+    // If doi is available, add it to the annotation
+    if (!_.isEmpty(window.abwa.contentTypeManager.doi)) {
+      data.document = data.document || {}
+      let doi = window.abwa.contentTypeManager.doi
+      data.document.dc = { identifier: [doi] }
+      data.document.highwire = { doi: [doi] }
+      data.document.link = data.document.link || []
+      data.document.link.push({href: 'doi:' + doi})
+    }
+    // If citation pdf is found
+    if (!_.isEmpty(window.abwa.contentTypeManager.citationPdf)) {
+      let pdfUrl = window.abwa.contentTypeManager.doi
+      data.document.link = data.document.link || []
+      data.document.link.push({href: pdfUrl, type: 'application/pdf'})
+    }
     return data
   }
 
