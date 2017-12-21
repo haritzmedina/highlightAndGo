@@ -2,6 +2,8 @@ const $ = require('jquery')
 const _ = require('lodash')
 const jsYaml = require('js-yaml')
 const Events = require('../../contentScript/Events')
+const URLUtils = require('../../utils/URLUtils')
+const DOI = require('doi-regex')
 
 class SLRDataExtractionContentScript {
   constructor () {
@@ -57,7 +59,6 @@ class SLRDataExtractionContentScript {
           let params = jsYaml.load(annotation.text)
           this.spreadsheetId = params.id
           this.askUserToLogInSheets((token) => {
-            console.log(token)
             $.ajax({
               method: 'GET',
               url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.spreadsheetId,
@@ -70,14 +71,28 @@ class SLRDataExtractionContentScript {
             }).done((result) => {
               let data = result.sheets[0].data[0].rowData
               let primaryStudyRow = 0
-              // Retrieve primary study row
-              let currentURL = window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis().replace(/(^\w+:|^)\/\//, '')
-              for (let i = 1; i < data.length && primaryStudyRow === 0; i++) {
-                if (!_.isEmpty(data[i].values[0].userEnteredValue) && !_.isEmpty(data[i].values[0].userEnteredValue.formulaValue)) {
-                  let value = data[i].values[0].userEnteredValue.formulaValue
-                  let link = value.match(/=hyperlink\("([^"]+)"/i)[1].replace(/(^\w+:|^)\/\//, '')
-                  if (currentURL.includes(link)) {
-                    primaryStudyRow = i
+              // Retrieve primary study row (if it has doi, compare with doi primary studies
+              if (window.abwa.contentTypeManager.doi) {
+                let doi = window.abwa.contentTypeManager.doi
+                for (let i = 1; i < data.length && primaryStudyRow === 0; i++) {
+                  if (!_.isEmpty(data[i].values[0].userEnteredValue) && !_.isEmpty(data[i].values[0].userEnteredValue.formulaValue)) {
+                    let value = data[i].values[0].userEnteredValue.formulaValue
+                    let link = value.match(/=hyperlink\("([^"]+)"/i)[1].replace(/(^\w+:|^)\/\//, '')
+                    let rowDoi = DOI.groups(link)[1]
+                    if (!_.isEmpty(rowDoi) && doi === rowDoi) {
+                      primaryStudyRow = i
+                    }
+                  }
+                }
+              } else {
+                let currentURL = window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis().replace(/(^\w+:|^)\/\//, '')
+                for (let i = 1; i < data.length && primaryStudyRow === 0; i++) {
+                  if (!_.isEmpty(data[i].values[0].userEnteredValue) && !_.isEmpty(data[i].values[0].userEnteredValue.formulaValue)) {
+                    let value = data[i].values[0].userEnteredValue.formulaValue
+                    let link = value.match(/=hyperlink\("([^"]+)"/i)[1].replace(/(^\w+:|^)\/\//, '')
+                    if (URLUtils.areSameURI(currentURL, link)) {
+                      primaryStudyRow = i
+                    }
                   }
                 }
               }

@@ -26,6 +26,15 @@
       "matches": ["https://docs.google.com/spreadsheets/d/*"],
       "js": ["scripts/googleSheetsContentScript.js"],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["*://dl.acm.org/citation.cfm?doid=*"],
+      "js": ["scripts/acmContentScript.js"],
+      "run_at": "document_end"
+    }, {
+      "matches": ["*://www.sciencedirect.com/science/article/pii/*"],
+      "js": ["scripts/scienceDirectContentScript.js"],
+      "run_at": "document_end"
     }
   ],
   "page_action": {
@@ -42,7 +51,11 @@
     "https://hypothes.is/",
     "identity",
     "storage",
-    "tabs"
+    "tabs",
+    "webRequest",
+    "webRequestBlocking",
+    "*://doi.org/*",
+    "*://dx.doi.org/*"
   ],
   "oauth2": {
     "client_id": "1008657588862-k3t7glpcvdrtc43dsmktkjudufh9m5ho.apps.googleusercontent.com",

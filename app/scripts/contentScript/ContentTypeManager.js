@@ -1,5 +1,5 @@
 const _ = require('lodash')
-const TextUtils = require('../utils/TextUtils')
+const URLUtils = require('../utils/URLUtils')
 
 class ContentTypeManager {
   constructor () {
@@ -27,7 +27,7 @@ class ContentTypeManager {
         })
       } else {
         this.documentType = ContentTypeManager.documentTypes.html
-        this.documentURL = window.location.href.split('#')[0] // Remove the hash
+        this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
         if (_.isFunction(callback)) {
           callback()
         }
@@ -61,7 +61,7 @@ class ContentTypeManager {
     // If current web is pdf viewer.html, set document type as pdf
     if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
       let decodedUri = decodeURIComponent(window.location.href)
-      let params = TextUtils.extractHashParamsFromUrl(decodedUri)
+      let params = URLUtils.extractHashParamsFromUrl(decodedUri)
       if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
         this.doi = params.doi
       }

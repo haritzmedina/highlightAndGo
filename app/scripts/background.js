@@ -5,12 +5,17 @@ chrome.runtime.onInstalled.addListener((details) => {
   console.log('previousVersion', details.previousVersion)
 })
 
-chrome.tabs.onUpdated.addListener((tabId) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   chrome.pageAction.show(tabId)
+})
+
+chrome.tabs.onCreated.addListener((tab) => {
+  // Retrieve saved clicked doi element
 })
 
 const HypothesisManager = require('./background/HypothesisManager')
 const GoogleSheetsManager = require('./background/GoogleSheetsManager')
+const DoiManager = require('./background/DoiManager')
 const Popup = require('./popup/Popup')
 
 const _ = require('lodash')
@@ -29,6 +34,10 @@ class Background {
     // Initialize google sheets manager
     this.googleSheetsManager = new GoogleSheetsManager()
     this.googleSheetsManager.init()
+
+    // Initialize doi manager
+    this.doiManager = new DoiManager()
+    this.doiManager.init()
 
     // Initialize page_action event handler
     chrome.pageAction.onClicked.addListener((tab) => {
@@ -49,6 +58,8 @@ class Background {
         if (this.tabs[tabId].activated) {
           this.tabs[tabId].activate()
         }
+      } else {
+        this.tabs[tabId] = new Popup()
       }
     })
 
@@ -58,9 +69,14 @@ class Background {
         if (request.cmd === 'whoiam') {
           sendResponse(sender)
         } else if (request.cmd === 'deactivatePopup') {
-          console.log(this.tabs)
           if (!_.isEmpty(this.tabs) && !_.isEmpty(this.tabs[sender.tab.id])) {
             this.tabs[sender.tab.id].deactivate()
+          }
+          sendResponse(true)
+        } else if (request.cmd === 'activatePopup') {
+          console.log(this.tabs)
+          if (!_.isEmpty(this.tabs) && !_.isEmpty(this.tabs[sender.tab.id])) {
+            this.tabs[sender.tab.id].activate()
           }
           sendResponse(true)
         }
