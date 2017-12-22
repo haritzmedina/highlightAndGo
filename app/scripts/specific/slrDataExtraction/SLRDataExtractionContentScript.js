@@ -78,13 +78,19 @@ class SLRDataExtractionContentScript {
                   if (!_.isEmpty(data[i].values[0].userEnteredValue) && !_.isEmpty(data[i].values[0].userEnteredValue.formulaValue)) {
                     let value = data[i].values[0].userEnteredValue.formulaValue
                     let link = value.match(/=hyperlink\("([^"]+)"/i)[1].replace(/(^\w+:|^)\/\//, '')
-                    let rowDoi = DOI.groups(link)[1]
-                    if (!_.isEmpty(rowDoi) && doi === rowDoi) {
-                      primaryStudyRow = i
+                    // If link is doi.org url
+                    let doiGroups = DOI.groups(link)
+                    if (!_.isEmpty(doiGroups) && !_.isEmpty(doiGroups[1])) {
+                      let rowDoi = DOI.groups(link)[1]
+                      if (!_.isEmpty(rowDoi) && doi === rowDoi) {
+                        primaryStudyRow = i
+                      }
                     }
                   }
                 }
-              } else {
+              }
+              // If primary study is not found by doi, try by URL
+              if (primaryStudyRow === 0) {
                 let currentURL = window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis().replace(/(^\w+:|^)\/\//, '')
                 for (let i = 1; i < data.length && primaryStudyRow === 0; i++) {
                   if (!_.isEmpty(data[i].values[0].userEnteredValue) && !_.isEmpty(data[i].values[0].userEnteredValue.formulaValue)) {
@@ -106,11 +112,17 @@ class SLRDataExtractionContentScript {
               }
               console.log('Dimension column %s', dimensionColumn)
               if (primaryStudyRow !== 0 && dimensionColumn !== 0) {
-                // If cell has value, turn cell in red
+                // If cell is empty, add annotation value to the cell
                 if (_.isEmpty(data[primaryStudyRow].values[dimensionColumn].formattedValue)) {
                   console.log('Setting dimension')
                   let range = this.columnToLetter(dimensionColumn + 1) + (primaryStudyRow + 1)
-                  let annotationURL = classificationAnnotation.uri + '#annotations:' + classificationAnnotation.id
+                  // If doi is found in PDF, the annotation URL will be doi.org, in other case the same as annotation uri
+                  let annotationURL = null
+                  if (window.abwa.contentTypeManager.doi) {
+                    annotationURL = 'https://doi.org/' + window.abwa.contentTypeManager.doi + '#hag:' + classificationAnnotation.id
+                  } else {
+                    annotationURL = classificationAnnotation.uri + '#hag:' + classificationAnnotation.id
+                  }
                   $.ajax({
                     async: true,
                     method: 'PUT',
@@ -125,7 +137,7 @@ class SLRDataExtractionContentScript {
                       'values': [['=HYPERLINK("' + annotationURL + '","' + category + '")']]
                     })
                   })
-                } else { // Else, add annotation value to the cell
+                } else { // Else, turn cell in red
                   console.log('Dimension already set')
                   $.ajax({
                     async: true,
