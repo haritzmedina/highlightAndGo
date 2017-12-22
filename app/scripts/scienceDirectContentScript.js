@@ -5,7 +5,7 @@ class ScienceDirectContentScript {
   init () {
     // Get if this tab has an annotation to open and a doi
     let params = TextUtils.extractHashParamsFromUrl(window.location.href)
-    if (params.hag) {
+    if (!_.isEmpty(params) && !_.isEmpty(params.hag)) {
       // Activate the extension
       chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, (result) => {
         // Retrieve if annotation is done in current url or in pdf version
