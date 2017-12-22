@@ -28,7 +28,7 @@
       "run_at": "document_end"
     },
     {
-      "matches": ["*://dl.acm.org/citation.cfm?doid=*"],
+      "matches": ["*://dl.acm.org/citation.cfm?*"],
       "js": ["scripts/acmContentScript.js"],
       "run_at": "document_end"
     }, {
