@@ -12,7 +12,11 @@ class Tag {
     this.namespace = config.namespace
     this.tags = config.tags || [config.namespace + ':' + config.name]
     if (config.options && config.options.color) {
-      this.color = ColorUtils.setAlphaToColor(config.options.color, 0.5) // Set a 0.5 alpha to all colors
+      if (!ColorUtils.hasAlpha(config.options.color)) {
+        this.color = ColorUtils.setAlphaToColor(config.options.color, 0.5) // Set a 0.5 alpha to all colors without alpha
+      } else {
+        this.color = config.options.color
+      }
     } else {
       this.color = ColorUtils.getHashColor(this.name)
     }
@@ -180,7 +184,7 @@ class TagManager {
   }
 
   initAllTags (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url}, (annotations) => {
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url, order: 'desc'}, (annotations) => {
       // Retrieve tags of the namespace
       this.tagAnnotations = _.filter(annotations, (annotation) => {
         return this.hasANamespace(annotation, this.namespace)
@@ -233,16 +237,30 @@ class TagManager {
         tagGroupsAnnotations[groupTag] = new TagGroup({name: groupTag, namespace: this.namespace, group: this.config.grouped.group})
       }
     }
+    let groups = _.keys(tagGroupsAnnotations)
+    let colors = {}
+    for (let i = 0; i < groups.length; i++) {
+      colors[groups[i]] = ColorUtils.getDifferentColor(_.values(colors), groups[i])
+    }
     for (let i = 0; i < this.tagAnnotations.length; i++) {
       let tagAnnotation = this.tagAnnotations[i]
       let tagName = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.subgroup))
       let groupBelongedTo = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.relation))
       if (tagName && groupBelongedTo) {
         if (_.isArray(tagGroupsAnnotations[groupBelongedTo].tags)) {
+          // Load options from annotation text body
+          let options = jsYaml.load(tagAnnotation.text)
+          // If color is not defined, define one per group
+          if (_.isEmpty(options)) {
+            options = {}
+          }
+          if (_.isEmpty(options.color)) {
+            options.color = ColorUtils.setAlphaToColor(colors[groupBelongedTo], (0.2 + tagGroupsAnnotations[groupBelongedTo].tags.length * 0.1))
+          }
           tagGroupsAnnotations[groupBelongedTo].tags.push(new Tag({
             name: tagName,
             namespace: this.namespace,
-            options: jsYaml.load(tagAnnotation.text),
+            options: options,
             tags: [
               this.namespace + ':' + this.config.grouped.relation + ':' + groupBelongedTo,
               this.namespace + ':' + this.config.grouped.subgroup + ':' + tagName]

@@ -1,5 +1,6 @@
 const TextUtils = require('./utils/URLUtils')
 const HypothesisClientManager = require('./hypothesis/HypothesisClientManager')
+const _ = require('lodash')
 
 class ScienceDirectContentScript {
   init () {
