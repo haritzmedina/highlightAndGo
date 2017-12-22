@@ -52,10 +52,6 @@ class ColorUtils {
     } while (_.isEmpty(color) && attempts < 10)
     return color
   }
-
-  static isDark (colorStr) {
-
-  }
 }
 
 module.exports = ColorUtils
