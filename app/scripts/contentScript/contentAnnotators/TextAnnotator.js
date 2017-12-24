@@ -6,6 +6,7 @@ const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
 const LanguageUtils = require('../../utils/LanguageUtils')
 const $ = require('jquery')
+require('jquery-contextmenu/dist/jquery.contextMenu')
 const _ = require('lodash')
 
 const TRY_RECOVERING_ANNOTATION_INTERVAL_IN_SECONDS = 3
@@ -205,10 +206,13 @@ class TextAnnotator extends ContentAnnotator {
         highlightedElement.dataset.color = tagForAnnotation.color
         highlightedElement.dataset.tags = tagForAnnotation.tags
       })
+      // Create context menu event for highlighted elements
+      this.createContextMenuForAnnotation(annotation)
       // Append currently highlighted elements
       this.currentlyHighlightedElements = $.merge(this.currentlyHighlightedElements, highlightedElements)
     } catch (err) {
       // If annotation target is not found try it again until found
+      // TODO Performance: Check if this should be setTimeout instead of interval (cause is recursive function)
       let interval = setInterval(() => {
         console.log('Trying to recover annotation')
         this.highlightAnnotation(annotation, () => {
@@ -220,6 +224,20 @@ class TextAnnotator extends ContentAnnotator {
         callback()
       }
     }
+  }
+
+  createContextMenuForAnnotation (annotation) {
+    $.contextMenu({
+      selector: '[data-annotation-id="' + annotation.id + '"]',
+      callback: (key, options) => {
+        // TODO Delete annotation
+        console.log(key)
+        console.log(options)
+      },
+      items: {
+        'delete': {name: 'Delete annotation', icon: 'delete'}
+      }
+    })
   }
 
   setHighlightedBackgroundColor (elem, color) {

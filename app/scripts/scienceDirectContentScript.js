@@ -14,7 +14,6 @@ class ScienceDirectContentScript {
         window.hag.hypothesisClientManager.init(() => {
           window.hag.hypothesisClientManager.hypothesisClient.fetchAnnotation(params.hag, (annotation) => {
             // TODO Check if annotation is from this page
-            debugger
           })
         })
       })
