@@ -6,6 +6,7 @@ const Sidebar = require('./Sidebar')
 const TagManager = require('./TagManager')
 const GroupSelector = require('./GroupSelector')
 const ConfigDecisionHelper = require('./ConfigDecisionHelper')
+const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
 const AugmentationManager = require('./AugmentationManager')
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
@@ -26,16 +27,19 @@ class ContentScriptManager {
       window.abwa.hypothesisClientManager.init(() => {
         window.abwa.sidebar = new Sidebar()
         window.abwa.sidebar.init(() => {
-          window.abwa.groupSelector = new GroupSelector()
-          window.abwa.groupSelector.init(() => {
-            window.abwa.modeManager = new ModeManager()
-            window.abwa.modeManager.init(() => {
-              // Reload for first time the content by group
-              this.reloadContentByGroup()
-              // Initialize listener for group change to reload the content
-              this.initListenerForGroupChange()
-              this.status = ContentScriptManager.status.initialized
-              console.log('Initialized content script manager')
+          window.abwa.annotationBasedInitializer = new AnnotationBasedInitializer()
+          window.abwa.annotationBasedInitializer.init(() => {
+            window.abwa.groupSelector = new GroupSelector()
+            window.abwa.groupSelector.init(() => {
+              window.abwa.modeManager = new ModeManager()
+              window.abwa.modeManager.init(() => {
+                // Reload for first time the content by group
+                this.reloadContentByGroup()
+                // Initialize listener for group change to reload the content
+                this.initListenerForGroupChange()
+                this.status = ContentScriptManager.status.initialized
+                console.log('Initialized content script manager')
+              })
             })
           })
         })

@@ -44,7 +44,10 @@ class GroupSelector {
       let annotationGroupId = window.abwa.annotationBasedInitializer.initAnnotation.group
       // Load group of annotation
       this.retrieveHypothesisGroups((groups) => {
+        // Set current group
         this.currentGroup = _.find(groups, (group) => { return group.id === annotationGroupId })
+        // Save to chrome storage current group
+        ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.currentGroup)}, ChromeStorage.local)
         if (_.isFunction(callback)) {
           callback()
         }

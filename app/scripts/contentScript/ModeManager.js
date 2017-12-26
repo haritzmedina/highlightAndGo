@@ -5,7 +5,16 @@ const Events = require('./Events')
 
 class ModeManager {
   constructor (mode) {
-    this.mode = mode || ModeManager.modes.highlight
+    if (mode) {
+      this.mode = mode
+    } else {
+      // If initialization based on annotation
+      if (window.abwa.annotationBasedInitializer.initAnnotation) {
+        this.mode = ModeManager.modes.index
+      } else {
+        this.mode = ModeManager.modes.highlight
+      }
+    }
   }
 
   init (callback) {
@@ -36,9 +45,9 @@ class ModeManager {
   setToggleStatus () {
     let annotatorToggle = document.querySelector('#annotatorToggle')
     if (this.mode === ModeManager.modes.highlight) {
-      annotatorToggle.setAttribute('checked', 'true')
+      annotatorToggle.checked = true
     } else {
-      annotatorToggle.setAttribute('checked', 'false')
+      annotatorToggle.checked = false
     }
   }
 
