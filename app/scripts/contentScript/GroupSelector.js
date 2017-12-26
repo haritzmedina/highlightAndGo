@@ -39,25 +39,38 @@ class GroupSelector {
    * @param callback
    */
   defineCurrentGroup (callback) {
-    if (!this.currentGroup) {
-      ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
-        if (err) {
-          throw new Error('Unable to retrieve current selected group')
-        } else {
-          // Parse chrome storage result
-          if (!_.isEmpty(savedCurrentGroup) && savedCurrentGroup.data) {
-            this.currentGroup = JSON.parse(savedCurrentGroup.data)
-          } else {
-            this.currentGroup = defaultGroup
-          }
-        }
+    // If initialization annotation is set
+    if (window.abwa.annotationBasedInitializer.initAnnotation) {
+      let annotationGroupId = window.abwa.annotationBasedInitializer.initAnnotation.group
+      // Load group of annotation
+      this.retrieveHypothesisGroups((groups) => {
+        this.currentGroup = _.find(groups, (group) => { return group.id === annotationGroupId })
         if (_.isFunction(callback)) {
           callback()
         }
       })
-    } else {
-      if (_.isFunction(callback)) {
-        callback()
+    } else { // If initialization annotation is not set
+      if (!this.currentGroup) {
+        // Retrieve last saved group
+        ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
+          if (err) {
+            throw new Error('Unable to retrieve current selected group')
+          } else {
+            // Parse chrome storage result
+            if (!_.isEmpty(savedCurrentGroup) && savedCurrentGroup.data) {
+              this.currentGroup = JSON.parse(savedCurrentGroup.data)
+            } else {
+              this.currentGroup = defaultGroup
+            }
+          }
+          if (_.isFunction(callback)) {
+            callback()
+          }
+        })
+      } else {
+        if (_.isFunction(callback)) {
+          callback()
+        }
       }
     }
   }
