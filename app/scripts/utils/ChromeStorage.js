@@ -1,6 +1,6 @@
 'use strict'
 
-const languageUtils = require('./LanguageUtils')
+const _ = require('lodash')
 
 class ChromeStorage {
   /**
@@ -12,15 +12,15 @@ class ChromeStorage {
    * @throws Error if it was unable to storage data
    */
   static setData (namespace, data, storageArea, callback) {
-    if (languageUtils.isFunction(callback)) {
-      // Create to be saved object
-      let obj = {}
-      obj[namespace] = data
-      storageArea.set(obj, () => {
-        // Execute callback and return error if happened
+    // Create to be saved object
+    let obj = {}
+    obj[namespace] = data
+    storageArea.set(obj, () => {
+      // Execute callback and return error if happened
+      if (_.isFunction(callback)) {
         callback(chrome.runtime.lastError)
-      })
-    }
+      }
+    })
   }
 
   /**
@@ -32,7 +32,9 @@ class ChromeStorage {
   static getData (namespace, storageArea, callback) {
     storageArea.get(namespace, function (items) {
       // Execute callback and return error if happened and the data required
-      callback(chrome.runtime.lastError, items[namespace])
+      if (_.isFunction(callback)) {
+        callback(chrome.runtime.lastError, items[namespace])
+      }
     })
   }
 }
