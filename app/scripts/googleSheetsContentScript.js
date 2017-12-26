@@ -13,7 +13,10 @@ window.addEventListener('load', () => {
         window.hag = {}
         window.hag.contentScriptManager = new GoogleSheetContentScriptManager()
         window.hag.contentScriptManager.init(() => {
-          // TODO Disable the button of popup
+          // Disable the button of popup
+          chrome.runtime.sendMessage({scope: 'extension', cmd: 'deactivatePopup'}, (result) => {
+            console.log('Deactivated popup')
+          })
         })
       }
     }
