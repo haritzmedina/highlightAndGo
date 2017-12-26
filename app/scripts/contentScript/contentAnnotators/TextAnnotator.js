@@ -16,6 +16,7 @@ class TextAnnotator extends ContentAnnotator {
     super()
     this.events = {}
     this.events.mouseUpOnDocumentHandler = null
+    this.currentUserProfile = null
     this.currentlyHighlightedElements = []
     this.highlightClassName = 'highlightedAnnotation'
     this.highlightFilteredClassName = 'unHighlightedAnnotation'
@@ -24,7 +25,7 @@ class TextAnnotator extends ContentAnnotator {
   init (callback) {
     this.initSelectionEvents(() => {
       this.initAnnotateEvent(() => {
-        // TODO Load annotations for first time
+        // Load annotations for first time
         this.loadAnnotations(() => {
           if (_.isFunction(callback)) {
             callback()
@@ -35,24 +36,24 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   initAnnotateEvent (callback) {
-    this.events.annotateEvent = this.createAnnotateEventHandler()
+    this.events.annotateEvent = this.createAnnotationEventHandler()
     document.addEventListener(Events.annotate, this.events.annotateEvent, false)
     if (_.isFunction(callback)) {
       callback()
     }
   }
 
-  createAnnotateEventHandler () {
+  createAnnotationEventHandler () {
     return (event) => {
       let selectors = []
       // If selection is empty, return null
       if (document.getSelection().toString().length === 0) {
-        console.debug('Current selection is empty') // TODO Show user message
+        alert('Nothing to highlight, current selection is empty') // Show user message
         return
       }
       // If selection is child of sidebar, return null
       if ($(document.getSelection().anchorNode).parents('#annotatorSidebarWrapper').toArray().length !== 0) {
-        console.debug('Current selection is child of the annotator sidebar') // TODO Show user message
+        alert('The selected content cannot be highlighted, is not part of the document') // Show user message
         return
       }
       let range = document.getSelection().getRangeAt(0)
@@ -151,30 +152,34 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   loadAnnotations (callback) {
-    // Retrieve annotations for current url and group
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-      url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
-      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
-      group: window.abwa.groupSelector.currentGroup.id
-    }, (annotations) => {
-      // Search tagged annotations
-      let tagList = window.abwa.tagManager.getTagsList()
-      let taggedAnnotations = []
-      for (let i = 0; i < annotations.length; i++) {
-        // Check if annotation contains a tag of current group
-        let tag = TagManager.retrieveTagForAnnotation(annotations[i], tagList)
-        if (tag) {
-          taggedAnnotations.push(annotations[i])
+    // Retrieve current user profile
+    window.abwa.hypothesisClientManager.hypothesisClient.getUserProfile((userProfile) => {
+      this.currentUserProfile = userProfile
+      // Retrieve annotations for current url and group
+      window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+        url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+        uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+        group: window.abwa.groupSelector.currentGroup.id
+      }, (annotations) => {
+        // Search tagged annotations
+        let tagList = window.abwa.tagManager.getTagsList()
+        let taggedAnnotations = []
+        for (let i = 0; i < annotations.length; i++) {
+          // Check if annotation contains a tag of current group
+          let tag = TagManager.retrieveTagForAnnotation(annotations[i], tagList)
+          if (tag) {
+            taggedAnnotations.push(annotations[i])
+          }
         }
+        console.debug('Annotations to highlight')
+        console.debug(taggedAnnotations)
+        // Highlight annotations in the DOM
+        this.highlightAnnotations(taggedAnnotations)
+      })
+      if (_.isFunction(callback)) {
+        callback()
       }
-      console.debug('Annotations to highlight')
-      console.debug(taggedAnnotations)
-      // Highlight annotations in the DOM
-      this.highlightAnnotations(taggedAnnotations)
     })
-    if (_.isFunction(callback)) {
-      callback()
-    }
   }
 
   highlightAnnotations (annotations, callback) {
@@ -227,17 +232,33 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   createContextMenuForAnnotation (annotation) {
-    $.contextMenu({
-      selector: '[data-annotation-id="' + annotation.id + '"]',
-      callback: (key, options) => {
-        // TODO Delete annotation
-        console.log(key)
-        console.log(options)
-      },
-      items: {
-        'delete': {name: 'Delete annotation', icon: 'delete'}
-      }
-    })
+    if (this.currentUserProfile.userid === annotation.user) {
+      $.contextMenu({
+        selector: '[data-annotation-id="' + annotation.id + '"]',
+        callback: (key, options) => {
+          // Delete annotation
+          window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (result) => {
+            if (!result.deleted) {
+              // Alert user error happened
+              alert('Error deleting hypothesis annotation, please try it again')
+            } else {
+              // Retrieve highlighted elements for annotation
+              let annotationElements = _.remove(this.currentlyHighlightedElements, (element) => {
+                return element.dataset.annotationId === annotation.id
+              })
+              // Unhighlight annotation highlight elements
+              DOMTextUtils.unHighlightElements(annotationElements)
+              // Dispatch deleted annotation event
+              LanguageUtils.dispatchCustomEvent(Events.annotationDeleted, {annotation: annotation})
+              console.debug('Deleted annotation ' + annotation.id)
+            }
+          })
+        },
+        items: {
+          'delete': {name: 'Delete annotation', icon: 'delete'}
+        }
+      })
+    }
   }
 
   setHighlightedBackgroundColor (elem, color) {
