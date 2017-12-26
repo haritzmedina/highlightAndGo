@@ -12,11 +12,8 @@ class SLRDataExtractionContentScript {
   }
 
   init (callback) {
-    this.linkToSLR = document.createElement('a')
-    this.linkToSLR.href = chrome.extension.getURL('content/slrView/index.html')
-    this.linkToSLR.innerText = 'View current status'
-    this.linkToSLR.target = '_blank'
-    $('#groupBody').append(this.linkToSLR)
+    // Create link to back to spreadsheet
+    this.initBackToSpreadsheetLink()
     // Listen to event when annotation is created
     document.addEventListener(Events.annotationCreated, (event) => {
       // Add to google sheet the current annotation
@@ -35,6 +32,32 @@ class SLRDataExtractionContentScript {
       this.updateClassificationInGSheetWithDeletedAnnotation(deletedAnnotation, () => {
 
       })
+    })
+  }
+
+  initBackToSpreadsheetLink (callback) {
+    // Retrieve current spreadsheet id
+    this.retrieveSpreadsheetIdForCurrentGroup((err, spreadsheetId) => {
+      if (err) {
+        console.error(new Error('Unable to retrieve spreadsheet asociated with this group'))
+      } else {
+        this.askUserToLogInSheets((token) => {
+          this.getSpreadsheetData(spreadsheetId, token, null, (result) => {
+            let data = result.sheets[0].data[0].rowData
+            // Retrieve current primary study row
+            let primaryStudyRow = this.retrievePrimaryStudyRow(data)
+            // Construct link to spreadsheet
+            this.linkToSLR = document.createElement('a')
+            this.linkToSLR.href = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit#gid=0&range=A' + primaryStudyRow
+            this.linkToSLR.innerText = 'Back to spreadsheet' // TODO i18n
+            this.linkToSLR.target = '_blank'
+            $('#groupBody').append(this.linkToSLR)
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          })
+        })
+      }
     })
   }
 
