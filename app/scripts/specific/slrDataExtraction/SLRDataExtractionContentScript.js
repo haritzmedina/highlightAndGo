@@ -163,27 +163,76 @@ class SLRDataExtractionContentScript {
     })
     let dimension = null
     if (dimensionTag.includes('slr:isCategoryOf:')) { // Categorized dimension
-      dimension = dimensionTag.replace('slr:isCategoryOf:', '')
-      // Search all annotations ...
-      window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-        url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(), // For current document (pdf/html)
-        uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(), // For current document (html)
-        group: window.abwa.groupSelector.currentGroup.id, // For current group
-        tags: ['slr:isCategoryOf:' + dimension], // With slr:isCategoryOf:<dimension>
-        order: 'asc' // Ordered from oldest to newest
-      }, (annotations) => {
-        debugger
-        // If no annotation is found, the cell is empty and white
-        // If only annotations of 1 category are found, the category name is set and the oldest one is set, cell in white
-        // If annotations more than 1 category are found, oldest annotation url and category, cell is set in red color
-        if (annotations.length === 0) {
-          // Search row and column
-          // Set in white and empty the cell
+      this.retrieveSpreadsheetIdForCurrentGroup((err, spreadsheetId) => {
+        if (err) {
+          console.error(err)
         } else {
-          // Check if all annotations have the same categories
-          _.groupBy(annotations, (annotation) => {
-            _.find(annotation.tags, (tag) => {
-              tag.includes('slr:category:')
+          this.askUserToLogInSheets((token) => {
+            this.getSpreadsheetData(spreadsheetId, token, null, (result) => {
+              let data = result.sheets[0].data[0].rowData
+              dimension = dimensionTag.replace('slr:isCategoryOf:', '')
+              window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+                url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(), // For current document (pdf/html)
+                uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(), // For current document (html)
+                group: window.abwa.groupSelector.currentGroup.id, // For current group
+                tags: 'slr:isCategoryOf:' + dimension, // With slr:isCategoryOf:<dimension>
+                order: 'asc' // Ordered from oldest to newest
+              }, (annotations) => {
+                // Search row and column
+                let primaryStudyRow = this.retrievePrimaryStudyRow(data)
+                let dimensionColumn = this.retrieveDimensionColumn(data, dimension)
+                // If no annotation is found, the cell is empty and white
+                // If only annotations of 1 category are found, the category name is set and the oldest one is set, cell in white
+                // If annotations more than 1 category are found, oldest annotation url and category, cell is set in red color
+                if (annotations.length === 0) {
+                  // Set in white and empty the cell
+                  this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, null, () => {
+                    this.setCellEmpty({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
+                      console.debug('Empty dimension %s in sheet, cause no annotations are found')
+                      if (_.isFunction(callback)) {
+                        callback()
+                      }
+                    })
+                  })
+                } else {
+                  // Check if all annotations have the same categories
+                  let categories = _.keys(_.groupBy(annotations, (annotation) => {
+                    return _.find(annotation.tags, (tag) => {
+                      return tag.includes('slr:category:')
+                    })
+                  }))
+                  if (categories.length === 1) {
+                    // Set in white and fill the cell
+                    this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, null, () => {
+                      let category = categories[0].replace('slr:category:', '')
+                      let link = this.getAnnotationUrl(annotations[0])
+                      this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
+                        if (_.isFunction(callback)) {
+                          callback()
+                        }
+                      })
+                    })
+                  } else {
+                    // Cell in red, oldest value
+                    this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, {
+                      'red': 0.9,
+                      'green': 0,
+                      'blue': 0
+                    }, () => {
+                      // Retrieve category of the oldest annotation
+                      let category = _.find(annotations[0].tags, (tag) => {
+                        return tag.includes('slr:category:')
+                      }).replace('slr:category:', '')
+                      let link = this.getAnnotationUrl(annotations[0])
+                      this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
+                        if (_.isFunction(callback)) {
+                          callback()
+                        }
+                      })
+                    })
+                  }
+                }
+              })
             })
           })
         }
