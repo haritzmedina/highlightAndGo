@@ -95,7 +95,6 @@ class SLRDataExtractionContentScript {
               let dimensionColumn = this.retrieveDimensionColumn(data, dimension)
               if (primaryStudyRow !== 0 && dimensionColumn !== 0) {
                 // If cell is empty, add annotation value to the cell
-                debugger
                 if (_.isEmpty(data[primaryStudyRow].values[dimensionColumn].formattedValue)) {
                   console.debug('Setting dimension')
                   // If doi is found in PDF, the annotation URL will be doi.org, in other case the same as annotation uri
