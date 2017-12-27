@@ -48,7 +48,7 @@ class SLRDataExtractionContentScript {
             let primaryStudyRow = this.retrievePrimaryStudyRow(data)
             // Construct link to spreadsheet
             this.linkToSLR = document.createElement('a')
-            this.linkToSLR.href = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit#gid=0&range=A' + primaryStudyRow
+            this.linkToSLR.href = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit#gid=0&range=A' + (primaryStudyRow + 1)
             this.linkToSLR.innerText = 'Back to spreadsheet' // TODO i18n
             this.linkToSLR.target = '_blank'
             $('#groupBody').append(this.linkToSLR)
@@ -95,6 +95,7 @@ class SLRDataExtractionContentScript {
               let dimensionColumn = this.retrieveDimensionColumn(data, dimension)
               if (primaryStudyRow !== 0 && dimensionColumn !== 0) {
                 // If cell is empty, add annotation value to the cell
+                debugger
                 if (_.isEmpty(data[primaryStudyRow].values[dimensionColumn].formattedValue)) {
                   console.debug('Setting dimension')
                   // If doi is found in PDF, the annotation URL will be doi.org, in other case the same as annotation uri
@@ -109,8 +110,9 @@ class SLRDataExtractionContentScript {
                         callback()
                       }
                     })
-                } else { // Else, turn cell in red
-                  console.log('Dimension already set')
+                } else if (data[primaryStudyRow].values[dimensionColumn].formattedValue !== category) {
+                  // If cell value is different to the annotated category, so set the cell in red
+                  console.debug('Dimension %s differs from already set one %s')
                   this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, {
                     'red': 0.9,
                     'green': 0,
@@ -121,6 +123,7 @@ class SLRDataExtractionContentScript {
                     }
                   })
                 }
+                // If cell is not empty and the current category is different
               } else {
                 if (primaryStudyRow === 0) {
                   alert('Something went wrong. Unable to add to spreadsheet, no primary study found in gSheet')
