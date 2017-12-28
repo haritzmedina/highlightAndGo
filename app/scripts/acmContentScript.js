@@ -1,31 +1,48 @@
-const TextUtils = require('./utils/URLUtils')
+const URLUtils = require('./utils/URLUtils')
 const _ = require('lodash')
 const DOI = require('doi-regex')
 
 class ACMContentScript {
+  constructor () {
+    this.doi = null
+    this.hag = null
+  }
+
   init () {
-    // Get if this tab has an annotation to open and a doi
-    let params = TextUtils.extractHashParamsFromUrl(window.location.href)
-    if (!_.isEmpty(params) && !_.isEmpty(params.hag)) {
-      // Activate the extension
-      chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, (result) => {
-        console.log('Activated popup')
-        // Retrieve pdf url
-        let pdfUrlElement = document.querySelector('#divmain > table:nth-child(2) > tbody > tr > td:nth-child(1) > table:nth-child(1) > tbody > tr > td:nth-child(2) > a')
-        let pdfUrl = pdfUrlElement.href
-        // Append hash to pdf url
-        pdfUrl += window.location.hash
-        // Redirect browser to pdf
-        window.location.replace(pdfUrl)
-      })
+    // Get url params
+    let params = URLUtils.extractHashParamsFromUrl(window.location.href)
+    // Get document doi
+    if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
+      this.doi = params.doi
     } else {
-      // Scrap DOI from web and add pdf to url
-      let doi = this.findDoi()
-      let pdfElement = this.getPdfLinkElement()
-      if (pdfElement) {
-        pdfElement.href += '#doi:' + doi
+      // Scrap the doi from web
+      this.doi = this.findDoi()
+    }
+    // Get pdf link element
+    let pdfLinkElement = this.getPdfLinkElement()
+    if (pdfLinkElement) {
+      // Get if this tab has an annotation to open
+      if (!_.isEmpty(params) && !_.isEmpty(params.hag)) {
+        // Activate the extension
+        chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, (result) => {
+          console.log('Activated popup')
+          // Retrieve pdf url
+          let pdfUrl = pdfLinkElement.href
+          // Create hash with required params to open extension
+          let hash = '#hag:' + params.hag
+          if (this.doi) {
+            hash += '&doi:' + this.doi
+          }
+          // Append hash to pdf url
+          pdfUrl += hash
+          // Redirect browser to pdf
+          window.location.replace(pdfUrl)
+        })
       } else {
-        console.log('PDF URL not found')
+        // Append doi to PDF url
+        if (pdfLinkElement) {
+          pdfLinkElement.href += '#doi:' + this.doi
+        }
       }
     }
   }
