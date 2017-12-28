@@ -9,3 +9,7 @@ mark {
 .textLayer ::selection {
   background: rgba(130, 190, 240, 0.6);
 }
+
+.textLayer .highlight.selected {
+  background-color: rgba(0,0,0,0)
+}

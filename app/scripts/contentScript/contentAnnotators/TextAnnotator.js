@@ -27,9 +27,11 @@ class TextAnnotator extends ContentAnnotator {
       this.initAnnotateEvent(() => {
         // Load annotations for first time
         this.loadAnnotations(() => {
-          if (_.isFunction(callback)) {
-            callback()
-          }
+          this.initAnnotatorByAnnotation(() => {
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          })
         })
       })
     })
@@ -295,6 +297,16 @@ class TextAnnotator extends ContentAnnotator {
     }
   }
 
+  goToFirstAnnotationOfTag () {
+    // TODO Retrieve first annotation for tag
+
+    this.goToAnnotation()
+  }
+
+  goToAnnotation (annotation) {
+
+  }
+
   closeSidebar () {
     super.closeSidebar()
   }
@@ -309,6 +321,35 @@ class TextAnnotator extends ContentAnnotator {
     document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
     // Remove created annotations
     DOMTextUtils.unHighlightElements(this.currentlyHighlightedElements)
+  }
+
+  initAnnotatorByAnnotation (callback) {
+    // TODO Check if init annotation exists
+    if (window.abwa.annotationBasedInitializer.initAnnotation) {
+      let initAnnotation = window.abwa.annotationBasedInitializer.initAnnotation
+      // If document is pdf, the DOM is dynamic, we must scroll to annotation using PDF.js FindController
+      if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+        let queryTextSelector = _.find(initAnnotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
+        if (queryTextSelector && queryTextSelector.exact) {
+          window.PDFViewerApplication.findController.executeCommand('find', {query: queryTextSelector.exact, phraseSearch: true})
+        }
+      } else { // Else, try to find the annotation by data-annotation-id element attribute
+        let firstElementToScroll = document.querySelector('[data-annotation-id="' + initAnnotation.id + '"]')
+        if (!_.isElement(firstElementToScroll) && !_.isNumber(this.initializationTimeout)) {
+          this.initializationTimeout = setTimeout(() => {
+            console.debug('Trying to scroll to init annotation in 2 seconds')
+            this.initAnnotatorByAnnotation()
+          }, 2000)
+        } else {
+          $('html').animate({
+            scrollTop: ($(firstElementToScroll).offset().top - 200) + 'px'
+          }, 300)
+        }
+      }
+    }
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 }
 
