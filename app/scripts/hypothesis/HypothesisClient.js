@@ -1,6 +1,7 @@
 const _ = require('lodash')
 
 const MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH = 5000
+const MAX_NUMBER_OF_CALL_RETRIES = 5
 
 let $
 if (typeof window === 'undefined') {
@@ -24,32 +25,50 @@ class HypothesisClient {
       'crossDomain': true,
       'url': url,
       'method': 'POST',
+      'retryCount': 0,
+      'retryLimit': MAX_NUMBER_OF_CALL_RETRIES,
       'headers': {
         'authorization': 'Bearer ' + this.token,
         'content-type': 'application/json',
         'cache-control': 'no-cache'
+      },
+      'error': function () {
+        this.retryCount++
+        if (this.retryCount <= this.retryLimit) {
+          $.ajax(this)
+        } else {
+          if (_.isFunction(callback)) {
+            callback(new Error(), [])
+          }
+        }
       },
       processData: false,
       data: JSON.stringify(data)
     }
 
     $.ajax(settings).done((response) => {
-      callback(response)
+      callback(null, response)
     })
   }
 
   createNewAnnotations (annotations, callback) {
     let promises = []
     for (let i = 0; i < annotations.length; i++) {
-      promises.push(new Promise((resolve) => {
-        this.createNewAnnotation(annotations[i], (response) => {
-          resolve(response)
+      promises.push(new Promise((resolve, reject) => {
+        this.createNewAnnotation(annotations[i], (err, response) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(response)
+          }
         })
         return true
       }))
     }
     Promise.all(promises).then((responses) => {
       callback(null, responses)
+    }).catch((reasons) => {
+      callback(new Error('Some annotations cannot be created'))
     })
   }
 
@@ -166,6 +185,8 @@ class HypothesisClient {
           if (_.isFunction(callback)) {
             callback(annotations)
           }
+        }).catch(() => {
+          alert('Some of the annotations cannot be retrieved. Please try reloading the webpage.') // TODO Improve error handling
         })
       }
     })
@@ -191,7 +212,7 @@ class HypothesisClient {
       'headers': headers,
       'data': data,
       'retryCount': 0,
-      'retryLimit': 5,
+      'retryLimit': MAX_NUMBER_OF_CALL_RETRIES,
       'created': Date.now(),
       'success': (response) => {
         if (_.isFunction(callback)) {

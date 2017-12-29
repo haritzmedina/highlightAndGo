@@ -41,6 +41,7 @@
     "popper.js": "^1.13.0",
     "qtip2": "^3.0.3",
     "showdown": "^1.8.6",
+    "unique-colors": "^1.0.1",
     "xpath-range": "^1.1.1"
   },
   "devDependencies": {

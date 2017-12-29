@@ -83,7 +83,10 @@ class HypothesisGroupInitializer {
   createRelationGSheetGroup (group, callback) {
     // Create relation to sheet annotation
     let relationAnnotation = this.generateRelateSheetAndGroupAnnotation(this.parsedSheetData.gSheetId, group)
-    window.hag.hypothesisClientManager.hypothesisClient.createNewAnnotation(relationAnnotation, (response) => {
+    window.hag.hypothesisClientManager.hypothesisClient.createNewAnnotation(relationAnnotation, (err, response) => {
+      if (err) {
+        alert('Error while creating relation between hypothesis and google sheet. Please try it again.')
+      }
       if (_.isFunction(callback)) {
         callback()
       }

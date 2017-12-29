@@ -90,13 +90,17 @@ class TextAnnotator extends ContentAnnotator {
       }
       // Construct the annotation to send to hypothesis
       let annotation = this.constructAnnotation(selectors, event.detail.tags)
-      window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(annotation, (annotation) => {
-        // Send event annotation is created
-        LanguageUtils.dispatchCustomEvent(Events.annotationCreated, {annotation: annotation})
-        console.debug('Created annotation with ID: ' + annotation.id)
-        this.highlightAnnotation(annotation, () => {
-          window.getSelection().removeAllRanges()
-        })
+      window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(annotation, (err, annotation) => {
+        if (err) {
+          alert('Unexpected error, unable to create annotation')
+        } else {
+          // Send event annotation is created
+          LanguageUtils.dispatchCustomEvent(Events.annotationCreated, {annotation: annotation})
+          console.debug('Created annotation with ID: ' + annotation.id)
+          this.highlightAnnotation(annotation, () => {
+            window.getSelection().removeAllRanges()
+          })
+        }
       })
     }
   }
