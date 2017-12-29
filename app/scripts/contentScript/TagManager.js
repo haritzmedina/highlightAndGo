@@ -40,6 +40,8 @@ class Tag {
     this.tagButton.addEventListener('click', (event) => {
       if (event.target.getAttribute('role') === 'annotation') {
         LanguageUtils.dispatchCustomEvent(Events.annotate, {tags: this.tags})
+      } else if (event.target.getAttribute('role') === 'annotation') {
+        window.abwa.contentAnnotator.goToFirstAnnotationOfTag({tags: this.tags})
       }
     })
     return this.tagButton
@@ -47,6 +49,30 @@ class Tag {
 
   changeRol (newRole) {
     this.tagButton.setAttribute('role', newRole)
+  }
+
+  createIndexButton () {
+    let tagButtonTemplate = document.querySelector('#tagButtonTemplate')
+    this.tagButton = $(tagButtonTemplate.content.firstElementChild).clone().get(0)
+    this.tagButton.innerText = this.name
+    this.tagButton.title = this.name
+    for (let key in this.options) {
+      this.tagButton.dataset[key] = this.options[key]
+    }
+    this.tagButton.dataset.tags = this.tags
+    this.tagButton.setAttribute('role', 'annotation')
+    if (this.color) {
+      $(this.tagButton).css('background-color', this.color)
+    }
+    // Set handler for button
+    this.tagButton.addEventListener('click', (event) => {
+      if (event.target.getAttribute('role') === 'annotation') {
+        LanguageUtils.dispatchCustomEvent(Events.annotate, {tags: this.tags})
+      } else if (event.target.getAttribute('role') === 'annotation') {
+        window.abwa.contentAnnotator.goToFirstAnnotationOfTag({tags: this.tags})
+      }
+    })
+    return this.tagButton
   }
 }
 
@@ -68,15 +94,21 @@ class TagGroup {
         tagButtonContainer.append(this.tags[j].createButton())
       }
       return tagGroup
-    } else {
-      let dimensionTag = new Tag({
-        name: this.config.name,
-        namespace: this.config.namespace,
-        options: {},
-        tags: [
-          this.config.namespace + ':' + this.config.group + ':' + this.config.name]
-      })
-      return dimensionTag.createButton()
+    }
+  }
+
+  createIndexPanel () {
+    if (this.tags.length > 0) {
+      let tagGroupTemplate = document.querySelector('#indexTagGroupTemplate')
+      let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
+      let tagButtonContainer = $(tagGroup).find('.tagButtonContainer')
+      let groupNameSpan = tagGroup.querySelector('.groupName')
+      groupNameSpan.innerText = this.config.name
+      groupNameSpan.title = this.config.name
+      for (let j = 0; j < this.tags.length; j++) {
+        tagButtonContainer.append(this.tags[j].createIndexButton())
+      }
+      return tagGroup
     }
   }
 }
@@ -87,26 +119,24 @@ class TagManager {
     this.config = config
     this.tagAnnotations = []
     this.currentTags = []
+    this.currentIndexTags = []
     this.events = {}
   }
 
   init (callback) {
     this.initTagsStructure(() => {
-      this.initReloadHandlers(() => {
-        this.initEventHandlers(() => {
-          if (window.abwa.modeManager.mode === ModeManager.modes.highlight) {
-            this.initAllTags(() => {
-              if (_.isFunction(callback)) {
-                callback()
-              }
-            })
-          } else {
-            this.initFilteredTags(() => {
-              if (_.isFunction(callback)) {
-                callback()
-              }
-            })
-          }
+      this.initEventHandlers(() => {
+        this.initAllTags(() => {
+          this.initIndexTags(() => {
+            if (window.abwa.modeManager.mode === ModeManager.modes.highlight) {
+              this.showAllTags()
+            } else {
+              this.showIndexTags()
+            }
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          })
         })
       })
     })
@@ -116,17 +146,11 @@ class TagManager {
     let tagWrapperUrl = chrome.extension.getURL('pages/sidebar/tagWrapper.html')
     $.get(tagWrapperUrl, (html) => {
       $('#abwaSidebarContainer').append($.parseHTML(html))
-      this.tagsContainer = document.querySelector('#tags')
+      this.tagsContainer = {annotate: document.querySelector('#tagsAnnotate'), index: document.querySelector('#tagsIndex')}
       if (_.isFunction(callback)) {
         callback()
       }
     })
-  }
-
-  initReloadHandlers (callback) {
-    if (_.isFunction(callback)) {
-      callback()
-    }
   }
 
   getTagsList () {
@@ -304,13 +328,13 @@ class TagManager {
         for (let i = 0; i < this.currentTags.length; i++) {
           // Append each element
           let tagButton = this.currentTags[i].createButton()
-          this.tagsContainer.append(tagButton)
+          this.tagsContainer.annotate.append(tagButton)
         }
       } else if (LanguageUtils.isInstanceOf(this.currentTags[0], TagGroup)) {
         for (let i = 0; i < this.currentTags.length; i++) {
           let tagGroupElement = this.currentTags[i].createPanel()
           if (tagGroupElement) {
-            this.tagsContainer.append(tagGroupElement)
+            this.tagsContainer.annotate.append(tagGroupElement)
           }
         }
       }
@@ -334,27 +358,147 @@ class TagManager {
       // Show all the tags
       this.createTagButtons()
     } else if (event.detail.mode === ModeManager.modes.index) {
-      this.initFilteredTags()
+      this.initIndexTags()
     }
   }
 
-  initFilteredTags () {
-    // Check which tags has annotations
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-      url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
-      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
-      group: window.abwa.groupSelector.currentGroup.id}, (annotations) => {
-      this.retrieveGroupOrSubGroupTags(annotations)
+  initIndexTags (callback) {
+    // TODO Retrieve all the dimensions
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url, order: 'desc'}, (annotations) => {
+      // If annotations are grouped
+      if (!_.isEmpty(this.config.grouped)) {
+        // Retrieve tags of the namespace
+        let groupAnnotations = _.filter(annotations, (annotation) => {
+          return this.hasANamespace(annotation, this.namespace)
+        })
+        // Remove slr:spreadsheet annotation ONLY for SLR case
+        groupAnnotations = _.filter(groupAnnotations, (annotation) => {
+          return !this.hasATag(annotation, 'slr:spreadsheet')
+        })
+        // Get only tags of groups
+        groupAnnotations = _.filter(groupAnnotations, (annotation) => {
+          return this.hasATag(annotation, this.namespace + ':' + this.config.grouped.group)
+        })
+        let groupTags = {}
+        for (let i = 0; i < groupAnnotations.length; i++) {
+          let groupTag = this.retrieveTagNameByPrefix(groupAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.group))
+          if (groupTag) {
+            groupTags[groupTag] = new TagGroup({name: groupTag, namespace: this.namespace, group: this.config.grouped.group})
+          }
+        }
+        // Retrieve current annotations
+        window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+          url: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+          uri: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+          group: window.abwa.groupSelector.currentGroup.id
+        }, (documentAnnotations) => {
+          // Retrieve tags of the namespace
+          documentAnnotations = _.filter(documentAnnotations, (annotation) => {
+            return this.hasANamespace(annotation, this.namespace)
+          })
+          // Get only tags of subgroups or groups
+          groupAnnotations = _.filter(groupAnnotations, (annotation) => {
+            return this.hasATag(annotation, this.namespace + ':' + this.config.grouped.group) ||
+              this.hasATag(annotation, this.namespace + ':' + this.config.grouped.subgroup)
+          })
+          // Group active subgroups by groups
+          for (let i = 0; i < documentAnnotations.length; i++) {
+            let annotationGroupData = this.getGroupAndSubgroup(documentAnnotations[i])
+            // If not already subgroup, define it
+            if (!_.find(groupTags[annotationGroupData.group].tags, (tag) => { return tag === annotationGroupData.subgroup })) {
+              // Create tag and add to its group
+              // If has subgroup
+              if (annotationGroupData.subgroup) {
+                let tagName = annotationGroupData.subgroup
+                let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
+                groupTags[annotationGroupData.group].tags.push(new Tag({
+                  name: tagName,
+                  namespace: this.namespace,
+                  options: {color: color},
+                  tags: [
+                    this.namespace + ':' + this.config.grouped.relation + ':' + annotationGroupData.group,
+                    this.namespace + ':' + this.config.grouped.subgroup + ':' + annotationGroupData.subgroup
+                  ]
+                }))
+              } else { // If doesn't have subgroup (free category)
+                let tagName = annotationGroupData.group
+                let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
+                groupTags[annotationGroupData.group].tags.push(new Tag({
+                  name: tagName,
+                  namespace: this.namespace,
+                  options: {color: color},
+                  tags: [
+                    this.namespace + ':' + this.config.grouped.group + ':' + tagName
+                  ]
+                }))
+              }
+            }
+          }
+          this.currentIndexTags = _.values(groupTags)
+          // Generate tag groups and buttons
+          this.createIndexTagsButtons()
+          if (_.isFunction(callback)) {
+            callback()
+          }
+        })
+      }
     })
   }
 
-  retrieveGroupOrSubGroupTags (annotations) {
-    // TODO Create tags only annotated
+  createIndexTagsButtons (callback) {
+    // If it is an array is not grouped
+    if (this.currentIndexTags.length > 0) {
+      if (LanguageUtils.isInstanceOf(this.currentIndexTags[0], Tag)) {
+        for (let i = 0; i < this.currentIndexTags.length; i++) {
+          // Append each element
+          let tagButton = this.currentIndexTags[i].createButton()
+          this.tagsContainer.index.append(tagButton)
+        }
+      } else if (LanguageUtils.isInstanceOf(this.currentIndexTags[0], TagGroup)) {
+        for (let i = 0; i < this.currentIndexTags.length; i++) {
+          let tagGroupElement = this.currentIndexTags[i].createIndexPanel()
+          if (tagGroupElement) {
+            this.tagsContainer.index.append(tagGroupElement)
+          }
+        }
+      }
+    }
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
   removeTags () {
     let tagPanel = document.querySelector('#tags')
     tagPanel.innerHTML = ''
+  }
+
+  getGroupAndSubgroup (annotation) {
+    let tags = annotation.tags
+    let group = null
+    let subGroup = null
+    let groupOf = _.find(tags, (tag) => { return _.startsWith(tag, this.namespace + ':' + this.config.grouped.relation + ':') })
+    if (groupOf) {
+      subGroup = _.find(tags, (tag) => { return _.startsWith(tag, this.namespace + ':' + this.config.grouped.subgroup + ':') })
+        .replace(this.namespace + ':' + this.config.grouped.subgroup + ':', '')
+      group = groupOf.replace(this.namespace + ':' + this.config.grouped.relation + ':', '')
+    } else {
+      let groupTag = _.find(tags, (tag) => { return _.startsWith(tag, this.namespace + ':' + this.config.grouped.group + ':') })
+      if (groupTag) {
+        group = groupTag.replace(this.namespace + ':' + this.config.grouped.group + ':', '')
+      }
+    }
+    return {group: group, subgroup: subGroup}
+  }
+
+  showAllTags () {
+    $(this.tagsContainer.index).attr('aria-hidden', 'true')
+    $(this.tagsContainer.annotate).attr('aria-hidden', 'false')
+  }
+
+  showIndexTags () {
+    $(this.tagsContainer.index).attr('aria-hidden', 'false')
+    $(this.tagsContainer.annotate).attr('aria-hidden', 'true')
   }
 }
 

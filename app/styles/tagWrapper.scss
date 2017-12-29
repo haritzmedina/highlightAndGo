@@ -19,7 +19,11 @@
   padding-bottom: 3px;
 }
 
-.tagButtonContainer {
+.tagContainer[aria-hidden="true"]{
+  display: none;
+}
+
+.tagButtonContainer{
   padding: 5px 0 0;
 }
 
