@@ -262,9 +262,10 @@ class TagManager {
       }
     }
     let groups = _.keys(tagGroupsAnnotations)
+    let colorList = ColorUtils.getDifferentColors(groups.length)
     let colors = {}
     for (let i = 0; i < groups.length; i++) {
-      colors[groups[i]] = ColorUtils.getDifferentColor(_.values(colors), groups[i])
+      colors[groups[i]] = colorList[i]
     }
     for (let i = 0; i < this.tagAnnotations.length; i++) {
       let tagAnnotation = this.tagAnnotations[i]

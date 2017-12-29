@@ -1,6 +1,6 @@
 const ColorHash = require('color-hash')
 const Color = require('color')
-const _ = require('lodash')
+const UniqueColors = require('unique-colors')
 
 class ColorUtils {
   static getRandomColor () {
@@ -39,18 +39,8 @@ class ColorUtils {
     return color.valpha !== 1
   }
 
-  static getDifferentColor (colorList, str) {
-    let color = null
-    let attempts = 0
-    do {
-      color = ColorUtils.getHashColor(str)
-      if (_.find(colorList, (c) => { return (new Color(c)).contrast(new Color(color)) < 2 })) {
-        color = null
-        str += 'a'
-        attempts += 1 // Another try
-      }
-    } while (_.isEmpty(color) && attempts < 10)
-    return color
+  static getDifferentColors (number) {
+    return UniqueColors.unique_colors(number)
   }
 }
 
