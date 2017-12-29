@@ -50,30 +50,11 @@ class Tag {
   changeRol (newRole) {
     this.tagButton.setAttribute('role', newRole)
   }
+}
 
-  createIndexButton () {
-    let tagButtonTemplate = document.querySelector('#tagButtonTemplate')
-    this.tagButton = $(tagButtonTemplate.content.firstElementChild).clone().get(0)
-    this.tagButton.innerText = this.name
-    this.tagButton.title = this.name
-    for (let key in this.options) {
-      this.tagButton.dataset[key] = this.options[key]
-    }
-    this.tagButton.dataset.tags = this.tags
-    this.tagButton.setAttribute('role', 'annotation')
-    if (this.color) {
-      $(this.tagButton).css('background-color', this.color)
-    }
-    // Set handler for button
-    this.tagButton.addEventListener('click', (event) => {
-      if (event.target.getAttribute('role') === 'annotation') {
-        LanguageUtils.dispatchCustomEvent(Events.annotate, {tags: this.tags})
-      } else if (event.target.getAttribute('role') === 'annotation') {
-        window.abwa.contentAnnotator.goToFirstAnnotationOfTag({tags: this.tags})
-      }
-    })
-    return this.tagButton
-  }
+Tag.roles = {
+  annotation: 'annotation',
+  index: 'index'
 }
 
 class TagGroup {
@@ -96,27 +77,16 @@ class TagGroup {
       return tagGroup
     }
   }
-
-  createIndexPanel () {
-    if (this.tags.length > 0) {
-      let tagGroupTemplate = document.querySelector('#indexTagGroupTemplate')
-      let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
-      let tagButtonContainer = $(tagGroup).find('.tagButtonContainer')
-      let groupNameSpan = tagGroup.querySelector('.groupName')
-      groupNameSpan.innerText = this.config.name
-      groupNameSpan.title = this.config.name
-      for (let j = 0; j < this.tags.length; j++) {
-        tagButtonContainer.append(this.tags[j].createIndexButton())
-      }
-      return tagGroup
-    }
-  }
 }
 
 class TagManager {
   constructor (namespace, config) {
-    this.namespace = namespace
-    this.config = config
+    this.model = {
+      documentAnnotations: [],
+      groupAnnotations: [],
+      namespace: namespace,
+      config: config
+    }
     this.tagAnnotations = []
     this.currentTags = []
     this.currentIndexTags = []
@@ -139,6 +109,44 @@ class TagManager {
           })
         })
       })
+    })
+  }
+
+  getDocumentAnnotations (callback) {
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+
+    }, (err, annotations) => {
+      if (err) {
+        alert('Unable to retrieve document annotations')
+      } else {
+        if (_.isFunction(callback)) {
+          callback(annotations)
+        }
+      }
+    })
+  }
+
+  getGroupAnnotations (callback) {
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+      url: window.abwa.groupSelector.currentGroup.url,
+      order: 'desc'
+    }, (err, annotations) => {
+      if (err) {
+        alert('Unable to retrieve document annotations')
+      } else {
+        // Retrieve tags which has the namespace
+        annotations = _.filter(annotations, (annotation) => {
+          return this.hasANamespace(annotation, this.model.namespace)
+        })
+        // Remove slr:spreadsheet annotation ONLY for SLR case
+        annotations = _.filter(annotations, (annotation) => {
+          return !this.hasATag(annotation, 'slr:spreadsheet')
+        })
+        // Remove tags which are not group or subgroup
+        if (_.isFunction(callback)) {
+          callback(annotations)
+        }
+      }
     })
   }
 
@@ -208,21 +216,15 @@ class TagManager {
   }
 
   initAllTags (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url, order: 'desc'}, (annotations) => {
-      // Retrieve tags of the namespace
-      this.tagAnnotations = _.filter(annotations, (annotation) => {
-        return this.hasANamespace(annotation, this.namespace)
-      })
-      // Remove slr:spreadsheet annotation ONLY for SLR case
-      this.tagAnnotations = _.filter(this.tagAnnotations, (annotation) => {
-        return !this.hasATag(annotation, 'slr:spreadsheet')
-      })
+    this.getGroupAnnotations((annotations) => {
+      // Add to model
+      this.model.groupAnnotations = annotations
       // If annotations are grouped
-      if (!_.isEmpty(this.config.grouped)) {
-        this.currentTags = this.createTagsBasedOnAnnotationsGrouped(annotations, this.config.grouped)
+      if (!_.isEmpty(this.model.config.grouped)) {
+        this.currentTags = this.createTagsBasedOnAnnotationsGrouped(annotations, this.model.config.grouped)
       } else {
         // Create tags based on annotations
-        this.currentTags = this.createTagsBasedOnAnnotations(this.tagAnnotations)
+        this.currentTags = this.createTagsBasedOnAnnotations(annotations)
       }
       this.createTagButtons()
       if (_.isFunction(callback)) {
@@ -247,8 +249,8 @@ class TagManager {
     let tags = []
     for (let i = 0; i < this.tagAnnotations.length; i++) {
       let tagAnnotation = this.tagAnnotations[i]
-      let tagName = tagAnnotation.tags[0].substr(this.namespace.length + 1) // <namespace>:
-      tags.push(new Tag({name: tagName, namespace: this.namespace, options: jsYaml.load(tagAnnotation.text)}))
+      let tagName = tagAnnotation.tags[0].substr(this.model.namespace.length + 1) // <namespace>:
+      tags.push(new Tag({name: tagName, namespace: this.model.namespace, options: jsYaml.load(tagAnnotation.text)}))
     }
     return tags
   }
@@ -256,9 +258,9 @@ class TagManager {
   createTagsBasedOnAnnotationsGrouped () {
     let tagGroupsAnnotations = {}
     for (let i = 0; i < this.tagAnnotations.length; i++) {
-      let groupTag = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.group))
+      let groupTag = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.group))
       if (groupTag) {
-        tagGroupsAnnotations[groupTag] = new TagGroup({name: groupTag, namespace: this.namespace, group: this.config.grouped.group})
+        tagGroupsAnnotations[groupTag] = new TagGroup({name: groupTag, namespace: this.model.namespace, group: this.model.config.grouped.group})
       }
     }
     let groups = _.keys(tagGroupsAnnotations)
@@ -269,8 +271,8 @@ class TagManager {
     }
     for (let i = 0; i < this.tagAnnotations.length; i++) {
       let tagAnnotation = this.tagAnnotations[i]
-      let tagName = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.subgroup))
-      let groupBelongedTo = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.relation))
+      let tagName = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.subgroup))
+      let groupBelongedTo = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.relation))
       if (tagName && groupBelongedTo) {
         if (_.isArray(tagGroupsAnnotations[groupBelongedTo].tags)) {
           // Load options from annotation text body
@@ -284,11 +286,11 @@ class TagManager {
           }
           tagGroupsAnnotations[groupBelongedTo].tags.push(new Tag({
             name: tagName,
-            namespace: this.namespace,
+            namespace: this.model.namespace,
             options: options,
             tags: [
-              this.namespace + ':' + this.config.grouped.relation + ':' + groupBelongedTo,
-              this.namespace + ':' + this.config.grouped.subgroup + ':' + tagName]
+              this.model.namespace + ':' + this.model.config.grouped.relation + ':' + groupBelongedTo,
+              this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + tagName]
           }))
         }
       }
@@ -353,95 +355,102 @@ class TagManager {
   }
 
   modeChangeHandler (event) {
-    // Remove all tags
-    this.removeTags()
     if (event.detail.mode === ModeManager.modes.highlight) {
       // Show all the tags
-      this.createTagButtons()
+      this.showAllTags()
     } else if (event.detail.mode === ModeManager.modes.index) {
-      this.initIndexTags()
+      // TODO Update index tags
+      this.showIndexTags()
     }
   }
 
   initIndexTags (callback) {
     // TODO Retrieve all the dimensions
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url, order: 'desc'}, (annotations) => {
-      // If annotations are grouped
-      if (!_.isEmpty(this.config.grouped)) {
-        // Retrieve tags of the namespace
-        let groupAnnotations = _.filter(annotations, (annotation) => {
-          return this.hasANamespace(annotation, this.namespace)
-        })
-        // Remove slr:spreadsheet annotation ONLY for SLR case
-        groupAnnotations = _.filter(groupAnnotations, (annotation) => {
-          return !this.hasATag(annotation, 'slr:spreadsheet')
-        })
-        // Get only tags of groups
-        groupAnnotations = _.filter(groupAnnotations, (annotation) => {
-          return this.hasATag(annotation, this.namespace + ':' + this.config.grouped.group)
-        })
-        let groupTags = {}
-        for (let i = 0; i < groupAnnotations.length; i++) {
-          let groupTag = this.retrieveTagNameByPrefix(groupAnnotations[i].tags, (this.namespace + ':' + this.config.grouped.group))
-          if (groupTag) {
-            groupTags[groupTag] = new TagGroup({name: groupTag, namespace: this.namespace, group: this.config.grouped.group})
-          }
-        }
-        // Retrieve current annotations
-        window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-          url: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
-          uri: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
-          group: window.abwa.groupSelector.currentGroup.id
-        }, (documentAnnotations) => {
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url, order: 'desc'}, (err, annotations) => {
+      if (err) {
+        console.error('Unable to load annotations') // TODO
+      } else {
+        // If annotations are grouped
+        if (!_.isEmpty(this.model.config.grouped)) {
           // Retrieve tags of the namespace
-          documentAnnotations = _.filter(documentAnnotations, (annotation) => {
-            return this.hasANamespace(annotation, this.namespace)
+          let groupAnnotations = _.filter(annotations, (annotation) => {
+            return this.hasANamespace(annotation, this.model.namespace)
           })
-          // Get only tags of subgroups or groups
+          // Remove slr:spreadsheet annotation ONLY for SLR case
           groupAnnotations = _.filter(groupAnnotations, (annotation) => {
-            return this.hasATag(annotation, this.namespace + ':' + this.config.grouped.group) ||
-              this.hasATag(annotation, this.namespace + ':' + this.config.grouped.subgroup)
+            return !this.hasATag(annotation, 'slr:spreadsheet')
           })
-          // Group active subgroups by groups
-          for (let i = 0; i < documentAnnotations.length; i++) {
-            let annotationGroupData = this.getGroupAndSubgroup(documentAnnotations[i])
-            // If not already subgroup, define it
-            if (!_.find(groupTags[annotationGroupData.group].tags, (tag) => { return tag === annotationGroupData.subgroup })) {
-              // Create tag and add to its group
-              // If has subgroup
-              if (annotationGroupData.subgroup) {
-                let tagName = annotationGroupData.subgroup
-                let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
-                groupTags[annotationGroupData.group].tags.push(new Tag({
-                  name: tagName,
-                  namespace: this.namespace,
-                  options: {color: color},
-                  tags: [
-                    this.namespace + ':' + this.config.grouped.relation + ':' + annotationGroupData.group,
-                    this.namespace + ':' + this.config.grouped.subgroup + ':' + annotationGroupData.subgroup
-                  ]
-                }))
-              } else { // If doesn't have subgroup (free category)
-                let tagName = annotationGroupData.group
-                let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
-                groupTags[annotationGroupData.group].tags.push(new Tag({
-                  name: tagName,
-                  namespace: this.namespace,
-                  options: {color: color},
-                  tags: [
-                    this.namespace + ':' + this.config.grouped.group + ':' + tagName
-                  ]
-                }))
-              }
+          // Get only tags of groups
+          groupAnnotations = _.filter(groupAnnotations, (annotation) => {
+            return this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.group)
+          })
+          let groupTags = {}
+          for (let i = 0; i < groupAnnotations.length; i++) {
+            let groupTag = this.retrieveTagNameByPrefix(groupAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.group))
+            if (groupTag) {
+              groupTags[groupTag] = new TagGroup({name: groupTag, namespace: this.model.namespace, group: this.model.config.grouped.group})
             }
           }
-          this.currentIndexTags = _.values(groupTags)
-          // Generate tag groups and buttons
-          this.createIndexTagsButtons()
-          if (_.isFunction(callback)) {
-            callback()
-          }
-        })
+          // Retrieve current annotations
+          window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+            url: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+            uri: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+            group: window.abwa.groupSelector.currentGroup.id
+          }, (err, documentAnnotations) => {
+            if (err) {
+              console.error('Unable to load annotations') // TODO
+            } else {
+              // Retrieve tags of the namespace
+              documentAnnotations = _.filter(documentAnnotations, (annotation) => {
+                return this.hasANamespace(annotation, this.model.namespace)
+              })
+              // Get only tags of subgroups or groups
+              groupAnnotations = _.filter(groupAnnotations, (annotation) => {
+                return this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.group) ||
+                  this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.subgroup)
+              })
+              // Group active subgroups by groups
+              for (let i = 0; i < documentAnnotations.length; i++) {
+                let annotationGroupData = this.getGroupAndSubgroup(documentAnnotations[i])
+                // If not already subgroup, define it
+                if (!_.find(groupTags[annotationGroupData.group].tags, (tag) => { return tag === annotationGroupData.subgroup })) {
+                  // Create tag and add to its group
+                  // If has subgroup
+                  if (annotationGroupData.subgroup) {
+                    let tagName = annotationGroupData.subgroup
+                    let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
+                    groupTags[annotationGroupData.group].tags.push(new Tag({
+                      name: tagName,
+                      namespace: this.model.namespace,
+                      options: {color: color},
+                      tags: [
+                        this.model.namespace + ':' + this.model.config.grouped.relation + ':' + annotationGroupData.group,
+                        this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + annotationGroupData.subgroup
+                      ]
+                    }))
+                  } else { // If doesn't have subgroup (free category)
+                    let tagName = annotationGroupData.group
+                    let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
+                    groupTags[annotationGroupData.group].tags.push(new Tag({
+                      name: tagName,
+                      namespace: this.model.namespace,
+                      options: {color: color},
+                      tags: [
+                        this.model.namespace + ':' + this.model.config.grouped.group + ':' + tagName
+                      ]
+                    }))
+                  }
+                }
+              }
+              this.currentIndexTags = _.values(groupTags)
+              // Generate tag groups and buttons
+              this.createIndexTagsButtons()
+              if (_.isFunction(callback)) {
+                callback()
+              }
+            }
+          })
+        }
       }
     })
   }
@@ -457,7 +466,7 @@ class TagManager {
         }
       } else if (LanguageUtils.isInstanceOf(this.currentIndexTags[0], TagGroup)) {
         for (let i = 0; i < this.currentIndexTags.length; i++) {
-          let tagGroupElement = this.currentIndexTags[i].createIndexPanel()
+          let tagGroupElement = this.currentIndexTags[i].createPanel()
           if (tagGroupElement) {
             this.tagsContainer.index.append(tagGroupElement)
           }
@@ -478,15 +487,15 @@ class TagManager {
     let tags = annotation.tags
     let group = null
     let subGroup = null
-    let groupOf = _.find(tags, (tag) => { return _.startsWith(tag, this.namespace + ':' + this.config.grouped.relation + ':') })
+    let groupOf = _.find(tags, (tag) => { return _.startsWith(tag, this.model.namespace + ':' + this.model.config.grouped.relation + ':') })
     if (groupOf) {
-      subGroup = _.find(tags, (tag) => { return _.startsWith(tag, this.namespace + ':' + this.config.grouped.subgroup + ':') })
-        .replace(this.namespace + ':' + this.config.grouped.subgroup + ':', '')
-      group = groupOf.replace(this.namespace + ':' + this.config.grouped.relation + ':', '')
+      subGroup = _.find(tags, (tag) => { return _.startsWith(tag, this.model.namespace + ':' + this.model.config.grouped.subgroup + ':') })
+        .replace(this.model.namespace + ':' + this.model.config.grouped.subgroup + ':', '')
+      group = groupOf.replace(this.model.namespace + ':' + this.model.config.grouped.relation + ':', '')
     } else {
-      let groupTag = _.find(tags, (tag) => { return _.startsWith(tag, this.namespace + ':' + this.config.grouped.group + ':') })
+      let groupTag = _.find(tags, (tag) => { return _.startsWith(tag, this.model.namespace + ':' + this.model.config.grouped.group + ':') })
       if (groupTag) {
-        group = groupTag.replace(this.namespace + ':' + this.config.grouped.group + ':', '')
+        group = groupTag.replace(this.model.namespace + ':' + this.model.config.grouped.group + ':', '')
       }
     }
     return {group: group, subgroup: subGroup}
@@ -500,6 +509,14 @@ class TagManager {
   showIndexTags () {
     $(this.tagsContainer.index).attr('aria-hidden', 'false')
     $(this.tagsContainer.annotate).attr('aria-hidden', 'true')
+  }
+
+  retrieveAllGroups () {
+
+  }
+
+  retrieveAllSubgroups () {
+
   }
 }
 

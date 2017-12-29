@@ -100,41 +100,49 @@ class SLRView {
 
   retrieveDimensions (callback) {
     let groupUrl = this.currentGroup.url
-    this.hypothesisClientManager.hypothesisClient.searchAnnotations({url: groupUrl}, (annotations) => {
-      let slrDimensionAnnotations = _.filter(annotations, (annotation) => {
-        let dimensionTags = _.filter(annotation.tags, (tag) => {
-          return _.startsWith(tag, 'slr:dimension')
+    this.hypothesisClientManager.hypothesisClient.searchAnnotations({url: groupUrl}, (err, annotations) => {
+      if (err) {
+        console.error(err)
+      } else {
+        let slrDimensionAnnotations = _.filter(annotations, (annotation) => {
+          let dimensionTags = _.filter(annotation.tags, (tag) => {
+            return _.startsWith(tag, 'slr:dimension')
+          })
+          return dimensionTags.length > 0
         })
-        return dimensionTags.length > 0
-      })
-      let slrDimensions = slrDimensionAnnotations.map((slrDimensionAnnotation) => {
-        let dimensionTag = _.find(slrDimensionAnnotation.tags, (tag) => {
-          return _.startsWith(tag, 'slr:dimension')
+        let slrDimensions = slrDimensionAnnotations.map((slrDimensionAnnotation) => {
+          let dimensionTag = _.find(slrDimensionAnnotation.tags, (tag) => {
+            return _.startsWith(tag, 'slr:dimension')
+          })
+          return _.replace(dimensionTag, 'slr:dimension:', '')
         })
-        return _.replace(dimensionTag, 'slr:dimension:', '')
-      })
-      console.debug('Found %s dimensions', slrDimensions.length)
-      console.debug(slrDimensions)
-      if (_.isFunction(callback)) {
-        callback(slrDimensions)
+        console.debug('Found %s dimensions', slrDimensions.length)
+        console.debug(slrDimensions)
+        if (_.isFunction(callback)) {
+          callback(slrDimensions)
+        }
       }
     })
   }
 
   retrieveAnnotationsOfClassifiedPrimaryStudies (callback) {
-    this.hypothesisClientManager.hypothesisClient.searchAnnotations({group: this.currentGroup.id}, (annotations) => {
-      // Filter annotations from hypothesis group url
-      let classificationAnnotations = _.filter(annotations, (annotation) => {
-        // Filter by allowed tags
-        let allowedTag = _.filter(annotation.tags, (tag) => {
-          return _.findIndex(SLRDataExtractionAllowedTags, (allowedTag) => {
-            return _.startsWith(tag, 'slr:' + allowedTag)
-          }) !== -1
+    this.hypothesisClientManager.hypothesisClient.searchAnnotations({group: this.currentGroup.id}, (err, annotations) => {
+      if (err) {
+        console.error(err)
+      } else {
+        // Filter annotations from hypothesis group url
+        let classificationAnnotations = _.filter(annotations, (annotation) => {
+          // Filter by allowed tags
+          let allowedTag = _.filter(annotation.tags, (tag) => {
+            return _.findIndex(SLRDataExtractionAllowedTags, (allowedTag) => {
+              return _.startsWith(tag, 'slr:' + allowedTag)
+            }) !== -1
+          })
+          return annotation.uri !== this.currentGroup.url && allowedTag.length > 0
         })
-        return annotation.uri !== this.currentGroup.url && allowedTag.length > 0
-      })
-      if (_.isFunction(callback)) {
-        callback(classificationAnnotations)
+        if (_.isFunction(callback)) {
+          callback(classificationAnnotations)
+        }
       }
     })
   }

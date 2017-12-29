@@ -24,14 +24,18 @@ class AugmentationManager {
 
   retrieveAnnotations (callback) {
     // Load hypothesis annotations for current page
-    this.loadHypothesisAnnotations((annotations) => {
-      console.debug(annotations)
-      // Apply operations for annotations
-      annotations.forEach(annotation => {
-        this.applyOperation(annotation)
-      })
-      if (_.isFunction(callback)) {
-        callback()
+    this.loadHypothesisAnnotations((err, annotations) => {
+      if (err) {
+        console.error('Unable to load annotations')
+      } else {
+        console.debug(annotations)
+        // Apply operations for annotations
+        annotations.forEach(annotation => {
+          this.applyOperation(annotation)
+        })
+        if (_.isFunction(callback)) {
+          callback()
+        }
       }
     })
   }

@@ -43,11 +43,10 @@ class ModeManager {
   }
 
   setToggleStatus () {
-    let annotatorToggle = document.querySelector('#annotatorToggle')
     if (this.mode === ModeManager.modes.highlight) {
-      annotatorToggle.checked = true
+      this.setHighlightMode()
     } else {
-      annotatorToggle.checked = false
+      this.setIndexMode()
     }
   }
 
@@ -63,13 +62,29 @@ class ModeManager {
     }
   }
 
+  setHighlightMode () {
+    let annotatorToggle = document.querySelector('#annotatorToggle')
+    let modeLabel = document.querySelector('#modeLabel')
+    annotatorToggle.checked = true
+    modeLabel.innerText = chrome.i18n.getMessage('highlight')
+    this.mode = ModeManager.modes.highlight
+  }
+
+  setIndexMode () {
+    let annotatorToggle = document.querySelector('#annotatorToggle')
+    let modeLabel = document.querySelector('#modeLabel')
+    annotatorToggle.checked = false
+    modeLabel.innerText = chrome.i18n.getMessage('index')
+    this.mode = ModeManager.modes.index
+  }
+
   initEventHandlers (callback) {
     let annotatorToggle = document.querySelector('#annotatorToggle')
     annotatorToggle.addEventListener('click', (event) => {
       if (annotatorToggle.checked) {
-        this.mode = ModeManager.modes.highlight
+        this.setHighlightMode()
       } else {
-        this.mode = ModeManager.modes.index
+        this.setIndexMode()
       }
       LanguageUtils.dispatchCustomEvent(Events.modeChanged, {mode: this.mode})
     })

@@ -148,9 +148,7 @@ class HypothesisClient {
     let annotations = []
     this.searchBunchAnnotations(data, 0, (err, response) => {
       if (err) {
-        if (_.isFunction(callback)) {
-          callback(annotations)
-        }
+        console.error('Unable to retrieve annotations')
       } else {
         // Concat first time done annotations
         annotations = annotations.concat(response.rows)
@@ -169,10 +167,10 @@ class HypothesisClient {
             iterationData.limit = 200
           }
           // Create a promise for each request to do
-          promises.push(new Promise((resolve) => {
+          promises.push(new Promise((resolve, reject) => {
             this.searchBunchAnnotations(iterationData, i, (err, response) => {
               if (err) {
-                resolve() // TODO Manage error
+                reject(new Error(err)) // TODO Manage error
               } else {
                 annotations = annotations.concat(response.rows)
                 resolve()
@@ -181,12 +179,14 @@ class HypothesisClient {
           }))
         }
         // Execute all the promises
-        Promise.all(promises).then(() => {
+        Promise.all(promises).catch((reasons) => {
           if (_.isFunction(callback)) {
-            callback(annotations)
+            callback(new Error('Unable to retrieve annotations'))
           }
-        }).catch(() => {
-          alert('Some of the annotations cannot be retrieved. Please try reloading the webpage.') // TODO Improve error handling
+        }).then(() => {
+          if (_.isFunction(callback)) {
+            callback(null, annotations)
+          }
         })
       }
     })
@@ -220,6 +220,7 @@ class HypothesisClient {
         }
       },
       'error': function () {
+        debugger
         this.retryCount++
         if (this.retryCount <= this.retryLimit) {
           $.ajax(this)

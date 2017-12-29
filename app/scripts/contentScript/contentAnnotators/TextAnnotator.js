@@ -16,6 +16,7 @@ class TextAnnotator extends ContentAnnotator {
     super()
     this.events = {}
     this.events.mouseUpOnDocumentHandler = null
+    this.currentAnnotations = null
     this.currentUserProfile = null
     this.currentlyHighlightedElements = []
     this.highlightClassName = 'highlightedAnnotation'
@@ -94,6 +95,8 @@ class TextAnnotator extends ContentAnnotator {
         if (err) {
           alert('Unexpected error, unable to create annotation')
         } else {
+          // Add to annotations
+          this.currentAnnotations.push(annotation)
           // Send event annotation is created
           LanguageUtils.dispatchCustomEvent(Events.annotationCreated, {annotation: annotation})
           console.debug('Created annotation with ID: ' + annotation.id)
@@ -166,21 +169,26 @@ class TextAnnotator extends ContentAnnotator {
         url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
         uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
         group: window.abwa.groupSelector.currentGroup.id
-      }, (annotations) => {
-        // Search tagged annotations
-        let tagList = window.abwa.tagManager.getTagsList()
-        let taggedAnnotations = []
-        for (let i = 0; i < annotations.length; i++) {
-          // Check if annotation contains a tag of current group
-          let tag = TagManager.retrieveTagForAnnotation(annotations[i], tagList)
-          if (tag) {
-            taggedAnnotations.push(annotations[i])
+      }, (err, annotations) => {
+        if (err) {
+          console.error('Unable to load annotations')
+        } else {
+          this.currentAnnotations = annotations || []
+          // Search tagged annotations
+          let tagList = window.abwa.tagManager.getTagsList()
+          let taggedAnnotations = []
+          for (let i = 0; i < annotations.length; i++) {
+            // Check if annotation contains a tag of current group
+            let tag = TagManager.retrieveTagForAnnotation(annotations[i], tagList)
+            if (tag) {
+              taggedAnnotations.push(annotations[i])
+            }
           }
+          console.debug('Annotations to highlight')
+          console.debug(taggedAnnotations)
+          // Highlight annotations in the DOM
+          this.highlightAnnotations(taggedAnnotations)
         }
-        console.debug('Annotations to highlight')
-        console.debug(taggedAnnotations)
-        // Highlight annotations in the DOM
-        this.highlightAnnotations(taggedAnnotations)
       })
       if (_.isFunction(callback)) {
         callback()
@@ -303,7 +311,7 @@ class TextAnnotator extends ContentAnnotator {
 
   goToFirstAnnotationOfTag () {
     // TODO Retrieve first annotation for tag
-
+    this.annotations
     this.goToAnnotation()
   }
 
