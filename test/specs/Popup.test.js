@@ -17,7 +17,7 @@ let hypothesisClient = new HypothesisClient(TOKEN)
 
 describe('Popup test', function () {
   beforeAll(() => {
-    browser.call(() => new Promise((resolve) => {
+    browser.call(() => new Promise((resolve, reject) => {
       hypothesisClient.createNewAnnotation({
         'group': '__world__',
         'permissions': {
@@ -51,11 +51,16 @@ describe('Popup test', function () {
         },
         'uri': WEBSITE_URL,
         'motivation': 'highlighting'
-      }, (response) => {
-        annotation = response
-        console.log('Created annotation with id: ' + annotation.id)
-        browser.url(WEBSITE_URL)
-        resolve()
+      }, (err, response) => {
+        if (err) {
+          console.error(err)
+          reject(err)
+        } else {
+          annotation = response
+          console.log('Created annotation with id: ' + annotation.id)
+          browser.url(WEBSITE_URL)
+          resolve()
+        }
       })
     }))
   })
