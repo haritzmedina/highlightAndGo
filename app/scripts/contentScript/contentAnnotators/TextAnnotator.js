@@ -309,14 +309,40 @@ class TextAnnotator extends ContentAnnotator {
     }
   }
 
-  goToFirstAnnotationOfTag () {
+  hasATag (annotation, tag) {
+    return _.findIndex(annotation.tags, (annotationTag) => {
+      return _.startsWith(annotationTag.toLowerCase(), tag.toLowerCase())
+    }) !== -1
+  }
+
+  goToFirstAnnotationOfTag (params) {
     // TODO Retrieve first annotation for tag
-    this.annotations
-    this.goToAnnotation()
+    let annotation = _.find(this.currentAnnotations, (annotation) => {
+      return _.isEqual(annotation.tags, params.tags)
+    })
+    this.goToAnnotation(annotation)
   }
 
   goToAnnotation (annotation) {
-
+    // If document is pdf, the DOM is dynamic, we must scroll to annotation using PDF.js FindController
+    if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+      let queryTextSelector = _.find(annotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
+      if (queryTextSelector && queryTextSelector.exact) {
+        window.PDFViewerApplication.findController.executeCommand('find', {query: queryTextSelector.exact, phraseSearch: true})
+      }
+    } else { // Else, try to find the annotation by data-annotation-id element attribute
+      let firstElementToScroll = document.querySelector('[data-annotation-id="' + annotation.id + '"]')
+      if (!_.isElement(firstElementToScroll) && !_.isNumber(this.initializationTimeout)) {
+        this.initializationTimeout = setTimeout(() => {
+          console.debug('Trying to scroll to init annotation in 2 seconds')
+          this.initAnnotatorByAnnotation()
+        }, 2000)
+      } else {
+        $('html').animate({
+          scrollTop: ($(firstElementToScroll).offset().top - 200) + 'px'
+        }, 300)
+      }
+    }
   }
 
   closeSidebar () {

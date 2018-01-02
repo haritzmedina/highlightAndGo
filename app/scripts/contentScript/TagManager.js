@@ -38,9 +38,9 @@ class Tag {
     }
     // Set handler for button
     this.tagButton.addEventListener('click', (event) => {
-      if (event.target.getAttribute('role') === 'annotation') {
+      if (event.target.getAttribute('role') === Tag.roles.annotation) {
         LanguageUtils.dispatchCustomEvent(Events.annotate, {tags: this.tags})
-      } else if (event.target.getAttribute('role') === 'annotation') {
+      } else if (event.target.getAttribute('role') === Tag.roles.index) {
         window.abwa.contentAnnotator.goToFirstAnnotationOfTag({tags: this.tags})
       }
     })
@@ -63,7 +63,7 @@ class TagGroup {
     this.tags = tags || []
   }
 
-  createPanel () {
+  createPanel (indexRole) {
     if (this.tags.length > 0) {
       let tagGroupTemplate = document.querySelector('#tagGroupTemplate')
       let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
@@ -72,7 +72,11 @@ class TagGroup {
       groupNameSpan.innerText = this.config.name
       groupNameSpan.title = this.config.name
       for (let j = 0; j < this.tags.length; j++) {
-        tagButtonContainer.append(this.tags[j].createButton())
+        let tagButton = this.tags[j].createButton()
+        if (indexRole) {
+          tagButton.setAttribute('role', Tag.roles.index)
+        }
+        tagButtonContainer.append(tagButton)
       }
       return tagGroup
     }
@@ -87,7 +91,6 @@ class TagManager {
       namespace: namespace,
       config: config
     }
-    this.tagAnnotations = []
     this.currentTags = []
     this.currentIndexTags = []
     this.events = {}
@@ -247,18 +250,19 @@ class TagManager {
 
   createTagsBasedOnAnnotations () {
     let tags = []
-    for (let i = 0; i < this.tagAnnotations.length; i++) {
-      let tagAnnotation = this.tagAnnotations[i]
+    for (let i = 0; i < this.model.groupAnnotations.length; i++) {
+      let tagAnnotation = this.model.groupAnnotations[i]
       let tagName = tagAnnotation.tags[0].substr(this.model.namespace.length + 1) // <namespace>:
       tags.push(new Tag({name: tagName, namespace: this.model.namespace, options: jsYaml.load(tagAnnotation.text)}))
     }
+    this.model.currentTags = tags
     return tags
   }
 
   createTagsBasedOnAnnotationsGrouped () {
     let tagGroupsAnnotations = {}
-    for (let i = 0; i < this.tagAnnotations.length; i++) {
-      let groupTag = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.group))
+    for (let i = 0; i < this.model.groupAnnotations.length; i++) {
+      let groupTag = this.retrieveTagNameByPrefix(this.model.groupAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.group))
       if (groupTag) {
         tagGroupsAnnotations[groupTag] = new TagGroup({name: groupTag, namespace: this.model.namespace, group: this.model.config.grouped.group})
       }
@@ -269,10 +273,10 @@ class TagManager {
     for (let i = 0; i < groups.length; i++) {
       colors[groups[i]] = colorList[i]
     }
-    for (let i = 0; i < this.tagAnnotations.length; i++) {
-      let tagAnnotation = this.tagAnnotations[i]
-      let tagName = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.subgroup))
-      let groupBelongedTo = this.retrieveTagNameByPrefix(this.tagAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.relation))
+    for (let i = 0; i < this.model.groupAnnotations.length; i++) {
+      let tagAnnotation = this.model.groupAnnotations[i]
+      let tagName = this.retrieveTagNameByPrefix(this.model.groupAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.subgroup))
+      let groupBelongedTo = this.retrieveTagNameByPrefix(this.model.groupAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.relation))
       if (tagName && groupBelongedTo) {
         if (_.isArray(tagGroupsAnnotations[groupBelongedTo].tags)) {
           // Load options from annotation text body
@@ -292,6 +296,7 @@ class TagManager {
               this.model.namespace + ':' + this.model.config.grouped.relation + ':' + groupBelongedTo,
               this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + tagName]
           }))
+          this.model.currentTags = tagGroupsAnnotations
         }
       }
     }
@@ -365,7 +370,7 @@ class TagManager {
   }
 
   initIndexTags (callback) {
-    // TODO Retrieve all the dimensions
+    // Retrieve all the annotations of the page
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url, order: 'desc'}, (err, annotations) => {
       if (err) {
         console.error('Unable to load annotations') // TODO
@@ -462,11 +467,12 @@ class TagManager {
         for (let i = 0; i < this.currentIndexTags.length; i++) {
           // Append each element
           let tagButton = this.currentIndexTags[i].createButton()
+          tagButton.setAttribute('role', Tag.roles.index) // Set index rol to tag
           this.tagsContainer.index.append(tagButton)
         }
       } else if (LanguageUtils.isInstanceOf(this.currentIndexTags[0], TagGroup)) {
         for (let i = 0; i < this.currentIndexTags.length; i++) {
-          let tagGroupElement = this.currentIndexTags[i].createPanel()
+          let tagGroupElement = this.currentIndexTags[i].createPanel(true) // Index tag buttons panel
           if (tagGroupElement) {
             this.tagsContainer.index.append(tagGroupElement)
           }
