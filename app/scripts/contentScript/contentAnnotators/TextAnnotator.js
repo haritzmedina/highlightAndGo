@@ -15,7 +15,6 @@ class TextAnnotator extends ContentAnnotator {
   constructor (config) {
     super()
     this.events = {}
-    this.events.mouseUpOnDocumentHandler = null
     this.currentAnnotations = null
     this.currentUserProfile = null
     this.currentlyHighlightedElements = []
@@ -39,8 +38,8 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   initAnnotateEvent (callback) {
-    this.events.annotateEvent = this.createAnnotationEventHandler()
-    document.addEventListener(Events.annotate, this.events.annotateEvent, false)
+    this.events.annotateEvent = {element: document, event: Events.annotate, handler: this.createAnnotationEventHandler()}
+    this.events.annotateEvent.element.addEventListener(this.events.annotateEvent.event, this.events.annotateEvent.handler, false)
     if (_.isFunction(callback)) {
       callback()
     }
@@ -153,8 +152,8 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   initSelectionEvents (callback) {
-    this.events.mouseUpOnDocumentHandler = this.mouseUpOnDocumentHandlerConstructor()
-    document.addEventListener('mouseup', this.events.mouseUpOnDocumentHandler)
+    this.events.mouseUpOnDocumentHandler = {element: document, event: 'mouseup', handler: this.mouseUpOnDocumentHandlerConstructor()}
+    this.events.mouseUpOnDocumentHandler.element.addEventListener(this.events.mouseUpOnDocumentHandler.event, this.events.mouseUpOnDocumentHandler.handler)
     if (_.isFunction(callback)) {
       callback()
     }

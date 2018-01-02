@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const swal = require('sweetalert2')
 
 class HypothesisGroupInitializer {
   init (parsedSheetData, callback) {
@@ -21,7 +22,10 @@ class HypothesisGroupInitializer {
         this.createHypothesisGroup((group) => {
           this.createDimensionsAndCategories(group, () => {
             this.createRelationGSheetGroup(group, () => {
-              prompt(chrome.i18n.getMessage('ShareHypothesisGroup'), group.url)
+              // When window.focus
+              swal('Correctly configured', // TODO i18n
+                chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '">' + group.url + '</a>',
+                'success')
               if (_.isFunction(callback)) {
                 callback()
               }
@@ -29,7 +33,9 @@ class HypothesisGroupInitializer {
           })
         })
       } else {
-        prompt(chrome.i18n.getMessage('ShareHypothesisGroup'), group.url)
+        swal('Correctly configured', // TODO i18n
+          chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '">' + group.url + '</a>',
+          'success')
         // TODO Update Hypothesis group
       }
     })

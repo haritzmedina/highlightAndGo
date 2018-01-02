@@ -315,6 +315,11 @@ class TagManager {
   }
 
   destroy () {
+    // Remove event listeners
+    let events = _.values(this.events)
+    for (let i = 0; i < events.length; i++) {
+      events[i].element.removeEventListener(events[i].event, events[i].handler)
+    }
     // Remove tags wrapper
     $('#tagsWrapper').remove()
   }
@@ -353,7 +358,8 @@ class TagManager {
   }
 
   initEventHandlers (callback) {
-    document.addEventListener(Events.modeChanged, (event) => { this.modeChangeHandler(event) }, false)
+    this.events.modeChange = {element: document, event: Events.modeChanged, handler: (event) => { this.modeChangeHandler(event) }}
+    this.events.modeChange.element.addEventListener(this.events.modeChange.event, this.events.modeChange.handler, false)
     if (_.isFunction(callback)) {
       callback()
     }
