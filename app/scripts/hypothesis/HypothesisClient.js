@@ -220,7 +220,6 @@ class HypothesisClient {
         }
       },
       'error': function () {
-        debugger
         this.retryCount++
         if (this.retryCount <= this.retryLimit) {
           $.ajax(this)

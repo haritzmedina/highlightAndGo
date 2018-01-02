@@ -31,9 +31,9 @@ class HypothesisClientManager {
         } else {
           this.hypothesisClient = new HypothesisClient()
         }
-        if (_.isFunction(callback)) {
-          callback()
-        }
+      }
+      if (_.isFunction(callback)) {
+        callback()
       }
     })
   }
