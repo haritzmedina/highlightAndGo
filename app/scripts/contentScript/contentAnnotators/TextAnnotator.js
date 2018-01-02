@@ -1,5 +1,5 @@
 const ContentAnnotator = require('./ContentAnnotator')
-const GroupSelector = require('../GroupSelector')
+const ModeManager = require('../ModeManager')
 const ContentTypeManager = require('../ContentTypeManager')
 const TagManager = require('../TagManager')
 const Events = require('../Events')
@@ -23,18 +23,46 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   init (callback) {
-    this.initSelectionEvents(() => {
-      this.initAnnotateEvent(() => {
-        // Load annotations for first time
-        this.loadAnnotations(() => {
-          this.initAnnotatorByAnnotation(() => {
-            if (_.isFunction(callback)) {
-              callback()
-            }
-          })
+    this.initEvents(() => {
+      this.loadAnnotations(() => {
+        this.initAnnotatorByAnnotation(() => {
+          if (_.isFunction(callback)) {
+            callback()
+          }
         })
       })
     })
+  }
+
+  initEvents (callback) {
+    this.initSelectionEvents(() => {
+      this.initAnnotateEvent(() => {
+        this.initModeChangeEvent(() => {
+          if (_.isFunction(callback)) {
+            callback()
+          }
+        })
+      })
+    })
+  }
+
+  initModeChangeEvent (callback) {
+    this.events.modeChangeEvent = {element: document, event: Events.modeChanged, handler: this.createInitModeChangeEventHandler()}
+    this.events.modeChangeEvent.element.addEventListener(this.events.modeChangeEvent.event, this.events.modeChangeEvent.handler, false)
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
+
+  createInitModeChangeEventHandler () {
+    return (event) => {
+      // If mode is index, disable selection event
+      if (window.abwa.modeManager.mode === ModeManager.modes.index) {
+        this.disableSelectionEvent()
+      } else {
+        this.activateSelectionEvent()
+      }
+    }
   }
 
   initAnnotateEvent (callback) {
@@ -152,11 +180,31 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   initSelectionEvents (callback) {
+    if (_.isEmpty(window.abwa.annotationBasedInitializer.initAnnotation)) {
+      this.activateSelectionEvent(() => {
+        if (_.isFunction(callback)) {
+          callback()
+        }
+      })
+    } else {
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    }
+  }
+
+  activateSelectionEvent (callback) {
     this.events.mouseUpOnDocumentHandler = {element: document, event: 'mouseup', handler: this.mouseUpOnDocumentHandlerConstructor()}
     this.events.mouseUpOnDocumentHandler.element.addEventListener(this.events.mouseUpOnDocumentHandler.event, this.events.mouseUpOnDocumentHandler.handler)
     if (_.isFunction(callback)) {
       callback()
     }
+  }
+
+  disableSelectionEvent (callback) {
+    this.events.mouseUpOnDocumentHandler.element.removeEventListener(
+      this.events.mouseUpOnDocumentHandler.event,
+      this.events.mouseUpOnDocumentHandler.handler)
   }
 
   loadAnnotations (callback) {
@@ -172,7 +220,6 @@ class TextAnnotator extends ContentAnnotator {
         if (err) {
           console.error('Unable to load annotations')
         } else {
-          this.currentAnnotations = annotations || []
           // Search tagged annotations
           let tagList = window.abwa.tagManager.getTagsList()
           let taggedAnnotations = []
@@ -183,6 +230,7 @@ class TextAnnotator extends ContentAnnotator {
               taggedAnnotations.push(annotations[i])
             }
           }
+          this.currentAnnotations = taggedAnnotations || []
           console.debug('Annotations to highlight')
           console.debug(taggedAnnotations)
           // Highlight annotations in the DOM
@@ -226,6 +274,8 @@ class TextAnnotator extends ContentAnnotator {
       })
       // Create context menu event for highlighted elements
       this.createContextMenuForAnnotation(annotation)
+      // Create click event to move to next annotation
+      this.createNextAnnotationHandler(annotation)
       // Append currently highlighted elements
       this.currentlyHighlightedElements = $.merge(this.currentlyHighlightedElements, highlightedElements)
     } catch (err) {
@@ -240,6 +290,37 @@ class TextAnnotator extends ContentAnnotator {
     } finally {
       if (_.isFunction(callback)) {
         callback()
+      }
+    }
+  }
+
+  createNextAnnotationHandler (annotation) {
+    debugger
+    let annotationIndex = _.findIndex(
+      this.currentAnnotations,
+      (currentAnnotation) => { return currentAnnotation.id === annotation.id })
+    let nextAnnotationIndex = _.findIndex(
+      this.currentAnnotations,
+      (currentAnnotation) => { return _.isEqual(currentAnnotation.tags, annotation.tags) },
+      annotationIndex + 1)
+    // If not next annotation found, retrieve the first one
+    if (nextAnnotationIndex === -1) {
+      nextAnnotationIndex = _.findIndex(
+        this.currentAnnotations,
+        (currentAnnotation) => { return _.isEqual(currentAnnotation.tags, annotation.tags) })
+    }
+    // If annotation is different, create event
+    if (nextAnnotationIndex !== annotationIndex) {
+      let highlightedElements = document.querySelectorAll('[data-annotation-id="' + annotation.id + '"]')
+      for (let i = 0; i < highlightedElements.length; i++) {
+        let highlightedElement = highlightedElements[i]
+        highlightedElement.addEventListener('click', () => {
+          console.log('Clicked')
+          // If mode is index, move to next annotation
+          if (window.abwa.modeManager.mode === ModeManager.modes.index) {
+            this.goToAnnotation(this.currentAnnotations[nextAnnotationIndex])
+          }
+        })
       }
     }
   }
@@ -354,14 +435,17 @@ class TextAnnotator extends ContentAnnotator {
 
   destroy () {
     // Remove event listener
-    document.removeEventListener('mouseup', this.events.mouseUpOnDocumentHandler)
-    document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
+    // Remove event listeners
+    let events = _.values(this.events)
+    for (let i = 0; i < events.length; i++) {
+      events[i].element.removeEventListener(events[i].event, events[i].handler)
+    }
     // Remove created annotations
     DOMTextUtils.unHighlightElements(this.currentlyHighlightedElements)
   }
 
   initAnnotatorByAnnotation (callback) {
-    // TODO Check if init annotation exists
+    // Check if init annotation exists
     if (window.abwa.annotationBasedInitializer.initAnnotation) {
       let initAnnotation = window.abwa.annotationBasedInitializer.initAnnotation
       // If document is pdf, the DOM is dynamic, we must scroll to annotation using PDF.js FindController

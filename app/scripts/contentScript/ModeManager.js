@@ -10,7 +10,10 @@ class ModeManager {
     } else {
       // If initialization based on annotation
       if (window.abwa.annotationBasedInitializer.initAnnotation) {
+        // Set index mode
         this.mode = ModeManager.modes.index
+        // Open sidebar
+        window.abwa.sidebar.openSidebar()
       } else {
         this.mode = ModeManager.modes.highlight
       }
