@@ -8,13 +8,15 @@ const LanguageUtils = require('../../utils/LanguageUtils')
 const $ = require('jquery')
 require('jquery-contextmenu/dist/jquery.contextMenu')
 const _ = require('lodash')
+require('components-jqueryui')
 
-const TRY_RECOVERING_ANNOTATION_INTERVAL_IN_SECONDS = 3
+const ANNOTATION_OBSERVER_INTERVAL_IN_SECONDS = 3
 
 class TextAnnotator extends ContentAnnotator {
   constructor (config) {
     super()
     this.events = {}
+    this.observerInterval = null
     this.currentAnnotations = null
     this.currentUserProfile = null
     this.currentlyHighlightedElements = []
@@ -24,11 +26,13 @@ class TextAnnotator extends ContentAnnotator {
 
   init (callback) {
     this.initEvents(() => {
-      this.loadAnnotations(() => {
-        this.initAnnotatorByAnnotation(() => {
-          if (_.isFunction(callback)) {
-            callback()
-          }
+      this.initAnnotationsObserver(() => {
+        this.loadAnnotations(() => {
+          this.initAnnotatorByAnnotation(() => {
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          })
         })
       })
     })
@@ -207,6 +211,25 @@ class TextAnnotator extends ContentAnnotator {
       this.events.mouseUpOnDocumentHandler.handler)
   }
 
+  initAnnotationsObserver (callback) {
+    this.observerInterval = setInterval(() => {
+      console.log(this.currentAnnotations)
+      for (let i = 0; i < this.currentAnnotations.length; i++) {
+        let annotation = this.currentAnnotations[i]
+        // Search if annotation exist
+        let element = document.querySelector('[data-annotation-id="' + annotation.id + '"')
+        // If annotation doesn't exist, try to find it
+        if (!_.isElement(element)) {
+          this.highlightAnnotation(annotation)
+        }
+      }
+    }, ANNOTATION_OBSERVER_INTERVAL_IN_SECONDS * 1000)
+    // Callback
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
+
   loadAnnotations (callback) {
     // Retrieve current user profile
     window.abwa.hypothesisClientManager.hypothesisClient.getUserProfile((userProfile) => {
@@ -278,15 +301,6 @@ class TextAnnotator extends ContentAnnotator {
       this.createNextAnnotationHandler(annotation)
       // Append currently highlighted elements
       this.currentlyHighlightedElements = $.merge(this.currentlyHighlightedElements, highlightedElements)
-    } catch (err) {
-      // If annotation target is not found try it again until found
-      // TODO Performance: Check if this should be setTimeout instead of interval (cause is recursive function)
-      let interval = setInterval(() => {
-        console.log('Trying to recover annotation')
-        this.highlightAnnotation(annotation, () => {
-          clearInterval(interval)
-        })
-      }, TRY_RECOVERING_ANNOTATION_INTERVAL_IN_SECONDS * 1000)
     } finally {
       if (_.isFunction(callback)) {
         callback()
@@ -295,7 +309,6 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   createNextAnnotationHandler (annotation) {
-    debugger
     let annotationIndex = _.findIndex(
       this.currentAnnotations,
       (currentAnnotation) => { return currentAnnotation.id === annotation.id })
@@ -434,7 +447,8 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   destroy () {
-    // Remove event listener
+    // Remove observer
+    clearInterval(this.observerInterval)
     // Remove event listeners
     let events = _.values(this.events)
     for (let i = 0; i < events.length; i++) {
