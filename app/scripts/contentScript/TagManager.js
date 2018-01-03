@@ -376,91 +376,70 @@ class TagManager {
   }
 
   initIndexTags (callback) {
-    // Retrieve all the annotations of the page
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({url: window.abwa.groupSelector.currentGroup.url, order: 'desc'}, (err, annotations) => {
+    let groupAnnotations = this.model.groupAnnotations
+    let groupTags = {}
+    for (let i = 0; i < groupAnnotations.length; i++) {
+      let groupTag = this.retrieveTagNameByPrefix(groupAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.group))
+      if (groupTag) {
+        groupTags[groupTag] = new TagGroup({name: groupTag, namespace: this.model.namespace, group: this.model.config.grouped.group})
+      }
+    }
+    // Retrieve current annotations
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+      url: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+      uri: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+      group: window.abwa.groupSelector.currentGroup.id
+    }, (err, documentAnnotations) => {
       if (err) {
-        console.error('Unable to load annotations') // TODO
+        console.error('Unable to load annotations') // TODO Show message to user
       } else {
-        // If annotations are grouped
-        if (!_.isEmpty(this.model.config.grouped)) {
-          // Retrieve tags of the namespace
-          let groupAnnotations = _.filter(annotations, (annotation) => {
-            return this.hasANamespace(annotation, this.model.namespace)
-          })
-          // Remove slr:spreadsheet annotation ONLY for SLR case
-          groupAnnotations = _.filter(groupAnnotations, (annotation) => {
-            return !this.hasATag(annotation, 'slr:spreadsheet')
-          })
-          // Get only tags of groups
-          groupAnnotations = _.filter(groupAnnotations, (annotation) => {
-            return this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.group)
-          })
-          let groupTags = {}
-          for (let i = 0; i < groupAnnotations.length; i++) {
-            let groupTag = this.retrieveTagNameByPrefix(groupAnnotations[i].tags, (this.model.namespace + ':' + this.model.config.grouped.group))
-            if (groupTag) {
-              groupTags[groupTag] = new TagGroup({name: groupTag, namespace: this.model.namespace, group: this.model.config.grouped.group})
+        // Retrieve tags of the namespace
+        documentAnnotations = _.filter(documentAnnotations, (annotation) => {
+          return this.hasANamespace(annotation, this.model.namespace)
+        })
+        // Get only tags of subgroups or groups
+        groupAnnotations = _.filter(groupAnnotations, (annotation) => {
+          return this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.group) ||
+            this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.subgroup)
+        })
+        // Group active subgroups by groups
+        for (let i = 0; i < documentAnnotations.length; i++) {
+          let annotationGroupData = this.getGroupAndSubgroup(documentAnnotations[i])
+          // If not already subgroup, define it
+          if (!_.find(groupTags[annotationGroupData.group].tags, (tag) => { return tag.name === annotationGroupData.subgroup })) {
+            // Create tag and add to its group
+            // If has subgroup
+            if (annotationGroupData.subgroup) {
+              let tagName = annotationGroupData.subgroup
+              let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
+              groupTags[annotationGroupData.group].tags.push(new Tag({
+                name: tagName,
+                namespace: this.model.namespace,
+                options: {color: color},
+                tags: [
+                  this.model.namespace + ':' + this.model.config.grouped.relation + ':' + annotationGroupData.group,
+                  this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + annotationGroupData.subgroup
+                ]
+              }))
+            } else { // If doesn't have subgroup (free category)
+              let tagName = annotationGroupData.group
+              let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
+              groupTags[annotationGroupData.group].tags.push(new Tag({
+                name: tagName,
+                namespace: this.model.namespace,
+                options: {color: color},
+                tags: [
+                  this.model.namespace + ':' + this.model.config.grouped.group + ':' + tagName
+                ]
+              }))
             }
           }
-          // Retrieve current annotations
-          window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-            url: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
-            uri: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
-            group: window.abwa.groupSelector.currentGroup.id
-          }, (err, documentAnnotations) => {
-            if (err) {
-              console.error('Unable to load annotations') // TODO
-            } else {
-              // Retrieve tags of the namespace
-              documentAnnotations = _.filter(documentAnnotations, (annotation) => {
-                return this.hasANamespace(annotation, this.model.namespace)
-              })
-              // Get only tags of subgroups or groups
-              groupAnnotations = _.filter(groupAnnotations, (annotation) => {
-                return this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.group) ||
-                  this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.subgroup)
-              })
-              // Group active subgroups by groups
-              for (let i = 0; i < documentAnnotations.length; i++) {
-                let annotationGroupData = this.getGroupAndSubgroup(documentAnnotations[i])
-                // If not already subgroup, define it
-                if (!_.find(groupTags[annotationGroupData.group].tags, (tag) => { return tag === annotationGroupData.subgroup })) {
-                  // Create tag and add to its group
-                  // If has subgroup
-                  if (annotationGroupData.subgroup) {
-                    let tagName = annotationGroupData.subgroup
-                    let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
-                    groupTags[annotationGroupData.group].tags.push(new Tag({
-                      name: tagName,
-                      namespace: this.model.namespace,
-                      options: {color: color},
-                      tags: [
-                        this.model.namespace + ':' + this.model.config.grouped.relation + ':' + annotationGroupData.group,
-                        this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + annotationGroupData.subgroup
-                      ]
-                    }))
-                  } else { // If doesn't have subgroup (free category)
-                    let tagName = annotationGroupData.group
-                    let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
-                    groupTags[annotationGroupData.group].tags.push(new Tag({
-                      name: tagName,
-                      namespace: this.model.namespace,
-                      options: {color: color},
-                      tags: [
-                        this.model.namespace + ':' + this.model.config.grouped.group + ':' + tagName
-                      ]
-                    }))
-                  }
-                }
-              }
-              this.currentIndexTags = _.values(groupTags)
-              // Generate tag groups and buttons
-              this.createIndexTagsButtons()
-              if (_.isFunction(callback)) {
-                callback()
-              }
-            }
-          })
+        }
+        this.currentIndexTags = _.values(groupTags)
+        // Generate tag groups and buttons
+        this.createIndexTagsButtons()
+        if (_.isFunction(callback)) {
+          callback()
         }
       }
     })
