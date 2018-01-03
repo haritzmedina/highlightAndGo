@@ -66,19 +66,27 @@ describe('Popup test', function () {
   })
 
   it('Tool creates a popup using annotation', async function () {
-    browser.call(() => new Promise((resolve) => {
-      hypothesisClient.fetchAnnotation(annotation.id, (response) => {
-        expect(response.uri).toBe(WEBSITE_URL)
-        resolve()
+    browser.call(() => new Promise((resolve, reject) => {
+      hypothesisClient.fetchAnnotation(annotation.id, (err, response) => {
+        if (err) {
+          reject(err)
+        } else {
+          expect(response.uri).toBe(WEBSITE_URL)
+          resolve()
+        }
       })
     }))
   })
 
   afterAll(() => {
-    browser.call(() => new Promise((resolve) => {
-      hypothesisClient.deleteAnnotation(annotation.id, () => {
-        console.log('Deleted annotation ' + annotation.id)
-        resolve()
+    browser.call(() => new Promise((resolve, reject) => {
+      hypothesisClient.deleteAnnotation(annotation.id, (err) => {
+        if (err) {
+          reject(err)
+        } else {
+          console.log('Deleted annotation ' + annotation.id)
+          resolve()
+        }
       })
     }))
   })

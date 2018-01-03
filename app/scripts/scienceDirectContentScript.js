@@ -12,8 +12,12 @@ class ScienceDirectContentScript {
         // Retrieve if annotation is done in current url or in pdf version
         window.hag.hypothesisClientManager = new HypothesisClientManager()
         window.hag.hypothesisClientManager.init(() => {
-          window.hag.hypothesisClientManager.hypothesisClient.fetchAnnotation(params.hag, (annotation) => {
-            // TODO Check if annotation is from this page
+          window.hag.hypothesisClientManager.hypothesisClient.fetchAnnotation(params.hag, (err, annotation) => {
+            if (err) {
+              console.error(err)
+            } else {
+              // TODO Check if annotation is from this page
+            }
           })
         })
       })
