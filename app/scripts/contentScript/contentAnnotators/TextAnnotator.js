@@ -5,6 +5,7 @@ const TagManager = require('../TagManager')
 const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
 const LanguageUtils = require('../../utils/LanguageUtils')
+const Config = require('../Config')
 const $ = require('jquery')
 require('jquery-contextmenu/dist/jquery.contextMenu')
 const _ = require('lodash')
@@ -16,12 +17,12 @@ class TextAnnotator extends ContentAnnotator {
   constructor (config) {
     super()
     this.events = {}
+    this.config = config
     this.observerInterval = null
     this.currentAnnotations = null
     this.currentUserProfile = null
     this.currentlyHighlightedElements = []
     this.highlightClassName = 'highlightedAnnotation'
-    this.highlightFilteredClassName = 'unHighlightedAnnotation'
   }
 
   init (callback) {
@@ -59,7 +60,7 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   createInitModeChangeEventHandler () {
-    return (event) => {
+    return () => {
       // If mode is index, disable selection event
       if (window.abwa.modeManager.mode === ModeManager.modes.index) {
         this.disableSelectionEvent()
@@ -121,7 +122,7 @@ class TextAnnotator extends ContentAnnotator {
         }
       }
       // Construct the annotation to send to hypothesis
-      let annotation = this.constructAnnotation(selectors, event.detail.tags)
+      let annotation = TextAnnotator.constructAnnotation(selectors, event.detail.tags)
       window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(annotation, (err, annotation) => {
         if (err) {
           alert('Unexpected error, unable to create annotation')
@@ -139,7 +140,7 @@ class TextAnnotator extends ContentAnnotator {
     }
   }
 
-  constructAnnotation (selectors, tags) {
+  static constructAnnotation (selectors, tags) {
     let data = {
       group: window.abwa.groupSelector.currentGroup.id,
       permissions: {
@@ -209,11 +210,13 @@ class TextAnnotator extends ContentAnnotator {
     this.events.mouseUpOnDocumentHandler.element.removeEventListener(
       this.events.mouseUpOnDocumentHandler.event,
       this.events.mouseUpOnDocumentHandler.handler)
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
   initAnnotationsObserver (callback) {
     this.observerInterval = setInterval(() => {
-      console.log(this.currentAnnotations)
       for (let i = 0; i < this.currentAnnotations.length; i++) {
         let annotation = this.currentAnnotations[i]
         // Search if annotation exist
@@ -328,7 +331,6 @@ class TextAnnotator extends ContentAnnotator {
       for (let i = 0; i < highlightedElements.length; i++) {
         let highlightedElement = highlightedElements[i]
         highlightedElement.addEventListener('click', () => {
-          console.log('Clicked')
           // If mode is index, move to next annotation
           if (window.abwa.modeManager.mode === ModeManager.modes.index) {
             this.goToAnnotation(this.currentAnnotations[nextAnnotationIndex])
@@ -339,44 +341,63 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   createContextMenuForAnnotation (annotation) {
-    if (this.currentUserProfile.userid === annotation.user) {
-      $.contextMenu({
-        selector: '[data-annotation-id="' + annotation.id + '"]',
-        callback: (key, options) => {
-          // Delete annotation
-          window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (result) => {
-            if (!result.deleted) {
-              // Alert user error happened
-              alert('Error deleting hypothesis annotation, please try it again')
-            } else {
-              // Retrieve highlighted elements for annotation
-              let annotationElements = _.remove(this.currentlyHighlightedElements, (element) => {
-                return element.dataset.annotationId === annotation.id
-              })
-              // Unhighlight annotation highlight elements
-              DOMTextUtils.unHighlightElements(annotationElements)
-              // Dispatch deleted annotation event
-              LanguageUtils.dispatchCustomEvent(Events.annotationDeleted, {annotation: annotation})
-              console.debug('Deleted annotation ' + annotation.id)
-            }
-          })
-        },
-        items: {
-          'delete': {name: 'Delete annotation', icon: 'delete'}
+    $.contextMenu({
+      selector: '[data-annotation-id="' + annotation.id + '"]',
+      build: () => {
+        // Create items for context menu
+        let items = {}
+        // If current user is the same as author, allow to remove annotation
+        if (this.currentUserProfile.userid === annotation.user) {
+          items['delete'] = {name: 'Delete annotation'}
         }
-      })
-    }
-  }
-
-  setHighlightedBackgroundColor (elem, color) {
-    if (color) {
-      $(elem).css('background-color', color)
-    } else {
-      if (elem.nodeName === 'MARK') {
-        $(elem).css('background-color', 'initial')
-      } else {
-        $(elem).css('background-color', '')
+        // Add validate item for SLR
+        if (this.config.namespace === Config.slrDataExtraction.namespace) {
+          if (window.abwa.modeManager.mode === ModeManager.modes.index) {
+            if (_.isObject(items['delete'])) {
+              items['sep1'] = '---------'
+            }
+            items['validate'] = {name: 'Validate classification'}
+          }
+        }
+        return {
+          callback: (key) => {
+            if (key === 'validate') {
+              // TODO Validate annotation category
+            } else if (key === 'delete') {
+              // Delete annotation
+              window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (err, result) => {
+                if (err) {
+                  // Unable to delete this annotation
+                  console.error('Error while trying to delete annotation %s', annotation.id)
+                } else {
+                  if (!result.deleted) {
+                    // Alert user error happened
+                    alert('Error deleting hypothesis annotation, please try it again')
+                  } else {
+                    // Dispatch deleted annotation event
+                    LanguageUtils.dispatchCustomEvent(Events.annotationDeleted, {annotation: annotation})
+                    // Retrieve highlighted elements for annotation and remove from currentlyHighlightedElements
+                    let annotationElements = _.remove(this.currentlyHighlightedElements, (element) => {
+                      return element.dataset.annotationId === annotation.id
+                    })
+                    // Remove annotation from data model
+                    _.remove(this.currentAnnotations, (currentAnnotation) => {
+                      return currentAnnotation.id === annotation.id
+                    })
+                    // Unhighlight annotation highlight elements
+                    DOMTextUtils.unHighlightElements(annotationElements)
+                    console.debug('Deleted annotation ' + annotation.id)
+                  }
+                }
+              })
+            }
+          },
+          items: items
+        }
       }
+    })
+    if (this.currentUserProfile.userid === annotation.user) {
+
     }
   }
 
@@ -400,12 +421,6 @@ class TextAnnotator extends ContentAnnotator {
         }
       }
     }
-  }
-
-  hasATag (annotation, tag) {
-    return _.findIndex(annotation.tags, (annotationTag) => {
-      return _.startsWith(annotationTag.toLowerCase(), tag.toLowerCase())
-    }) !== -1
   }
 
   goToFirstAnnotationOfTag (params) {
