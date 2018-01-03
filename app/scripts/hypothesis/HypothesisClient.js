@@ -35,6 +35,7 @@ class HypothesisClient {
       'error': function () {
         this.retryCount++
         if (this.retryCount <= this.retryLimit) {
+          // TODO Wait for some seconds and try again
           $.ajax(this)
         } else {
           if (_.isFunction(callback)) {
@@ -65,10 +66,14 @@ class HypothesisClient {
         return true
       }))
     }
-    Promise.all(promises).then((responses) => {
-      callback(null, responses)
-    }).catch((reasons) => {
+    Promise.all(promises).catch((reasons) => {
       callback(new Error('Some annotations cannot be created'))
+    }).then((responses) => {
+      if (responses.length === annotations.length) {
+        callback(null, responses)
+      } else {
+        callback(new Error('Some annotations cannot be created'))
+      }
     })
   }
 
