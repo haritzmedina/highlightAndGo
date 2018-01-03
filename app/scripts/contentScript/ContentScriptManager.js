@@ -86,9 +86,9 @@ class ContentScriptManager {
     this.destroyContentAnnotator()
     // Create a new content annotator for the current group
     if (config.contentAnnotator === 'text') {
-      window.abwa.contentAnnotator = new TextAnnotator()
+      window.abwa.contentAnnotator = new TextAnnotator(config)
     } else {
-      window.abwa.contentAnnotator = new TextAnnotator() // TODO Depending on the type of annotator
+      window.abwa.contentAnnotator = new TextAnnotator(config) // TODO Depending on the type of annotator
     }
     window.abwa.contentAnnotator.init(callback)
   }
