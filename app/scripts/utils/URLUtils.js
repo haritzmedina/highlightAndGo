@@ -4,13 +4,14 @@ class URLUtils {
    * @param url
    * @returns {{}}
    */
-  static extractHashParamsFromUrl (url) {
+  static extractHashParamsFromUrl (url, separator) {
+    separator = separator || ':'
     let splittedUrl = url.split('#')
     let result = null
     if (splittedUrl.length > 1) {
       let hash = splittedUrl[1]
       result = hash.split('&').reduce((result, item) => {
-        let parts = item.split(':')
+        let parts = item.split(separator)
         result[parts[0]] = parts[1]
         return result
       }, {})
