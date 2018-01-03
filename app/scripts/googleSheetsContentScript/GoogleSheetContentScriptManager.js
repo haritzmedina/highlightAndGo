@@ -15,7 +15,7 @@ class GoogleSheetContentScriptManager {
           console.debug('Correctly logged in to hypothesis: %s', tokens.hypothesis)
           console.debug('Correctly logged in to gSheet: %s', tokens.gSheet)
           this.initGoogleSheetParsing(() => {
-
+            // TODO Disable the extension icon
           })
         }
       })

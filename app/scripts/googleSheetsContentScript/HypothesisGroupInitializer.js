@@ -33,9 +33,12 @@ class HypothesisGroupInitializer {
           })
         })
       } else {
-        swal('Correctly configured', // TODO i18n
+        swal('The group ' + group.name + ' already exists', // TODO i18n
           chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '">' + group.url + '</a>',
-          'success')
+          'info')
+        if (_.isFunction(callback)) {
+          callback()
+        }
         // TODO Update Hypothesis group
       }
     })
@@ -44,7 +47,10 @@ class HypothesisGroupInitializer {
   createHypothesisGroup (callback) {
     window.hag.hypothesisClientManager.hypothesisClient.createHypothesisGroup(this.parsedSheetData.title, (err, group) => {
       if (err) {
-        console.error(err) // TODO Show to the user the error
+        swal('Oops!', // TODO i18n
+          'There was a problem while creating Hypothes.is group. Please reload the page and try it again. <br/>' +
+          'If error continues, please contact administrator.',
+          'error') // Show to the user the error
       } else {
         console.debug('Created group in hypothesis: ')
         console.debug(group)
@@ -77,7 +83,10 @@ class HypothesisGroupInitializer {
     console.debug(annotations)
     window.hag.hypothesisClientManager.hypothesisClient.createNewAnnotations(annotations, (err, result) => {
       if (err) {
-        console.error(err) // TODO Show to the user the error
+        swal('Oops!', // TODO i18n
+          'There was a problem while creating buttons for the sidebar. Please reload the page and try it again. <br/>' +
+          'If error continues, please contact administrator.',
+          'error') // Show to the user the error
       } else {
         if (_.isFunction(callback)) {
           callback()
@@ -88,13 +97,19 @@ class HypothesisGroupInitializer {
 
   createRelationGSheetGroup (group, callback) {
     // Create relation to sheet annotation
-    let relationAnnotation = this.generateRelateSheetAndGroupAnnotation(this.parsedSheetData.gSheetId, group)
-    window.hag.hypothesisClientManager.hypothesisClient.createNewAnnotation(relationAnnotation, (err, response) => {
+    let relationAnnotation = this.generateRelateSheetAndGroupAnnotation(this.parsedSheetData.gSheetMetadata, group)
+    window.hag.hypothesisClientManager.hypothesisClient.createNewAnnotation(relationAnnotation, (err, annotation) => {
       if (err) {
-        alert('Error while creating relation between hypothesis and google sheet. Please try it again.')
-      }
-      if (_.isFunction(callback)) {
-        callback()
+        swal('Oops!', // TODO i18n
+          'There was a problem while relating the tool with the spreadsheet. Please reload the page and try it again. <br/>' +
+          'If error continues, please contact administrator.',
+          'error') // Show to the user the error
+      } else {
+        console.debug('Created relation between sheet and hypothesis group: ')
+        console.debug(annotation)
+        if (_.isFunction(callback)) {
+          callback()
+        }
       }
     })
   }
@@ -113,7 +128,7 @@ class HypothesisGroupInitializer {
     }
   }
 
-  generateRelateSheetAndGroupAnnotation (idGSheet, group) {
+  generateRelateSheetAndGroupAnnotation (gSheetMetadata, group) {
     return {
       group: group.id,
       permissions: {
@@ -122,7 +137,7 @@ class HypothesisGroupInitializer {
       references: [],
       tags: ['slr:spreadsheet'],
       target: [],
-      text: 'id: ' + idGSheet,
+      text: 'spreadsheetId: ' + gSheetMetadata.spreadsheetId + '\n' + 'sheetId: ' + gSheetMetadata.sheetId,
       uri: group.url // Group url
     }
   }

@@ -1,5 +1,6 @@
 const _ = require('lodash')
 const $ = require('jquery')
+const URLUtils = require('../utils/URLUtils')
 
 class GoogleSheetParser {
   constructor () {
@@ -8,6 +9,7 @@ class GoogleSheetParser {
 
   parse (callback) {
     this.retrieveSpreadsheetId()
+    this.retrieveSheetId()
     this.retrieveCurrentToken((token) => {
       let promises = []
       promises.push(new Promise((resolve) => {
@@ -27,7 +29,7 @@ class GoogleSheetParser {
           callback(null, {
             dimensions: promisesResults[0],
             title: promisesResults[1],
-            gSheetId: this.spreadsheetId
+            gSheetMetadata: {spreadsheetId: this.spreadsheetId, sheetId: this.sheetId}
           })
         }
       })
@@ -37,6 +39,11 @@ class GoogleSheetParser {
   retrieveSpreadsheetId () {
     // Get current google sheet id
     this.spreadsheetId = window.location.href.match(/[-\w]{25,}/)[0]
+  }
+
+  retrieveSheetId () {
+    let hashParams = URLUtils.extractHashParamsFromUrl(window.location.href, '=')
+    this.sheetId = hashParams.gid
   }
 
   retrieveCurrentToken (callback) {
@@ -83,22 +90,25 @@ class GoogleSheetParser {
       let columnNames = result.values[0]
       let indexOfAuthor = _.findIndex(columnNames, (elem) => { return elem.toLowerCase() === 'author' })
       let dimensionsArray = _.takeWhile(columnNames, (elem) => { return elem.toLowerCase() !== 'author' })
+      let letterOfAuthor = this.columnToLetter(indexOfAuthor + 1)
+      console.log(letterOfAuthor)
+      console.log(dimensionsArray)
       let dimensions = _.zipObject(dimensionsArray, [])
       $.ajax({
         method: 'GET',
-        url: 'https://sheets.googleapis.com/v4/spreadsheets/1MfznSKgUMP_B19l_8lFKu1I9-UNP0cpfby9MHuwzbAg',
+        url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.spreadsheetId,
         data: {
           includeGridData: true,
-          ranges: 'B2:' + this.columnToLetter(indexOfAuthor + 1) + '2'
+          ranges: 'B2:' + letterOfAuthor + '2'
         },
         headers: {
           'Authorization': 'Bearer ' + token
         }
       }).done((result) => {
-        let values = result.sheets[0].data[0].rowData[0].values
-        for (let i = 0; i < values.length; i++) {
+        let values = result.sheets[0].data[0].rowData[0].values // TODO Current sheet
+        for (let i = 0; i < dimensionsArray.length; i++) {
           let dimensionName = dimensionsArray[i]
-          if (_.isObject(values[i].dataValidation) && values[i].dataValidation.condition.type === 'ONE_OF_LIST') {
+          if (_.isObject(values[i]) && _.isObject(values[i].dataValidation) && values[i].dataValidation.condition.type === 'ONE_OF_LIST') {
             let categories = _.map(values[i].dataValidation.condition.values, 'userEnteredValue')
             dimensions[dimensionName] = categories
           } else {
