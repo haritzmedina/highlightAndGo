@@ -37,18 +37,19 @@ class SLRDataExtractionContentScript {
 
   initBackToSpreadsheetLink (callback) {
     // Retrieve current spreadsheet id
-    this.retrieveSpreadsheetIdForCurrentGroup((err, spreadsheetId) => {
+    this.retrieveSpreadsheetMetadataForCurrentGroup((err, spreadsheetMetadata) => {
       if (err) {
         console.error(new Error('Unable to retrieve spreadsheet asociated with this group'))
       } else {
         this.askUserToLogInSheets((token) => {
-          this.getSpreadsheetData(spreadsheetId, token, null, (result) => {
-            let data = result.sheets[0].data[0].rowData
+          this.getSheet(spreadsheetMetadata, token, (sheet) => {
+            let data = sheet.data[0].rowData
             // Retrieve current primary study row
             let primaryStudyRow = this.retrievePrimaryStudyRow(data)
             // Construct link to spreadsheet
             this.linkToSLR = document.createElement('a')
-            this.linkToSLR.href = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit#gid=0&range=A' + (primaryStudyRow + 1)
+            this.linkToSLR.href = 'https://docs.google.com/spreadsheets/d/' + spreadsheetMetadata.spreadsheetId + '/edit#gid=' +
+              spreadsheetMetadata.sheetId + '&range=A' + (primaryStudyRow + 1)
             this.linkToSLR.innerText = 'Back to spreadsheet' // TODO i18n
             this.linkToSLR.target = '_blank'
             $('#groupBody').append(this.linkToSLR)
@@ -82,13 +83,13 @@ class SLRDataExtractionContentScript {
     }
     console.log('Dimension %s, category %s', dimension, category)
     if (category && dimension) {
-      this.retrieveSpreadsheetIdForCurrentGroup((err, spreadsheetId) => {
+      this.retrieveSpreadsheetMetadataForCurrentGroup((err, spreadsheetMetadata) => {
         if (err) {
           alert('The current group is not related with a google spreadsheet')
         } else {
           this.askUserToLogInSheets((token) => {
-            this.getSpreadsheetData(spreadsheetId, token, null, (result) => {
-              let data = result.sheets[0].data[0].rowData
+            this.getSheet(spreadsheetMetadata, token, (sheet) => {
+              let data = sheet.data[0].rowData
               // Retrieve primary study row
               let primaryStudyRow = this.retrievePrimaryStudyRow(data)
               // Retrieve dimension column
@@ -188,13 +189,13 @@ class SLRDataExtractionContentScript {
     })
     let dimension = null
     if (dimensionTag.includes('slr:isCategoryOf:')) { // Categorized dimension
-      this.retrieveSpreadsheetIdForCurrentGroup((err, spreadsheetId) => {
+      this.retrieveSpreadsheetMetadataForCurrentGroup((err, spreadsheetMetadata) => {
         if (err) {
           console.error(err)
         } else {
           this.askUserToLogInSheets((token) => {
-            this.getSpreadsheetData(spreadsheetId, token, null, (result) => {
-              let data = result.sheets[0].data[0].rowData
+            this.getSheet(spreadsheetMetadata, token, (sheet) => {
+              let data = sheet.data[0].rowData
               dimension = dimensionTag.replace('slr:isCategoryOf:', '')
               window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
                 url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(), // For current document (pdf/html)
@@ -273,13 +274,13 @@ class SLRDataExtractionContentScript {
       })
     } else if (dimensionTag.includes('slr:dimension:')) { // Uncategorized dimension
       // Retrieve google spreadsheet data
-      this.retrieveSpreadsheetIdForCurrentGroup((err, spreadsheetId) => {
+      this.retrieveSpreadsheetMetadataForCurrentGroup((err, spreadsheetMetadata) => {
         if (err) {
           console.error(err)
         } else {
           this.askUserToLogInSheets((token) => {
-            this.getSpreadsheetData(spreadsheetId, token, null, (result) => {
-              let data = result.sheets[0].data[0].rowData
+            this.getSheet(spreadsheetMetadata, token, (sheet) => {
+              let data = sheet.data[0].rowData
               dimension = dimensionTag.replace('slr:dimension:', '')
               // Search all annotations ...
               window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
@@ -356,9 +357,8 @@ class SLRDataExtractionContentScript {
     if (window.abwa.contentTypeManager.doi) {
       let doi = window.abwa.contentTypeManager.doi
       for (let i = 1; i < data.length && primaryStudyRow === 0; i++) {
-        if (!_.isEmpty(data[i].values[0].userEnteredValue) && !_.isEmpty(data[i].values[0].userEnteredValue.formulaValue)) {
-          let value = data[i].values[0].userEnteredValue.formulaValue
-          let link = value.match(/=hyperlink\("([^"]+)"/i)[1].replace(/(^\w+:|^)\/\//, '')
+        let link = this.getHyperlinkFromCell(data[i].values[0])
+        if (link) {
           // If link is doi.org url
           let doiGroups = DOI.groups(link)
           if (!_.isEmpty(doiGroups) && !_.isEmpty(doiGroups[1])) {
@@ -374,17 +374,33 @@ class SLRDataExtractionContentScript {
     if (primaryStudyRow === 0) {
       let currentURL = window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis().replace(/(^\w+:|^)\/\//, '')
       for (let i = 1; i < data.length && primaryStudyRow === 0; i++) {
-        if (!_.isEmpty(data[i].values[0].userEnteredValue) && !_.isEmpty(data[i].values[0].userEnteredValue.formulaValue)) {
-          let value = data[i].values[0].userEnteredValue.formulaValue
-          let link = value.match(/=hyperlink\("([^"]+)"/i)[1].replace(/(^\w+:|^)\/\//, '')
-          if (URLUtils.areSameURI(currentURL, link)) {
-            primaryStudyRow = i
+        if (_.isObject(data[i]) && _.isObject(data[i].values[0])) {
+          let link = this.getHyperlinkFromCell(data[i].values[0])
+          if (link) {
+            if (URLUtils.areSameURI(currentURL, link)) {
+              primaryStudyRow = i
+            }
           }
         }
       }
     }
     console.debug('Primary study row %s', primaryStudyRow)
     return primaryStudyRow
+  }
+
+  getHyperlinkFromCell (cell) {
+    // Try to get by hyperlink property
+    if (cell.hyperlink) {
+      return cell.hyperlink
+    } else {
+      if (!_.isEmpty(cell.userEnteredValue) && !_.isEmpty(cell.userEnteredValue.formulaValue)) {
+        let value = cell.userEnteredValue.formulaValue
+        let hyperlinkMatch = value.match(/=hyperlink\("([^"]+)"/i)
+        if (!_.isEmpty(hyperlinkMatch) && hyperlinkMatch.length > 1) {
+          return hyperlinkMatch[1].replace(/(^\w+:|^)\/\//, '')
+        }
+      }
+    }
   }
 
   retrieveDimensionColumn (data, dimensionName) {
@@ -398,48 +414,52 @@ class SLRDataExtractionContentScript {
   }
 
   setCellValueWithLink (value, link, cell, token, callback) {
-    let range = this.columnToLetter(cell.dimensionColumn + 1) + (cell.primaryStudyRow + 1)
-    $.ajax({
-      async: true,
-      method: 'PUT',
-      crossDomain: true,
-      url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.spreadsheetId + '/values/' + range + '?valueInputOption=USER_ENTERED',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      },
-      data: JSON.stringify({
-        'majorDimension': 'ROWS',
-        'values': [['=HYPERLINK("' + link + '","' + value + '")']]
+    this.getSheetName(token, (sheetName) => {
+      let range = sheetName + '!' + this.columnToLetter(cell.dimensionColumn + 1) + (cell.primaryStudyRow + 1)
+      $.ajax({
+        async: true,
+        method: 'PUT',
+        crossDomain: true,
+        url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.spreadsheetMetadata.spreadsheetId + '/values/' + range + '?valueInputOption=USER_ENTERED',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+          'majorDimension': 'ROWS',
+          'values': [['=HYPERLINK("' + link + '";"' + value + '")']]
+        })
+      }).done(() => {
+        console.debug('Set category %s, with link %s, in cell %s', value, link, range)
+        if (_.isFunction(callback)) {
+          callback()
+        }
       })
-    }).done(() => {
-      console.debug('Set category %s, with link %s, in cell %s', value, link, range)
-      if (_.isFunction(callback)) {
-        callback()
-      }
     })
   }
 
   setCellEmpty (cell, token, callback) {
-    let range = this.columnToLetter(cell.dimensionColumn + 1) + (cell.primaryStudyRow + 1)
-    $.ajax({
-      async: true,
-      method: 'PUT',
-      crossDomain: true,
-      url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.spreadsheetId + '/values/' + range + '?valueInputOption=USER_ENTERED',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      },
-      data: JSON.stringify({
-        'majorDimension': 'ROWS',
-        'values': [['']]
+    this.getSheetName(token, (sheetName) => {
+      let range = sheetName + '!' + this.columnToLetter(cell.dimensionColumn + 1) + (cell.primaryStudyRow + 1)
+      $.ajax({
+        async: true,
+        method: 'PUT',
+        crossDomain: true,
+        url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.spreadsheetMetadata.spreadsheetId + '/values/' + range + '?valueInputOption=USER_ENTERED',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+          'majorDimension': 'ROWS',
+          'values': [['']]
+        })
+      }).done(() => {
+        console.debug('Cell %s is empty', range)
+        if (_.isFunction(callback)) {
+          callback()
+        }
       })
-    }).done(() => {
-      console.debug('Cell %s is empty', range)
-      if (_.isFunction(callback)) {
-        callback()
-      }
     })
   }
 
@@ -453,7 +473,7 @@ class SLRDataExtractionContentScript {
       async: true,
       crossDomain: true,
       method: 'POST',
-      url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.spreadsheetId + ':batchUpdate',
+      url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.spreadsheetMetadata.spreadsheetId + ':batchUpdate',
       headers: {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
@@ -461,7 +481,7 @@ class SLRDataExtractionContentScript {
       data: JSON.stringify({
         requests: [{'repeatCell': {
           'range': {
-            'sheetId': 0,
+            'sheetId': this.spreadsheetMetadata.sheetId,
             'startRowIndex': cell.primaryStudyRow,
             'endRowIndex': cell.primaryStudyRow + 1,
             'startColumnIndex': cell.dimensionColumn,
@@ -484,10 +504,10 @@ class SLRDataExtractionContentScript {
     })
   }
 
-  getSpreadsheetData (spreadsheetId, token, sheetId, callback) {
+  getSheet (spreadsheetMetadata, token, callback) {
     $.ajax({
       method: 'GET',
-      url: 'https://sheets.googleapis.com/v4/spreadsheets/' + spreadsheetId,
+      url: 'https://sheets.googleapis.com/v4/spreadsheets/' + spreadsheetMetadata.spreadsheetId,
       headers: {
         'Authorization': 'Bearer ' + token
       },
@@ -496,13 +516,25 @@ class SLRDataExtractionContentScript {
       }
     }).done((result) => {
       // TODO Retrieve sheet by id if defined
+      let sheet = _.find(result.sheets, (sheet) => { return sheet.properties.sheetId === 0 })
       if (_.isFunction(callback)) {
-        callback(result)
+        callback(sheet)
       }
     })
   }
 
-  retrieveSpreadsheetIdForCurrentGroup (callback) {
+  getSheetName (token, callback) {
+    if (this.spreadsheetMetadata.name) {
+      callback(this.spreadsheetMetadata.name)
+    } else {
+      this.getSheet(this.spreadsheetMetadata, token, (sheet) => {
+        this.spreadsheetMetadata.name = sheet.properties.title // Caching for future usage
+        callback(this.spreadsheetMetadata.name)
+      })
+    }
+  }
+
+  retrieveSpreadsheetMetadataForCurrentGroup (callback) {
     // Retrieve the sheet id
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
       url: window.abwa.groupSelector.currentGroup.url,
@@ -514,9 +546,9 @@ class SLRDataExtractionContentScript {
         if (annotations.length > 0) {
           let annotation = annotations[0]
           let params = jsYaml.load(annotation.text)
-          this.spreadsheetId = params.id
+          this.spreadsheetMetadata = params
           if (_.isFunction(callback)) {
-            callback(null, params.id)
+            callback(null, params)
           }
         } else {
           // Should alert user
