@@ -105,7 +105,9 @@ class HypothesisClient {
       'headers': headers
     }
     $.ajax(settings).done((response) => {
-      callback(response)
+      callback(null, response)
+    }).fail(() => {
+      callback(new Error('Unable to retrieve annotation with id ' + id))
     })
   }
 
@@ -123,7 +125,7 @@ class HypothesisClient {
       'data': data
     }
     $.ajax(settings).done((response) => {
-      callback(response)
+      callback(null, response)
     })
   }
 
@@ -140,7 +142,7 @@ class HypothesisClient {
       }
     }
     $.ajax(settings).done((response) => {
-      callback(response)
+      callback(null, response)
     })
   }
 
