@@ -241,7 +241,8 @@ class TextAnnotator extends ContentAnnotator {
       window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
         url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
         uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
-        group: window.abwa.groupSelector.currentGroup.id
+        group: window.abwa.groupSelector.currentGroup.id,
+        order: 'asc'
       }, (err, annotations) => {
         if (err) {
           console.error('Unable to load annotations')
