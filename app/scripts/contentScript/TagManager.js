@@ -469,11 +469,6 @@ class TagManager {
     }
   }
 
-  removeTags () {
-    let tagPanel = document.querySelector('#tags')
-    tagPanel.innerHTML = ''
-  }
-
   getGroupAndSubgroup (annotation) {
     let tags = annotation.tags
     let group = null
