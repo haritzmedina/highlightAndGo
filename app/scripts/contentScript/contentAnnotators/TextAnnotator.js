@@ -217,13 +217,15 @@ class TextAnnotator extends ContentAnnotator {
 
   initAnnotationsObserver (callback) {
     this.observerInterval = setInterval(() => {
-      for (let i = 0; i < this.currentAnnotations.length; i++) {
-        let annotation = this.currentAnnotations[i]
-        // Search if annotation exist
-        let element = document.querySelector('[data-annotation-id="' + annotation.id + '"')
-        // If annotation doesn't exist, try to find it
-        if (!_.isElement(element)) {
-          this.highlightAnnotation(annotation)
+      if (this.currentAnnotations) {
+        for (let i = 0; i < this.currentAnnotations.length; i++) {
+          let annotation = this.currentAnnotations[i]
+          // Search if annotation exist
+          let element = document.querySelector('[data-annotation-id="' + annotation.id + '"')
+          // If annotation doesn't exist, try to find it
+          if (!_.isElement(element)) {
+            this.highlightAnnotation(annotation)
+          }
         }
       }
     }, ANNOTATION_OBSERVER_INTERVAL_IN_SECONDS * 1000)
