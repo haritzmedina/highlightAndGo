@@ -104,6 +104,7 @@ class HypothesisGroupInitializer {
           'There was a problem while relating the tool with the spreadsheet. Please reload the page and try it again. <br/>' +
           'If error continues, please contact administrator.',
           'error') // Show to the user the error
+        // Leave the group for the user
       } else {
         console.debug('Created relation between sheet and hypothesis group: ')
         console.debug(annotation)
