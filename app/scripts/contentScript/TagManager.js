@@ -424,14 +424,16 @@ class TagManager {
             } else { // If doesn't have subgroup (free category)
               let tagName = annotationGroupData.group
               let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
-              groupTags[annotationGroupData.group].tags.push(new Tag({
-                name: tagName,
-                namespace: this.model.namespace,
-                options: {color: color},
-                tags: [
-                  this.model.namespace + ':' + this.model.config.grouped.group + ':' + tagName
-                ]
-              }))
+              if (groupTags[annotationGroupData.group].tags.length === 0) {
+                groupTags[annotationGroupData.group].tags.push(new Tag({
+                  name: tagName,
+                  namespace: this.model.namespace,
+                  options: {color: color},
+                  tags: [
+                    this.model.namespace + ':' + this.model.config.grouped.group + ':' + tagName
+                  ]
+                }))
+              }
             }
           }
         }
