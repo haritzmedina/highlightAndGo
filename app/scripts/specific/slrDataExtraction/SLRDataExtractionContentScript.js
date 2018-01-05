@@ -4,6 +4,7 @@ const jsYaml = require('js-yaml')
 const Events = require('../../contentScript/Events')
 const URLUtils = require('../../utils/URLUtils')
 const DOI = require('doi-regex')
+const swal = require('sweetalert2')
 
 class SLRDataExtractionContentScript {
   constructor () {
@@ -32,6 +33,16 @@ class SLRDataExtractionContentScript {
       this.updateClassificationInGSheetWithDeletedAnnotation(deletedAnnotation, () => {
 
       })
+    })
+    // Listen to event when annotation is validated
+    document.addEventListener(Events.validateAnnotation, (event) => {
+      // Remove from google sheet the current annotation
+      let validatedAnnotation = event.detail.annotation
+      // Update google sheet with the deleted annotation
+      this.updateGSheetWithValidatedAnnotation(validatedAnnotation, () => {
+
+      })
+      // Update
     })
   }
 
@@ -113,11 +124,7 @@ class SLRDataExtractionContentScript {
                 } else if (data[primaryStudyRow].values[dimensionColumn].formattedValue !== category) {
                   // If cell value is different to the annotated category, so set the cell in red
                   console.debug('Dimension %s differs from already set one %s')
-                  this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, {
-                    'red': 0.9,
-                    'green': 0,
-                    'blue': 0
-                  }, () => {
+                  this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, SLRDataExtractionContentScript.colors.red, () => {
                     if (_.isFunction(callback)) {
                       callback()
                     }
@@ -245,11 +252,7 @@ class SLRDataExtractionContentScript {
                         })
                       } else {
                         // Cell in red, oldest value
-                        this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, {
-                          'red': 0.9,
-                          'green': 0,
-                          'blue': 0
-                        }, () => {
+                        this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, SLRDataExtractionContentScript.colors.red, () => {
                           // Retrieve category of the oldest annotation
                           let category = _.find(annotations[0].tags, (tag) => {
                             return tag.includes('slr:category:')
@@ -325,11 +328,7 @@ class SLRDataExtractionContentScript {
                       })
                     } else if (annotations.length > 1) {
                       // Set in red and fill the cell with the oldest annotation
-                      this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, {
-                        'red': 0.9,
-                        'green': 0,
-                        'blue': 0
-                      }, () => {
+                      this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, SLRDataExtractionContentScript.colors.red, () => {
                         let category = _.find(annotations[0].target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' }).exact
                         let link = this.getAnnotationUrl(annotations[0])
                         this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
@@ -464,11 +463,7 @@ class SLRDataExtractionContentScript {
   }
 
   setCellInColor (cell, token, color, callback) {
-    let cellBackgroundColor = color || {
-      'red': 1,
-      'green': 1,
-      'blue': 1
-    }
+    let cellBackgroundColor = color || SLRDataExtractionContentScript.colors.white
     $.ajax({
       async: true,
       crossDomain: true,
@@ -564,6 +559,132 @@ class SLRDataExtractionContentScript {
     } else {
       return annotation.uri + '#hag:' + annotation.id
     }
+  }
+
+  updateGSheetWithValidatedAnnotation (annotation, callback) {
+    // Retrieve dimension of annotation
+    let dimensionTag = _.find(annotation.tags, (tag) => {
+      return tag.includes('slr:isCategoryOf:') || tag.includes('slr:dimension:')
+    })
+    // Search dimension and category of the validated annotation
+    let dimension = null
+    let category = null
+    if (dimensionTag.includes('slr:isCategoryOf:')) { // Categorized dimension
+      dimension = dimensionTag.replace('slr:isCategoryOf:', '')
+      category = _.find(annotation.tags, (tag) => {
+        return tag.includes('slr:category:')
+      }).replace('slr:category:', '')
+    } else if (dimensionTag.includes('slr:dimension:')) {
+      dimension = dimensionTag.replace('slr:dimension:', '')
+      category = _.find(annotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' }).exact
+    } else {
+      callback(new Error('This annotation is not belonged to a dimension.'))
+    }
+    // Set cell in spreadsheet in green and value+link to this annotation
+    this.retrieveSpreadsheetMetadataForCurrentGroup((err, spreadsheetMetadata) => {
+      if (err) {
+        console.error(err)
+      } else {
+        this.askUserToLogInSheets((token) => {
+          this.getSheet(spreadsheetMetadata, token, (sheet) => {
+            let data = sheet.data[0].rowData
+            let primaryStudyRow = this.retrievePrimaryStudyRow(data)
+            let dimensionColumn = this.retrieveDimensionColumn(data, dimension)
+            if (primaryStudyRow !== 0 && dimensionColumn !== 0) {
+              // Define function to override cell
+              let overrideCell = () => {
+                this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn},
+                  token,
+                  SLRDataExtractionContentScript.colors.green, () => {
+                    let link = this.getAnnotationUrl(annotation)
+                    this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
+                      if (_.isFunction(callback)) {
+                        callback()
+                      }
+                    })
+                  })
+              }
+              // If cell has value or is not empty
+              if (_.isObject(data[primaryStudyRow]) && _.isObject(data[primaryStudyRow].values[dimensionColumn])) {
+                let cell = data[primaryStudyRow].values[dimensionColumn]
+                // If current cell is empty, override it
+                if (_.isEmpty(cell.formattedValue) || _.isEmpty(cell.userEnteredFormat) || _.isEmpty(cell.userEnteredFormat.backgroundColor)) {
+                  overrideCell()
+                } else {
+                  let createOverridePrompt = (conflict) => {
+                    let text = 'Facet is already validated with value: ' + cell.formattedValue + '<br/>Do you want to override it?'
+                    let title = 'Facet is already validated'
+                    if (conflict) {
+                      text = 'Facet has a conflict.<br/>Do you want to validate with this category?'
+                      title = 'Facet has a conflict'
+                    }
+                    // Create prompt
+                    swal({ // TODO i18n
+                      title: title,
+                      html: text,
+                      showCancelButton: true,
+                      confirmButtonColor: '#3085d6',
+                      cancelButtonColor: '#d33',
+                      type: 'warning'
+                    }).then((result) => {
+                      if (result.value) {
+                        overrideCell()
+                      }
+                    })
+                  }
+                  // If is already validated
+                  if (_.isEqual(cell.userEnteredFormat.backgroundColor, SLRDataExtractionContentScript.colors.green)) {
+                    // Ask if wants to override
+                    createOverridePrompt()
+                  } else if (_.isEqual(cell.userEnteredFormat.backgroundColor, SLRDataExtractionContentScript.colors.red)) {
+                    // Ask if wants to override (conflict exists)
+                    createOverridePrompt(true)
+                  } else {
+                    // Unknown error, maybe cell is empty, or whatever, don't do nothing
+                    if (_.isFunction(callback)) {
+                      callback(new Error('Unknown error'))
+                    }
+                  }
+                }
+              } else {
+                // If cell is not found. Override it with values (It shouldn't happen, only if gSheet is edited manually)
+                overrideCell()
+              }
+            } else {
+              if (_.isFunction(callback)) {
+                if (primaryStudyRow === 0) {
+                  swal('Primary study not found', // TODO i18n
+                    'Unable to validate this category. We couldn\'t find the primary study in the Google Sheet. Is it there?',
+                    'error')
+                } else {
+                  if (dimensionColumn === 0) {
+                    swal('Facet not found', // TODO i18n
+                      'Unable to find the facet to validate this primary study. Is the facet in the spreadsheet?',
+                      'error')
+                  }
+                }
+              }
+            }
+          })
+        })
+      }
+    })
+  }
+}
+
+SLRDataExtractionContentScript.colors = {
+  red: {
+    'red': 0.8980392
+  },
+  white: {
+    'red': 1,
+    'green': 1,
+    'blue': 1
+  },
+  green: {
+    'red': 0.29803923, // Representation of color in gsheet for 0.3
+    'green': 0.8,
+    'blue': 0.29803923 // Representation of color in gsheet for 0.3
   }
 }
 
