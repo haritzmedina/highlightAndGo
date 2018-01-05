@@ -70,9 +70,46 @@ class HypothesisClient {
       callback(new Error('Some annotations cannot be created'))
     }).then((responses) => {
       if (responses.length === annotations.length) {
-        callback(null, responses)
+        // Wait for 1 second to give time to Hypothesis server to create all the annotations well
+        setTimeout(() => {
+          // Sometimes the responses can be okay, but not all the annotations are created really (the API doesn't work really well)
+          // To ensure that all annotations are created, we must search them and compare, if not all of them are created, try it again
+          this.searchAnnotations({
+            user: responses[0].user,
+            order: 'desc',
+            group: annotations[0].group,
+            limit: annotations.length
+          }, (err, searchedAnnotations) => {
+            if (err) {
+              console.error('Error while trying to ensure that the annotations are created')
+              callback(new Error('Error while trying to ensure that the annotations are created'))
+            } else {
+              let nonCreatedAnnotations = _.differenceWith(responses, searchedAnnotations, (anno1, anno2) => { return anno1.id === anno2.id })
+              if (nonCreatedAnnotations.length > 0) {
+                console.debug('Some annotations are falsely created, trying again to create them correctly')
+                this.createNewAnnotations(nonCreatedAnnotations, (err, tryResponses) => {
+                  if (err) {
+                    if (_.isFunction(callback)) {
+                      callback(new Error('Some annotations cannot be created'))
+                    }
+                  } else {
+                    if (_.isFunction(callback)) {
+                      callback(null, _.concat(responses, tryResponses))
+                    }
+                  }
+                })
+              } else {
+                if (_.isFunction(callback)) {
+                  callback(null, responses)
+                }
+              }
+            }
+          })
+        }, 1000)
       } else {
-        callback(new Error('Some annotations cannot be created'))
+        if (_.isFunction(callback)) {
+          callback(new Error('Some annotations cannot be created'))
+        }
       }
     })
   }
