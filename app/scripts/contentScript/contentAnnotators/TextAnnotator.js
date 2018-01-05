@@ -307,6 +307,8 @@ class TextAnnotator extends ContentAnnotator {
       this.createNextAnnotationHandler(annotation)
       // Append currently highlighted elements
       this.currentlyHighlightedElements = $.merge(this.currentlyHighlightedElements, highlightedElements)
+    } catch (e) {
+      // TODO Handle error (maybe send in callback the error ¿?
     } finally {
       if (_.isFunction(callback)) {
         callback()
@@ -366,6 +368,7 @@ class TextAnnotator extends ContentAnnotator {
           callback: (key) => {
             if (key === 'validate') {
               // TODO Validate annotation category
+              LanguageUtils.dispatchCustomEvent(Events.validateAnnotation, {annotation: annotation})
             } else if (key === 'delete') {
               // Delete annotation
               window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (err, result) => {
