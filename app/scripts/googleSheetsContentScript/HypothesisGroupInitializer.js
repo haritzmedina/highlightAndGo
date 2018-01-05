@@ -24,7 +24,7 @@ class HypothesisGroupInitializer {
             this.createRelationGSheetGroup(group, () => {
               // When window.focus
               swal('Correctly configured', // TODO i18n
-                chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '">' + group.url + '</a>',
+                chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '" target="_blank">' + group.url + '</a>',
                 'success')
               if (_.isFunction(callback)) {
                 callback()
@@ -34,7 +34,7 @@ class HypothesisGroupInitializer {
         })
       } else {
         swal('The group ' + group.name + ' already exists', // TODO i18n
-          chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '">' + group.url + '</a>',
+          chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '" target="_blank">' + group.url + '</a>',
           'info')
         if (_.isFunction(callback)) {
           callback()
