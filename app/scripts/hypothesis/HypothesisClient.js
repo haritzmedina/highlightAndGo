@@ -302,7 +302,7 @@ Content-Disposition: form-data; name="csrf_token"
 -----------------------------sep
 Content-Disposition: form-data; name="name"
 
-` + groupName.substr(0, 24) + `
+` + groupName.substr(0, 25) + `
 -----------------------------sep
 Content-Disposition: form-data; name="description"
 
