@@ -2,7 +2,8 @@ const Events = {
   annotate: 'annotate',
   annotationCreated: 'annotationCreated',
   annotationDeleted: 'annotationDeleted',
-  modeChanged: 'modeChanged'
+  modeChanged: 'modeChanged',
+  validateAnnotation: 'validateAnnotation'
 }
 
 module.exports = Events
