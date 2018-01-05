@@ -4,8 +4,17 @@ const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
 const GoogleSheetParser = require('./GoogleSheetParser')
 const HypothesisGroupInitializer = require('./HypothesisGroupInitializer')
 
+const swal = require('sweetalert2')
+
 class GoogleSheetContentScriptManager {
   init () {
+    swal({
+      position: 'top-end',
+      type: 'info',
+      title: 'Configuring the tool, please be patient', // TODO i18n
+      text: 'If the tool takes too much time, please reload the page and try again',
+      showConfirmButton: false
+    })
     window.hag.hypothesisClientManager = new HypothesisClientManager()
     window.hag.hypothesisClientManager.init(() => {
       this.initLoginProcess((err, tokens) => {
