@@ -11,8 +11,6 @@ const AugmentationManager = require('./AugmentationManager')
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
-const SLRDataExtractionContentScript = require('../specific/slrDataExtraction/SLRDataExtractionContentScript')
-
 class ContentScriptManager {
   constructor () {
     this.events = {}
@@ -150,6 +148,7 @@ class ContentScriptManager {
     // Destroy current specific content manager
     this.destroySpecificContentManager()
     if (config.namespace === 'slr') {
+      const SLRDataExtractionContentScript = require('../specific/slrDataExtraction/SLRDataExtractionContentScript')
       window.abwa.specificContentManager = new SLRDataExtractionContentScript(config)
       window.abwa.specificContentManager.init()
     }
