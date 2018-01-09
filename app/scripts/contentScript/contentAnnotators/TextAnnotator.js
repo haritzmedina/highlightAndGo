@@ -278,11 +278,9 @@ class TextAnnotator extends ContentAnnotator {
         }
         this.allAnnotations = taggedAnnotations || []
         // Current annotations will be
-        this.currentAnnotations = taggedAnnotations || []
-        console.debug('Annotations to highlight')
-        console.debug(taggedAnnotations)
+        this.currentAnnotations = this.retrieveCurrentAnnotations()
         // Highlight annotations in the DOM
-        this.highlightAnnotations(taggedAnnotations)
+        this.highlightAnnotations(this.currentAnnotations)
       }
     })
     if (_.isFunction(callback)) {
