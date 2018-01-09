@@ -1,5 +1,8 @@
 const _ = require('lodash')
 const swal = require('sweetalert2')
+const ChromeStorage = require('../utils/ChromeStorage')
+
+const selectedGroupNamespace = 'hypothesis.currentGroup'
 
 class HypothesisGroupInitializer {
   init (parsedSheetData, callback) {
@@ -22,6 +25,8 @@ class HypothesisGroupInitializer {
         this.createHypothesisGroup((group) => {
           this.createDimensionsAndCategories(group, () => {
             this.createRelationGSheetGroup(group, () => {
+              // Save as current group the generated one
+              ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(group)}, ChromeStorage.local)
               // When window.focus
               swal('Correctly configured', // TODO i18n
                 chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '" target="_blank">' + group.url + '</a>',
