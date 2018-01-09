@@ -107,7 +107,11 @@ class SLRDataExtractionContentScript {
               let dimensionColumn = this.retrieveDimensionColumn(data, dimension)
               if (primaryStudyRow !== 0 && dimensionColumn !== 0) {
                 // If cell is empty, add annotation value to the cell
-                if (_.isEmpty(data[primaryStudyRow].values[dimensionColumn].formattedValue)) {
+                let currentCellValue = null
+                if (_.isObject(data[primaryStudyRow].values[dimensionColumn])) {
+                  currentCellValue = data[primaryStudyRow].values[dimensionColumn]
+                }
+                if (_.isEmpty(currentCellValue)) {
                   console.debug('Setting dimension')
                   // If doi is found in PDF, the annotation URL will be doi.org, in other case the same as annotation uri
                   let annotationURL = this.getAnnotationUrl(classificationAnnotation)
@@ -121,7 +125,7 @@ class SLRDataExtractionContentScript {
                         callback()
                       }
                     })
-                } else if (data[primaryStudyRow].values[dimensionColumn].formattedValue !== category) {
+                } else if (currentCellValue !== category) { // If cell is not empty and the current category is different
                   // If cell value is different to the annotated category, so set the cell in red
                   console.debug('Dimension %s differs from already set one %s')
                   this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, SLRDataExtractionContentScript.colors.red, () => {
@@ -130,7 +134,6 @@ class SLRDataExtractionContentScript {
                     }
                   })
                 }
-                // If cell is not empty and the current category is different
               } else {
                 if (primaryStudyRow === 0) {
                   alert('Something went wrong. Unable to add to spreadsheet, no primary study found in gSheet')
