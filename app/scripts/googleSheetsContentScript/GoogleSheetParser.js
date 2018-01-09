@@ -1,5 +1,6 @@
 const _ = require('lodash')
 const $ = require('jquery')
+const swal = require('sweetalert2')
 const URLUtils = require('../utils/URLUtils')
 
 class GoogleSheetParser {
@@ -76,6 +77,10 @@ class GoogleSheetParser {
       if (_.isFunction(callback)) {
         callback(result.properties.title)
       }
+    }).fail(() => {
+      swal('Oops!', // TODO i18n
+        'The spreadsheet need a share link!<br/>Please create on top right: "Share -> Get shareable link", and give edit permission.',
+        'error') // Show to the user the error
     })
   }
 
@@ -118,6 +123,10 @@ class GoogleSheetParser {
         if (_.isFunction(callback)) {
           callback(dimensions)
         }
+      }).fail(() => {
+        swal('Oops!', // TODO i18n
+          'The spreadsheet need a share link!<br/>Please create on top right: "Share -> Get shareable link", and give edit permission.',
+          'error') // Show to the user the error
       })
     })
   }

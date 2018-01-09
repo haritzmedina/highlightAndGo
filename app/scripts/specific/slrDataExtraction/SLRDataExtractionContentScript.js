@@ -436,6 +436,10 @@ class SLRDataExtractionContentScript {
         if (_.isFunction(callback)) {
           callback()
         }
+      }).fail(() => {
+        swal('Oops!', // TODO i18n
+          'The spreadsheet need a share link!<br/>Please go to <a href="' + this.linkToSLR.href + '" target="_blank">your spreadsheet</a>, click on top right: "Share -> Get shareable link", and give edit permission.',
+          'error') // Show to the user the error
       })
     })
   }
@@ -461,6 +465,10 @@ class SLRDataExtractionContentScript {
         if (_.isFunction(callback)) {
           callback()
         }
+      }).fail(() => {
+        swal('Oops!', // TODO i18n
+          'The spreadsheet need a share link!<br/>Please go to <a href="' + this.linkToSLR.href + '" target="_blank">your spreadsheet</a>, click on top right: "Share -> Get shareable link", and give edit permission.',
+          'error') // Show to the user the error
       })
     })
   }
@@ -499,6 +507,10 @@ class SLRDataExtractionContentScript {
       if (_.isFunction(callback)) {
         callback()
       }
+    }).fail(() => {
+      swal('Oops!', // TODO i18n
+        'The spreadsheet need a share link!<br/>Please go to <a href="' + this.linkToSLR.href + '" target="_blank">your spreadsheet</a>, click on top right: "Share -> Get shareable link", and give edit permission.',
+        'error') // Show to the user the error
     })
   }
 
@@ -518,6 +530,10 @@ class SLRDataExtractionContentScript {
       if (_.isFunction(callback)) {
         callback(sheet)
       }
+    }).fail(() => {
+      swal('Oops!', // TODO i18n
+        'The spreadsheet need a share link!<br/>Please go to <a href="' + this.linkToSLR.href + '" target="_blank">your spreadsheet</a>, click on top right: "Share -> Get shareable link", and give edit permission.',
+        'error') // Show to the user the error
     })
   }
 
