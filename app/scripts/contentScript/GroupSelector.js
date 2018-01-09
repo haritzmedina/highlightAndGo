@@ -111,7 +111,6 @@ class GroupSelector {
     $('#purposesWrapper').attr('aria-hidden', 'false')
     // Retrieve groups
     this.retrieveHypothesisGroups((groups) => {
-      this.user.groups = groups
       console.debug(groups)
       let dropdownMenu = document.querySelector('#groupSelector')
       dropdownMenu.innerHTML = '' // Remove all groups
@@ -134,7 +133,7 @@ class GroupSelector {
 
   retrieveHypothesisGroups (callback) {
     window.abwa.hypothesisClientManager.hypothesisClient.getUserProfile((profile) => {
-      this.user.groups = profile.groups
+      this.user = profile
       if (_.isFunction(callback)) {
         callback(profile.groups)
       }
