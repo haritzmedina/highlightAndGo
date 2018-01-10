@@ -109,7 +109,7 @@ class SLRDataExtractionContentScript {
                 // If cell is empty, add annotation value to the cell
                 let currentCellValue = null
                 if (_.isObject(data[primaryStudyRow].values[dimensionColumn])) {
-                  currentCellValue = data[primaryStudyRow].values[dimensionColumn]
+                  currentCellValue = data[primaryStudyRow].values[dimensionColumn].formattedValue
                 }
                 if (_.isEmpty(currentCellValue)) {
                   console.debug('Setting dimension')
