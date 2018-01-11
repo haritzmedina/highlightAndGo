@@ -58,21 +58,21 @@ class ContentTypeManager {
   }
 
   tryToLoadDoi () {
-    // If current web is pdf viewer.html, set document type as pdf
-    if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
-      let decodedUri = decodeURIComponent(window.location.href)
-      let params = URLUtils.extractHashParamsFromUrl(decodedUri)
-      if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
-        this.doi = params.doi
-      }
-    } else {
-      // Try to load doi from page metadata
+    // Try to load doi from hash param
+    let decodedUri = decodeURIComponent(window.location.href)
+    let params = URLUtils.extractHashParamsFromUrl(decodedUri)
+    if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
+      this.doi = params.doi
+    }
+    // Try to load doi from page metadata
+    if (_.isEmpty(this.doi)) {
       try {
         this.doi = document.querySelector('meta[name="citation_doi"]').content
       } catch (e) {
         console.log('Doi not found for this document')
       }
     }
+    // TODO Try to load doi from chrome tab storage
   }
 
   tryToLoadPublicationPDF () {

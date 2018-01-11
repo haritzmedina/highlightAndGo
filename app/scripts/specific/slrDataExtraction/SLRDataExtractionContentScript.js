@@ -114,7 +114,8 @@ class SLRDataExtractionContentScript {
                 if (_.isEmpty(currentCellValue)) {
                   console.debug('Setting dimension')
                   // If doi is found in PDF, the annotation URL will be doi.org, in other case the same as annotation uri
-                  let annotationURL = this.getAnnotationUrl(classificationAnnotation)
+                  let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
+                  let annotationURL = this.getAnnotationUrl(classificationAnnotation, primaryStudyHyperlink)
                   this.setCellValueWithLink(
                     category,
                     annotationURL,
@@ -246,7 +247,8 @@ class SLRDataExtractionContentScript {
                         // Set in white and fill the cell
                         this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, null, () => {
                           let category = categories[0].replace('slr:category:', '')
-                          let link = this.getAnnotationUrl(annotations[0])
+                          let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
+                          let link = this.getAnnotationUrl(annotations[0], primaryStudyHyperlink)
                           this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
                             if (_.isFunction(callback)) {
                               callback()
@@ -260,7 +262,8 @@ class SLRDataExtractionContentScript {
                           let category = _.find(annotations[0].tags, (tag) => {
                             return tag.includes('slr:category:')
                           }).replace('slr:category:', '')
-                          let link = this.getAnnotationUrl(annotations[0])
+                          let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
+                          let link = this.getAnnotationUrl(annotations[0], primaryStudyHyperlink)
                           this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
                             if (_.isFunction(callback)) {
                               callback()
@@ -322,7 +325,8 @@ class SLRDataExtractionContentScript {
                       // Set in white and fill the cell
                       this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, null, () => {
                         let category = _.find(annotations[0].target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' }).exact
-                        let link = this.getAnnotationUrl(annotations[0])
+                        let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
+                        let link = this.getAnnotationUrl(annotations[0], primaryStudyHyperlink)
                         this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
                           if (_.isFunction(callback)) {
                             callback()
@@ -333,7 +337,8 @@ class SLRDataExtractionContentScript {
                       // Set in red and fill the cell with the oldest annotation
                       this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, SLRDataExtractionContentScript.colors.red, () => {
                         let category = _.find(annotations[0].target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' }).exact
-                        let link = this.getAnnotationUrl(annotations[0])
+                        let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
+                        let link = this.getAnnotationUrl(annotations[0], primaryStudyHyperlink)
                         this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
                           if (_.isFunction(callback)) {
                             callback()
@@ -572,11 +577,15 @@ class SLRDataExtractionContentScript {
     })
   }
 
-  getAnnotationUrl (annotation) {
-    if (window.abwa.contentTypeManager.doi) {
-      return 'https://doi.org/' + window.abwa.contentTypeManager.doi + '#hag:' + annotation.id
+  getAnnotationUrl (annotation, primaryStudyURL) {
+    if (primaryStudyURL) {
+      return primaryStudyURL + '#hag:' + annotation.id
     } else {
-      return annotation.uri + '#hag:' + annotation.id
+      if (window.abwa.contentTypeManager.doi) {
+        return 'https://doi.org/' + window.abwa.contentTypeManager.doi + '#hag:' + annotation.id
+      } else {
+        return annotation.uri + '#hag:' + annotation.id
+      }
     }
   }
 
@@ -615,7 +624,8 @@ class SLRDataExtractionContentScript {
                 this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn},
                   token,
                   SLRDataExtractionContentScript.colors.green, () => {
-                    let link = this.getAnnotationUrl(annotation)
+                    let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
+                    let link = this.getAnnotationUrl(annotation, primaryStudyHyperlink)
                     this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
                       if (_.isFunction(callback)) {
                         callback()
@@ -626,8 +636,8 @@ class SLRDataExtractionContentScript {
               // If cell has value or is not empty
               if (_.isObject(data[primaryStudyRow]) && _.isObject(data[primaryStudyRow].values[dimensionColumn])) {
                 let cell = data[primaryStudyRow].values[dimensionColumn]
-                // If current cell is empty, override it
-                if (_.isEmpty(cell.formattedValue) || _.isEmpty(cell.userEnteredFormat) || _.isEmpty(cell.userEnteredFormat.backgroundColor)) {
+                // If current cell is empty or has the same value, override it
+                if (_.isEmpty(cell.formattedValue) || _.isEmpty(cell.userEnteredFormat) || (_.isEmpty(cell.userEnteredFormat.backgroundColor) && cell.formattedValue === category)) {
                   overrideCell()
                 } else {
                   let createOverridePrompt = (conflict) => {
