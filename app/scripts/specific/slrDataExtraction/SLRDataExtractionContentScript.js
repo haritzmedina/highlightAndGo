@@ -530,8 +530,8 @@ class SLRDataExtractionContentScript {
         includeGridData: true
       }
     }).done((result) => {
-      // TODO Retrieve sheet by id if defined
-      let sheet = _.find(result.sheets, (sheet) => { return sheet.properties.sheetId === 0 })
+      // Retrieve sheet by id if defined
+      let sheet = _.find(result.sheets, (sheet) => { return sheet.properties.sheetId === parseInt(spreadsheetMetadata.sheetId) })
       if (_.isFunction(callback)) {
         callback(sheet)
       }

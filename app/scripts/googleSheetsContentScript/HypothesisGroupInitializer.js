@@ -77,11 +77,13 @@ class HypothesisGroupInitializer {
       annotations.push(this.generateAnnotationCorpus(group, ['slr:dimension:' + dimensionName]))
       // Create categories annotation
       let categories = pair[1]
-      for (let j = 0; j < categories.length; j++) {
-        let categoryName = categories[j]
-        annotations.push(this.generateAnnotationCorpus(
-          group,
-          ['slr:category:' + categoryName, 'slr:isCategoryOf:' + dimensionName]))
+      if (categories) {
+        for (let j = 0; j < categories.length; j++) {
+          let categoryName = categories[j]
+          annotations.push(this.generateAnnotationCorpus(
+            group,
+            ['slr:category:' + categoryName, 'slr:isCategoryOf:' + dimensionName]))
+        }
       }
     }
     console.debug('Generated dimensions and categories annotations: ')
