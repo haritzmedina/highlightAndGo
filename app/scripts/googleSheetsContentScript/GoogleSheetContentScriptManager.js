@@ -7,12 +7,12 @@ const HypothesisGroupInitializer = require('./HypothesisGroupInitializer')
 const swal = require('sweetalert2')
 
 class GoogleSheetContentScriptManager {
-  init () {
+  init (callback) {
     swal({
       position: 'top-end',
       type: 'info',
       title: 'Configuring the tool, please be patient', // TODO i18n
-      text: 'If the tool takes too much time, please reload the page and try again',
+      text: 'If the tool takes too much time, please reload the page and try again.',
       showConfirmButton: false
     })
     window.hag.hypothesisClientManager = new HypothesisClientManager()
@@ -20,11 +20,17 @@ class GoogleSheetContentScriptManager {
       this.initLoginProcess((err, tokens) => {
         if (err) {
           window.alert(chrome.i18n.getMessage('Failed login to services'))
+          if (_.isFunction(callback)) {
+            callback()
+          }
         } else {
           console.debug('Correctly logged in to hypothesis: %s', tokens.hypothesis)
           console.debug('Correctly logged in to gSheet: %s', tokens.gSheet)
           this.initGoogleSheetParsing(() => {
-            // TODO Disable the extension icon
+            // Execute callback without errors
+            if (_.isFunction(callback)) {
+              callback()
+            }
           })
         }
       })
