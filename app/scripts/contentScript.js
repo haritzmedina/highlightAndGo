@@ -3,9 +3,10 @@ const AnnotationBasedInitializer = require('./contentScript/AnnotationBasedIniti
 
 const _ = require('lodash')
 window.addEventListener('load', () => {
+  console.debug('Loaded abwa content script')
   if (_.isEmpty(window.abwa)) {
     window.abwa = {} // Global namespace for variables
-    chrome.extension.onMessage.addListener((msg, sender, sendResponse) => {
+    chrome.extension.onMessage.addListener((msg) => {
       if (_.isEmpty(window.abwa.contentScriptManager)) {
         window.abwa.contentScriptManager = new ContentScriptManager()
       }
@@ -20,13 +21,12 @@ window.addEventListener('load', () => {
       }
     })
     // Check if uri contains annotation to initialize
-    AnnotationBasedInitializer.getAnnotationHashParam((annotation) => {
-      if (annotation) {
-        // If extension is not activated, activate
-        chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, (result) => {
-          console.debug('Activated popup by annotation')
-        })
-      }
-    })
+    let annotation = AnnotationBasedInitializer.getAnnotationHashParam()
+    if (annotation) {
+      // If extension is not activated, activate
+      chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, () => {
+        console.debug('Activated popup by annotation')
+      })
+    }
   }
 })
