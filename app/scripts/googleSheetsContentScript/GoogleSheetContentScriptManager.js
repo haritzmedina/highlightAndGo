@@ -8,18 +8,15 @@ const swal = require('sweetalert2')
 
 class GoogleSheetContentScriptManager {
   init (callback) {
-    swal({
-      position: 'top-end',
-      type: 'info',
-      title: 'Configuring the tool, please be patient', // TODO i18n
-      text: 'If the tool takes too much time, please reload the page and try again.',
-      showConfirmButton: false
-    })
+    // Notify user tool is configuring
+    this.showToolIsConfiguring()
     window.hag.hypothesisClientManager = new HypothesisClientManager()
     window.hag.hypothesisClientManager.init(() => {
       this.initLoginProcess((err, tokens) => {
         if (err) {
-          window.alert(chrome.i18n.getMessage('Failed login to services'))
+          swal('Oops!',
+            chrome.i18n.getMessage('Failed login to services'),
+            'error') // Notify error to user
           if (_.isFunction(callback)) {
             callback()
           }
@@ -34,6 +31,18 @@ class GoogleSheetContentScriptManager {
           })
         }
       })
+    })
+  }
+
+  showToolIsConfiguring () {
+    swal({
+      position: 'top-end',
+      title: 'Configuring the tool, please be patient', // TODO i18n
+      text: 'If the tool takes too much time, please reload the page and try again.',
+      showConfirmButton: false,
+      onOpen: () => {
+        swal.showLoading()
+      }
     })
   }
 
@@ -73,6 +82,9 @@ class GoogleSheetContentScriptManager {
     window.hag.googleSheetParser.parse((err, parsedSheetData) => {
       if (err) {
         console.error(err)
+        if (_.isFunction(callback)) {
+          callback()
+        }
       } else {
         console.debug('Parsed data from gSheet')
         console.debug(parsedSheetData)

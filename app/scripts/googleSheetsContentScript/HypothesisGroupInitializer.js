@@ -15,7 +15,7 @@ class HypothesisGroupInitializer {
   }
 
   initializeHypothesisGroup (callback) {
-    // TODO Get if current hypothesis group exists
+    // Get if current hypothesis group exists
     window.hag.hypothesisClientManager.hypothesisClient.getUserProfile((userProfile) => {
       let group = _.find(userProfile.groups, (group) => {
         return group.name === this.parsedSheetData.title.substr(0, 25)
