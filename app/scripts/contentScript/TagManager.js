@@ -303,10 +303,11 @@ class TagManager {
     // For groups without sub elements
     let emptyGroups = _.filter(tagGroupsAnnotations, (group) => { return group.tags.length === 0 })
     for (let j = 0; j < emptyGroups.length; j++) {
+      let options = {color: ColorUtils.setAlphaToColor(colors[emptyGroups[j].config.name], 0.5)}
       tagGroupsAnnotations[emptyGroups[j].config.name].tags.push(new Tag({
         name: emptyGroups[j].config.name,
         namespace: emptyGroups[j].namespace,
-        options: {},
+        options: options,
         tags: [emptyGroups[j].config.namespace + ':' + emptyGroups[j].config.group + ':' + emptyGroups[j].config.name]
       }))
     }
