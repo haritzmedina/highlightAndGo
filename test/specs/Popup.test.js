@@ -10,7 +10,7 @@ const HypothesisClient = require('../../app/scripts/hypothesis/HypothesisClient'
 
 const TOKEN = process.env.HYPOTHESIS_TOKEN
 
-const WEBSITE_URL = 'https://haritzmedina.com'
+const WEBSITE_URL = 'http://info.cern.ch/hypertext/WWW/TheProject.html'
 
 let annotation = null
 let hypothesisClient = new HypothesisClient(TOKEN)
@@ -35,10 +35,10 @@ describe('Popup test', function () {
             'selector':
               [
                 {
-                  'exact': 'Haritz Medina',
-                  'prefix': 'mi nombre es ',
+                  'exact': 'give universal access to',
+                  'prefix': 've aiming to ',
                   'type': 'TextQuoteSelector',
-                  'suffix': ' y este es mi sitio'
+                  'suffix': 'give universal'
                 }
               ]
           }

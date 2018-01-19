@@ -1,7 +1,3 @@
-/**
- * General utils
- * @author Haritz Medina <me@haritzmedina.com>
- */
 'use strict'
 
 const jQuery = require('jquery')
