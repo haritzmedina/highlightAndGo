@@ -32,11 +32,11 @@
     "description": "Sidebar mode header"
   },
   "Highlight": {
-    "message": "Highlight",
+    "message": "Extractor",
     "description": "Sidebar highlight label"
   },
   "Index": {
-    "message": "Index",
+    "message": "Checker",
     "description": "Sidebar index label"
   },
   "Dimensions": {
