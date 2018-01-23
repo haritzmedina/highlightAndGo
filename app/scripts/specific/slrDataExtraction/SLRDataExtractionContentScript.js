@@ -629,14 +629,14 @@ class SLRDataExtractionContentScript {
                     let link = this.getAnnotationUrl(annotation, primaryStudyHyperlink)
                     this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
                       // Alert user with validation done
-                      // TODO Check if it is a good idea to create prompt saying that it is correctly validated
-                      /* swal({ // TODO i18n
+                      // Check if it is a good idea to create prompt saying that it is correctly validated
+                      swal({ // TODO i18n
                         position: 'top-end',
                         type: 'success',
                         title: 'Correctly validated',
                         showConfirmButton: false,
                         timer: 1500
-                      }) */
+                      })
                       if (_.isFunction(callback)) {
                         callback()
                       }
