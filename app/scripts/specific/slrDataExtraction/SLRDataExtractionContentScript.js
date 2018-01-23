@@ -417,6 +417,7 @@ class SLRDataExtractionContentScript {
         dimensionColumn = j
       }
     }
+    console.debug('Dimension column %s', dimensionColumn)
     return dimensionColumn
   }
 
@@ -508,7 +509,7 @@ class SLRDataExtractionContentScript {
         }]
       })
     }).done(() => {
-      console.debug('Set in red row %s, column %s ', cell.primaryStudyRow, cell.dimensionColumn)
+      console.debug('Set color for row %s, column %s ', cell.primaryStudyRow, cell.dimensionColumn)
       if (_.isFunction(callback)) {
         callback()
       }
@@ -627,6 +628,15 @@ class SLRDataExtractionContentScript {
                     let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
                     let link = this.getAnnotationUrl(annotation, primaryStudyHyperlink)
                     this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
+                      // Alert user with validation done
+                      // TODO Check if it is a good idea to create prompt saying that it is correctly validated
+                      /* swal({ // TODO i18n
+                        position: 'top-end',
+                        type: 'success',
+                        title: 'Correctly validated',
+                        showConfirmButton: false,
+                        timer: 1500
+                      }) */
                       if (_.isFunction(callback)) {
                         callback()
                       }
@@ -637,7 +647,12 @@ class SLRDataExtractionContentScript {
               if (_.isObject(data[primaryStudyRow]) && _.isObject(data[primaryStudyRow].values[dimensionColumn])) {
                 let cell = data[primaryStudyRow].values[dimensionColumn]
                 // If current cell is empty or has the same value, override it
-                if (_.isEmpty(cell.formattedValue) || _.isEmpty(cell.userEnteredFormat) || (_.isEmpty(cell.userEnteredFormat.backgroundColor) && cell.formattedValue === category)) {
+                if (_.isEmpty(cell.formattedValue) || // If cell is empty
+                  _.isEmpty(cell.userEnteredFormat) || // If cell has not background color
+                  (cell.userEnteredFormat.backgroundColor !== SLRDataExtractionContentScript.colors.green && // Background color is not green
+                    cell.userEnteredFormat.backgroundColor !== SLRDataExtractionContentScript.colors.red && // Background color is not red
+                    cell.formattedValue === category)
+                ) {
                   overrideCell()
                 } else {
                   let createOverridePrompt = (conflict) => {

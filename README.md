@@ -1,10 +1,10 @@
-# annotation-based web augmentation
+# Highlight And Go
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+Chrome extension that tracks highlighting activity while reading primary studies, and accordingly populates the Google Sheets application at hand.
 
 # For End-users
 
-End users require a hypothesis account
+End users require a hypothesis and Google Sheet account. The extension can be downloaded from [Chrome Store](https://chrome.google.com/webstore/detail/highlightgo/bihmalipgnlomidlpekdnoohiejppfmo).
 
 # For developers
 
