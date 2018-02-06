@@ -1,5 +1,7 @@
-const HypothesisClient = require('./HypothesisClient')
 const _ = require('lodash')
+const swal = require('sweetalert2')
+
+const HypothesisClient = require('./HypothesisClient')
 
 const reloadIntervalInSeconds = 10 // Reload the hypothesis client every 10 seconds
 
@@ -40,6 +42,51 @@ class HypothesisClientManager {
 
   isLoggedIn () {
     return !_.isEmpty(this.hypothesisToken)
+  }
+
+  logInHypothesis (callback) {
+    // TODO Check if user grant permission to access hypothesis account
+    if (!window.hag.hypothesisClientManager.isLoggedIn()) {
+      this.askUserToLogInHypothesis((err, token) => {
+        if (err) {
+          callback(err)
+        } else {
+          callback(null, token)
+        }
+      })
+    } else {
+      callback(null, window.hag.hypothesisClientManager.hypothesisToken)
+    }
+  }
+
+  askUserToLogInHypothesis (callback) {
+    // Send ask cuestion
+    // Ask user to login in hypothesis
+    swal({
+      title: 'Hypothes.is login required', // TODO i18n
+      text: chrome.i18n.getMessage('HypothesisLoginRequired'),
+      type: 'info',
+      showCancelButton: true
+    }).then((result) => {
+      if (result.value) {
+        // Prompt hypothesis login form
+        chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'userLoginForm'}, (result) => {
+          if (result.error) {
+            if (_.isFunction(callback)) {
+              callback(new Error(result.error))
+            }
+          } else {
+            window.hag.hypothesisClientManager.reloadHypothesisClient(() => {
+              if (_.isFunction(callback)) {
+                callback(null, window.hag.hypothesisClientManager.hypothesisToken)
+              }
+            })
+          }
+        })
+      } else {
+        callback(new Error('User don\'t want to log in hypothes.is'))
+      }
+    })
   }
 
   destroy () {

@@ -11,26 +11,30 @@ class GoogleSheetParser {
   parse (callback) {
     this.retrieveSpreadsheetId()
     this.retrieveSheetId()
-    this.retrieveCurrentToken((token) => {
-      this.getSpreadsheet(token, (err, spreadsheet) => {
-        if (err) {
-          callback(err)
-        } else {
-          let title = spreadsheet.properties.title
-          let dimensions = this.getDimensionsAndCategories(spreadsheet)
-          if (_.isError(dimensions)) {
-            callback(dimensions)
+    this.retrieveCurrentToken((err, token) => {
+      if (err) {
+        callback(err)
+      } else {
+        this.getSpreadsheet(token, (err, spreadsheet) => {
+          if (err) {
+            callback(err)
           } else {
-            if (_.isFunction(callback)) {
-              callback(null, {
-                dimensions: dimensions,
-                title: title,
-                gSheetMetadata: {spreadsheetId: this.spreadsheetId, sheetId: this.sheetId}
-              })
+            let title = spreadsheet.properties.title
+            let dimensions = this.getDimensionsAndCategories(spreadsheet)
+            if (_.isError(dimensions)) {
+              callback(dimensions)
+            } else {
+              if (_.isFunction(callback)) {
+                callback(null, {
+                  dimensions: dimensions,
+                  title: title,
+                  gSheetMetadata: {spreadsheetId: this.spreadsheetId, sheetId: this.sheetId}
+                })
+              }
             }
           }
-        }
-      })
+        })
+      }
     })
   }
 
@@ -45,9 +49,13 @@ class GoogleSheetParser {
   }
 
   retrieveCurrentToken (callback) {
-    chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getToken'}, (token) => {
+    chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getToken'}, (result) => {
       if (_.isFunction(callback)) {
-        callback(token)
+        if (result.token) {
+          callback(null, result.token)
+        } else {
+          callback(result.error)
+        }
       }
     })
   }

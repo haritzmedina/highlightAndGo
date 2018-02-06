@@ -1,6 +1,7 @@
 const _ = require('lodash')
 
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
+const GoogleSheetsClientManager = require('../googleSheets/GoogleSheetsClientManager')
 const GoogleSheetParser = require('./GoogleSheetParser')
 const HypothesisGroupInitializer = require('./HypothesisGroupInitializer')
 
@@ -8,19 +9,20 @@ const swal = require('sweetalert2')
 
 class GoogleSheetContentScriptManager {
   init (callback) {
-    // Notify user tool is configuring
-    this.showToolIsConfiguring()
+    window.hag.googleSheetClientManager = new GoogleSheetsClientManager()
     window.hag.hypothesisClientManager = new HypothesisClientManager()
     window.hag.hypothesisClientManager.init(() => {
       this.initLoginProcess((err, tokens) => {
         if (err) {
           swal('Oops!',
-            chrome.i18n.getMessage('Failed login to services'),
+            'Unable to configure current spreadsheet. Failed login to services.', // TODO i18n
             'error') // Notify error to user
           if (_.isFunction(callback)) {
             callback()
           }
         } else {
+          // Show tool is configuring prompt
+          this.showToolIsConfiguring()
           console.debug('Correctly logged in to hypothesis: %s', tokens.hypothesis)
           console.debug('Correctly logged in to gSheet: %s', tokens.gSheet)
           this.initGoogleSheetParsing(() => {
@@ -47,34 +49,22 @@ class GoogleSheetContentScriptManager {
   }
 
   initLoginProcess (callback) {
-    if (!window.hag.hypothesisClientManager.isLoggedIn()) {
-      if (confirm(chrome.i18n.getMessage('HypothesisLoginRequired'))) {
-        // Promise if user is not logged in hypothesis
-        this.askUserToLogInHypothesis((hypothesisToken) => {
-          this.askUserToLogInSheets((gSheetToken) => {
-            if (_.isFunction(callback)) {
-              callback(null, {
-                hypothesis: window.hag.hypothesisClientManager.hypothesisToken,
-                gSheet: gSheetToken
-              })
-            }
-          })
-        })
+    window.hag.hypothesisClientManager.logInHypothesis((err, hypothesisToken) => {
+      if (err) {
+        callback(err)
       } else {
-        if (_.isFunction(callback)) {
-          callback(new Error('Unable to login in hypothesis'))
-        }
+        window.hag.googleSheetClientManager.logInGoogleSheets((err, gSheetToken) => {
+          if (err) {
+            callback(err)
+          } else {
+            callback(null, {
+              hypothesis: hypothesisToken,
+              gSheet: gSheetToken
+            })
+          }
+        })
       }
-    } else {
-      this.askUserToLogInSheets((gSheetToken) => {
-        if (_.isFunction(callback)) {
-          callback(null, {
-            hypothesis: window.hag.hypothesisClientManager.hypothesisToken,
-            gSheet: gSheetToken
-          })
-        }
-      })
-    }
+    })
   }
 
   initGoogleSheetParsing (callback) {
@@ -94,36 +84,6 @@ class GoogleSheetContentScriptManager {
             callback()
           }
         })
-      }
-    })
-  }
-
-  askUserToLogInHypothesis (callback) {
-    // Send ask cuestion
-    chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'userLoginForm'}, () => {
-      window.hag.hypothesisClientManager.reloadHypothesisClient(() => {
-        if (_.isFunction(callback)) {
-          callback(window.hag.hypothesisClientManager.hypothesisToken)
-        }
-      })
-    })
-  }
-
-  askUserToLogInSheets (callback) {
-    // Promise if user has not given permissions in google sheets
-    chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getTokenSilent'}, (token) => {
-      if (token) {
-        if (_.isFunction(callback)) {
-          callback(token)
-        }
-      } else {
-        if (confirm(chrome.i18n.getMessage('GoogleSheetLoginRequired'))) {
-          chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getToken'}, (token) => {
-            if (_.isFunction(callback)) {
-              callback(token)
-            }
-          })
-        }
       }
     })
   }

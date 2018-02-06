@@ -101,11 +101,22 @@ class HypothesisManager {
                   this.token = token
                   chrome.tabs.remove(tab.id, () => {
                     clearInterval(interval)
-                    sendResponse(this.token)
+                    sendResponse({token: this.token})
                   })
                 }
               })
             }, checkHypothesisLoggedInWhenPromptInSeconds * 1000)
+            // Set event for when user close the tab
+            let closeTabListener = (closedTabId) => {
+              if (closedTabId === tab.id && !this.token) {
+                // Remove listener for hypothesis token
+                clearInterval(interval)
+                // Hypothes.is login tab is closed
+                sendResponse({error: 'Hypothesis tab closed intentionally'})
+              }
+              chrome.tabs.onRemoved.removeListener(closeTabListener)
+            }
+            chrome.tabs.onRemoved.addListener(closeTabListener)
           })
         }
       }

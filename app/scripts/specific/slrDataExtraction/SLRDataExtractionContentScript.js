@@ -164,16 +164,16 @@ class SLRDataExtractionContentScript {
 
   askUserToLogInSheets (callback) {
     // Promise if user has not given permissions in google sheets
-    chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getTokenSilent'}, (token) => {
-      if (token) {
+    chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getTokenSilent'}, (result) => {
+      if (result.token) {
         if (_.isFunction(callback)) {
-          callback(token)
+          callback(result.token)
         }
       } else {
         if (confirm(chrome.i18n.getMessage('GoogleSheetLoginRequired'))) {
-          chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getToken'}, (token) => {
+          chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getToken'}, (result) => {
             if (_.isFunction(callback)) {
-              callback(token)
+              callback(result.token)
             }
           })
         }
