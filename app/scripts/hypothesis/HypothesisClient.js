@@ -335,6 +335,24 @@ submit
       }
     })
   }
+
+  removeAMemberFromAGroup (groupId, user, callback) {
+    user = 'me' // For the moment only is allowed to remove yourself. See: http://h.readthedocs.io/en/latest/api-reference/#operation/deleteGroupMember
+    let opts = {
+      method: 'GET',
+      url: 'https://hypothes.is/api/groups/' + groupId + '/members/' + user,
+      headers: {
+        'Authorization': 'Bearer ' + this.token
+      }
+    }
+    $.ajax(opts).done((response) => {
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    }).fail(() => {
+      callback(new Error('Unable to remove member ' + user + 'from the group' + groupId))
+    })
+  }
 }
 
 module.exports = HypothesisClient

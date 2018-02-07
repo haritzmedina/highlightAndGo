@@ -1,8 +1,11 @@
 class MappingStudy {
-  constructor () {
+  constructor (name) {
+    this.name = name || ''
     this.facets = []
-    this.hypothesisGroupId = null
+    this.hypothesisGroup = null
     this.spreadsheetId = null
     this.sheetId = null
   }
 }
+
+module.exports = MappingStudy

@@ -1,6 +1,7 @@
 class Code {
-  constructor () {
-    this.name = ''
+  constructor (name, facet) {
+    this.name = name || ''
+    this.facet = facet || null
   }
 }
 

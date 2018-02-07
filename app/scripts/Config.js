@@ -14,9 +14,14 @@ const Config = {
     location: true,
     tags: {
       grouped: {
-        group: 'dimension',
-        subgroup: 'category',
-        relation: 'isCategoryOf'
+        group: 'facet',
+        subgroup: 'code',
+        relation: 'isCodeOf'
+      },
+      statics: {
+        multivalued: 'multivalued',
+        inductive: 'inductive',
+        spreadsheet: 'spreadsheet'
       }
     }
   }

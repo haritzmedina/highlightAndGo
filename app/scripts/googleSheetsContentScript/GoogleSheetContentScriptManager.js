@@ -69,19 +69,25 @@ class GoogleSheetContentScriptManager {
 
   initGoogleSheetParsing (callback) {
     window.hag.googleSheetParser = new GoogleSheetParser()
-    window.hag.googleSheetParser.parse((err, parsedSheetData) => {
+    window.hag.googleSheetParser.parse((err, parsedSheetMappingStudy) => {
       if (err) {
         console.error(err)
         if (_.isFunction(callback)) {
           callback()
         }
       } else {
-        console.debug('Parsed data from gSheet')
-        console.debug(parsedSheetData)
+        console.debug('Parsed mapping study data from gSheet')
+        console.debug(parsedSheetMappingStudy)
         window.hag.HypothesisGroupInitializer = new HypothesisGroupInitializer()
-        window.hag.HypothesisGroupInitializer.init(parsedSheetData, () => {
-          if (_.isFunction(callback)) {
-            callback()
+        window.hag.HypothesisGroupInitializer.init(parsedSheetMappingStudy, (err, mappingStudy) => {
+          if (err) {
+            if (_.isFunction(callback)) {
+              callback(err)
+            }
+          } else {
+            if (_.isFunction(callback)) {
+              callback()
+            }
           }
         })
       }

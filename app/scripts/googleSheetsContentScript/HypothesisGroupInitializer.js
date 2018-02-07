@@ -1,15 +1,22 @@
 const _ = require('lodash')
 const swal = require('sweetalert2')
 const ChromeStorage = require('../utils/ChromeStorage')
+const Config = require('../Config')
 
 const selectedGroupNamespace = 'hypothesis.currentGroup'
 
 class HypothesisGroupInitializer {
-  init (parsedSheetData, callback) {
-    this.parsedSheetData = parsedSheetData
-    this.initializeHypothesisGroup(() => {
-      if (_.isFunction(callback)) {
-        callback()
+  init (mappingStudy, callback) {
+    this.mappingStudy = mappingStudy
+    this.initializeHypothesisGroup((err) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
+      } else {
+        if (_.isFunction(callback)) {
+          callback()
+        }
       }
     })
   }
@@ -18,24 +25,58 @@ class HypothesisGroupInitializer {
     // Get if current hypothesis group exists
     window.hag.hypothesisClientManager.hypothesisClient.getUserProfile((userProfile) => {
       let group = _.find(userProfile.groups, (group) => {
-        return group.name === this.parsedSheetData.title.substr(0, 25)
+        return group.name === this.mappingStudy.name.substr(0, 25)
       })
       // Create the group if not exists
       if (_.isEmpty(group)) {
-        this.createHypothesisGroup((group) => {
-          this.createDimensionsAndCategories(group, () => {
-            this.createRelationGSheetGroup(group, () => {
-              // Save as current group the generated one
-              ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(group)}, ChromeStorage.local)
-              // When window.focus
-              swal('Correctly configured', // TODO i18n
-                chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '" target="_blank">' + group.url + '</a>',
-                'success')
-              if (_.isFunction(callback)) {
-                callback()
+        this.createHypothesisGroup((err) => {
+          if (err) {
+            swal('Oops!', // TODO i18n
+              'There was a problem while creating the hypothes.is group. Please reload the page and try it again. <br/>' +
+              'If the error continues, please contact administrator.',
+              'error') // Show to the user the error
+            if (_.isFunction(callback)) {
+              callback(err)
+            }
+          } else {
+            this.createFacetsAndCodes((err) => {
+              if (err) {
+                swal('Oops!', // TODO i18n
+                  'There was a problem while creating buttons for the sidebar. Please reload the page and try it again. <br/>' +
+                  'If the error continues, please contact the administrator.',
+                  'error') // Show to the user the error
+                // Remove created hypothesis group
+                this.removeGroup()
+                if (_.isFunction(callback)) {
+                  callback(err)
+                }
+              } else {
+                this.createRelationGSheetGroup((err) => {
+                  if (err) {
+                    swal('Oops!', // TODO i18n
+                      'There was a problem while relating the tool with the spreadsheet. Please reload the page and try it again. <br/>' +
+                      'If error continues, please contact administrator.',
+                      'error') // Show to the user the error
+                    // Remove created hypothesis group
+                    this.removeGroup()
+                    if (_.isFunction(callback)) {
+                      callback(err)
+                    }
+                  } else {
+                    // Save as current group the generated one
+                    ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.mappingStudy.hypothesisGroup)}, ChromeStorage.local)
+                    // When window.focus
+                    swal('Correctly configured', // TODO i18n
+                      chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + this.mappingStudy.hypothesisGroup.url + '" target="_blank">' + this.mappingStudy.hypothesisGroup.url + '</a>',
+                      'success')
+                    if (_.isFunction(callback)) {
+                      callback()
+                    }
+                  }
+                })
               }
             })
-          })
+          }
         })
       } else {
         swal('The group ' + group.name + ' already exists', // TODO i18n
@@ -50,50 +91,44 @@ class HypothesisGroupInitializer {
   }
 
   createHypothesisGroup (callback) {
-    window.hag.hypothesisClientManager.hypothesisClient.createHypothesisGroup(this.parsedSheetData.title, (err, group) => {
+    window.hag.hypothesisClientManager.hypothesisClient.createHypothesisGroup(this.mappingStudy.name, (err, group) => {
       if (err) {
-        swal('Oops!', // TODO i18n
-          'There was a problem while creating Hypothes.is group. Please reload the page and try it again. <br/>' +
-          'If error continues, please contact administrator.',
-          'error') // Show to the user the error
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
       } else {
         console.debug('Created group in hypothesis: ')
         console.debug(group)
+        this.mappingStudy.hypothesisGroup = group
         if (_.isFunction(callback)) {
-          callback(group)
+          callback()
         }
       }
     })
   }
 
-  createDimensionsAndCategories (group, callback) {
-    // Create dimensions and categories annotations
-    let dimensionsAndCategoriesPairs = _.toPairs(this.parsedSheetData.dimensions)
+  createFacetsAndCodes (callback) {
+    console.log(this.mappingStudy.facets)
     let annotations = []
-    for (let i = 0; i < dimensionsAndCategoriesPairs.length; i++) {
-      let pair = dimensionsAndCategoriesPairs[i]
-      // Create dimension annotation
-      let dimensionName = pair[0]
-      annotations.push(this.generateAnnotationCorpus(group, ['slr:dimension:' + dimensionName]))
-      // Create categories annotation
-      let categories = pair[1]
-      if (categories) {
-        for (let j = 0; j < categories.length; j++) {
-          let categoryName = categories[j]
-          annotations.push(this.generateAnnotationCorpus(
-            group,
-            ['slr:category:' + categoryName, 'slr:isCategoryOf:' + dimensionName]))
-        }
+    let facets = this.mappingStudy.facets
+    for (let i = 0; i < facets.length; i++) {
+      let facet = facets[i]
+      // Create annotation for facet
+      annotations.push(this.generateFacetAnnotationCorpus(facet))
+      // Create annotations for codes
+      let codes = facet.codes
+      for (let j = 0; j < facet.codes.length; j++) {
+        let code = codes[j]
+        annotations.push(this.generateCodeAnnotationCorpus(code))
       }
     }
     console.debug('Generated dimensions and categories annotations: ')
     console.debug(annotations)
     window.hag.hypothesisClientManager.hypothesisClient.createNewAnnotations(annotations, (err, result) => {
       if (err) {
-        swal('Oops!', // TODO i18n
-          'There was a problem while creating buttons for the sidebar. Please reload the page and try it again. <br/>' +
-          'If error continues, please contact administrator.',
-          'error') // Show to the user the error
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
       } else {
         if (_.isFunction(callback)) {
           callback()
@@ -102,16 +137,32 @@ class HypothesisGroupInitializer {
     })
   }
 
-  createRelationGSheetGroup (group, callback) {
+  generateFacetAnnotationCorpus (facet) {
+    let tags = [Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.group + ':' + facet.name]
+    if (facet.multivalued) {
+      tags.push(Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.multivalued)
+    }
+    if (facet.inductive) {
+      tags.push(Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.inductive)
+    }
+    return this.generateAnnotationCorpus(tags)
+  }
+
+  generateCodeAnnotationCorpus (code) {
+    let codeTag = Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':' + code.name
+    let isCodeOfTag = Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.relation + ':' + code.facet
+    let tags = [codeTag, isCodeOfTag]
+    return this.generateAnnotationCorpus(tags)
+  }
+
+  createRelationGSheetGroup (callback) {
     // Create relation to sheet annotation
-    let relationAnnotation = this.generateRelateSheetAndGroupAnnotation(this.parsedSheetData.gSheetMetadata, group)
+    let relationAnnotation = this.generateRelateSheetAndGroupAnnotation()
     window.hag.hypothesisClientManager.hypothesisClient.createNewAnnotation(relationAnnotation, (err, annotation) => {
       if (err) {
-        swal('Oops!', // TODO i18n
-          'There was a problem while relating the tool with the spreadsheet. Please reload the page and try it again. <br/>' +
-          'If error continues, please contact administrator.',
-          'error') // Show to the user the error
-        // Leave the group for the user
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
       } else {
         console.debug('Created relation between sheet and hypothesis group: ')
         console.debug(annotation)
@@ -122,39 +173,47 @@ class HypothesisGroupInitializer {
     })
   }
 
-  generateAnnotationCorpus (group, tags) {
+  generateAnnotationCorpus (tags) {
     return {
-      group: group.id,
+      group: this.mappingStudy.hypothesisGroup.id,
       permissions: {
-        read: ['group:' + group.id]
+        read: ['group:' + this.mappingStudy.hypothesisGroup.id]
       },
       references: [],
       tags: tags,
       target: [],
       text: '',
-      uri: group.url // Group url
+      uri: this.mappingStudy.hypothesisGroup.url // Group url
     }
   }
 
-  generateRelateSheetAndGroupAnnotation (gSheetMetadata, group) {
+  generateRelateSheetAndGroupAnnotation () {
     return {
-      group: group.id,
+      group: this.mappingStudy.hypothesisGroup.id,
       permissions: {
-        read: ['group:' + group.id]
+        read: ['group:' + this.mappingStudy.hypothesisGroup.id]
       },
       references: [],
-      tags: ['slr:spreadsheet'],
+      tags: [Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.spreadsheet],
       target: [],
-      text: 'spreadsheetId: ' + gSheetMetadata.spreadsheetId + '\n' + 'sheetId: ' + gSheetMetadata.sheetId,
-      uri: group.url // Group url
+      text: 'spreadsheetId: ' + this.mappingStudy.spreadsheetId + '\n' + 'sheetId: ' + this.mappingStudy.sheetId,
+      uri: this.mappingStudy.hypothesisGroup.url // Group url
+    }
+  }
+
+  removeGroup (callback) {
+    if (this.mappingStudy.hypothesisGroup) {
+      window.hag.hypothesisClientManager.hypothesisClient.removeAMemberFromAGroup(this.mappingStudy.hypothesisGroup.id, 'me', (err) => {
+        if (_.isFunction(callback)) {
+          callback(err)
+        } else {
+          callback()
+        }
+      })
     }
   }
 
   updateHypothesisGroup () {
-
-  }
-
-  disableExtensionButton () {
 
   }
 }
