@@ -3,7 +3,10 @@ const Events = {
   annotationCreated: 'annotationCreated',
   annotationDeleted: 'annotationDeleted',
   modeChanged: 'modeChanged',
-  validateAnnotation: 'validateAnnotation'
+  validateAnnotation: 'validateAnnotation',
+  userFilterChange: 'userFilterChange',
+  updatedAllAnnotations: 'updatedAllAnnotations',
+  updatedCurrentAnnotations: 'updatedCurrentAnnotations'
 }
 
 module.exports = Events

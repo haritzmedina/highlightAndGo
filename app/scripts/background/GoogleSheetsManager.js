@@ -4,7 +4,6 @@ class GoogleSheetsManager {
       if (request.scope === 'googleSheets') {
         if (request.cmd === 'getToken') {
           chrome.identity.getAuthToken({ 'interactive': true }, function (token) {
-            debugger
             if (chrome.runtime.lastError) {
               sendResponse({error: chrome.runtime.lastError})
             } else {

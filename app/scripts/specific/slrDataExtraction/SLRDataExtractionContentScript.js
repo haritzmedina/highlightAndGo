@@ -3,6 +3,8 @@ const _ = require('lodash')
 const jsYaml = require('js-yaml')
 const Events = require('../../contentScript/Events')
 const URLUtils = require('../../utils/URLUtils')
+const SheetUtils = require('../../utils/SheetUtils')
+const Config = require('../../Config')
 const DOI = require('doi-regex')
 const swal = require('sweetalert2')
 
@@ -10,6 +12,11 @@ class SLRDataExtractionContentScript {
   constructor () {
     this.linkToSLR = null
     this.spreadsheetId = null
+    this.tags = {
+      isFacetOf: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.relation + ':',
+      facet: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.group + ':',
+      code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':'
+    }
   }
 
   init (callback) {
@@ -77,19 +84,19 @@ class SLRDataExtractionContentScript {
     // Check what type of classification is, restricted by (has this tag) or free (hasn't this tag)
     let category = null
     let dimension = null
-    if (this.hasATag(classificationAnnotation, 'slr:isCategoryOf')) {
+    if (this.hasATag(classificationAnnotation, this.tags.isFacetOf)) {
       // TODO Retrieve the category and dimension belonged to
       category = _.find(classificationAnnotation.tags, (tag) => {
-        return tag.includes('slr:category:')
-      }).replace('slr:category:', '')
+        return tag.includes(this.tags.code)
+      }).replace(this.tags.code, '')
       dimension = _.find(classificationAnnotation.tags, (tag) => {
-        return tag.includes('slr:isCategoryOf:')
-      }).replace('slr:isCategoryOf:', '')
+        return tag.includes(this.tags.isFacetOf)
+      }).replace(this.tags.isFacetOf, '')
     } else {
       // TODO Retrieve category from target
       dimension = _.find(classificationAnnotation.tags, (tag) => {
-        return tag.includes('slr:dimension:')
-      }).replace('slr:dimension:', '')
+        return tag.includes(this.tags.facet)
+      }).replace(this.tags.facet, '')
       category = _.find(classificationAnnotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' }).exact
     }
     console.log('Dimension %s, category %s', dimension, category)
@@ -151,17 +158,6 @@ class SLRDataExtractionContentScript {
     }
   }
 
-  columnToLetter (column) {
-    let temp = ''
-    let letter = ''
-    while (column > 0) {
-      temp = (column - 1) % 26
-      letter = String.fromCharCode(temp + 65) + letter
-      column = (column - temp - 1) / 26
-    }
-    return letter
-  }
-
   askUserToLogInSheets (callback) {
     // Promise if user has not given permissions in google sheets
     chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getTokenSilent'}, (result) => {
@@ -196,10 +192,10 @@ class SLRDataExtractionContentScript {
   updateClassificationInGSheetWithDeletedAnnotation (deletedAnnotation, callback) {
     // Retrieve dimension of annotation
     let dimensionTag = _.find(deletedAnnotation.tags, (tag) => {
-      return tag.includes('slr:isCategoryOf:') || tag.includes('slr:dimension:')
+      return tag.includes(this.tags.isFacetOf) || tag.includes(this.tags.facet)
     })
     let dimension = null
-    if (dimensionTag.includes('slr:isCategoryOf:')) { // Categorized dimension
+    if (dimensionTag.includes(this.tags.isFacetOf)) { // Categorized dimension
       this.retrieveSpreadsheetMetadataForCurrentGroup((err, spreadsheetMetadata) => {
         if (err) {
           console.error(err)
@@ -207,12 +203,12 @@ class SLRDataExtractionContentScript {
           this.askUserToLogInSheets((token) => {
             this.getSheet(spreadsheetMetadata, token, (sheet) => {
               let data = sheet.data[0].rowData
-              dimension = dimensionTag.replace('slr:isCategoryOf:', '')
+              dimension = dimensionTag.replace(this.tags.isFacetOf, '')
               window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
                 url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(), // For current document (pdf/html)
                 uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(), // For current document (html)
                 group: window.abwa.groupSelector.currentGroup.id, // For current group
-                tags: 'slr:isCategoryOf:' + dimension, // With slr:isCategoryOf:<dimension>
+                tags: this.tags.isFacetOf + dimension, // With slr:isFacetOf:<facet>
                 order: 'asc' // Ordered from oldest to newest
               }, (err, annotations) => {
                 if (err) {
@@ -240,13 +236,13 @@ class SLRDataExtractionContentScript {
                       // Check if all annotations have the same categories
                       let categories = _.keys(_.groupBy(annotations, (annotation) => {
                         return _.find(annotation.tags, (tag) => {
-                          return tag.includes('slr:category:')
+                          return tag.includes(this.tags.code)
                         })
                       }))
                       if (categories.length === 1) {
                         // Set in white and fill the cell
                         this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, null, () => {
-                          let category = categories[0].replace('slr:category:', '')
+                          let category = categories[0].replace(this.tags.code, '')
                           let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
                           let link = this.getAnnotationUrl(annotations[0], primaryStudyHyperlink)
                           this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
@@ -260,8 +256,8 @@ class SLRDataExtractionContentScript {
                         this.setCellInColor({primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, SLRDataExtractionContentScript.colors.red, () => {
                           // Retrieve category of the oldest annotation
                           let category = _.find(annotations[0].tags, (tag) => {
-                            return tag.includes('slr:category:')
-                          }).replace('slr:category:', '')
+                            return tag.includes(this.tags.code)
+                          }).replace(this.tags.code, '')
                           let primaryStudyHyperlink = this.getHyperlinkFromCell(data[primaryStudyRow].values[0])
                           let link = this.getAnnotationUrl(annotations[0], primaryStudyHyperlink)
                           this.setCellValueWithLink(category, link, {primaryStudyRow: primaryStudyRow, dimensionColumn: dimensionColumn}, token, () => {
@@ -281,7 +277,7 @@ class SLRDataExtractionContentScript {
           })
         }
       })
-    } else if (dimensionTag.includes('slr:dimension:')) { // Uncategorized dimension
+    } else if (dimensionTag.includes(this.tags.facet)) { // Uncategorized dimension
       // Retrieve google spreadsheet data
       this.retrieveSpreadsheetMetadataForCurrentGroup((err, spreadsheetMetadata) => {
         if (err) {
@@ -290,13 +286,13 @@ class SLRDataExtractionContentScript {
           this.askUserToLogInSheets((token) => {
             this.getSheet(spreadsheetMetadata, token, (sheet) => {
               let data = sheet.data[0].rowData
-              dimension = dimensionTag.replace('slr:dimension:', '')
+              dimension = dimensionTag.replace(this.tags.facet, '')
               // Search all annotations ...
               window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
                 url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(), // For current document (pdf/html)
                 uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(), // For current document (html)
                 group: window.abwa.groupSelector.currentGroup.id, // For current group
-                tags: 'slr:dimension:' + dimension, // With slr:dimension:<dimension>
+                tags: this.tags.facet + dimension, // With slr:facet:<dimension>
                 order: 'asc', // Ordered from oldest to newest
                 limit: 2 // No need to retrieve more than 2 annotations, see following code to know why
               }, (err, annotations) => {
@@ -423,7 +419,7 @@ class SLRDataExtractionContentScript {
 
   setCellValueWithLink (value, link, cell, token, callback) {
     this.getSheetName(token, (sheetName) => {
-      let range = sheetName + '!' + this.columnToLetter(cell.dimensionColumn + 1) + (cell.primaryStudyRow + 1)
+      let range = sheetName + '!' + SheetUtils.columnToLetter(cell.dimensionColumn + 1) + (cell.primaryStudyRow + 1)
       $.ajax({
         async: true,
         method: 'PUT',
@@ -452,7 +448,7 @@ class SLRDataExtractionContentScript {
 
   setCellEmpty (cell, token, callback) {
     this.getSheetName(token, (sheetName) => {
-      let range = sheetName + '!' + this.columnToLetter(cell.dimensionColumn + 1) + (cell.primaryStudyRow + 1)
+      let range = sheetName + '!' + SheetUtils.columnToLetter(cell.dimensionColumn + 1) + (cell.primaryStudyRow + 1)
       $.ajax({
         async: true,
         method: 'PUT',
@@ -593,18 +589,18 @@ class SLRDataExtractionContentScript {
   updateGSheetWithValidatedAnnotation (annotation, callback) {
     // Retrieve dimension of annotation
     let dimensionTag = _.find(annotation.tags, (tag) => {
-      return tag.includes('slr:isCategoryOf:') || tag.includes('slr:dimension:')
+      return tag.includes(this.tags.isFacetOf) || tag.includes(this.tags.facet)
     })
     // Search dimension and category of the validated annotation
     let dimension = null
     let category = null
-    if (dimensionTag.includes('slr:isCategoryOf:')) { // Categorized dimension
-      dimension = dimensionTag.replace('slr:isCategoryOf:', '')
+    if (dimensionTag.includes(this.tags.isFacetOf)) { // Categorized dimension
+      dimension = dimensionTag.replace(this.tags.isFacetOf, '')
       category = _.find(annotation.tags, (tag) => {
-        return tag.includes('slr:category:')
-      }).replace('slr:category:', '')
-    } else if (dimensionTag.includes('slr:dimension:')) {
-      dimension = dimensionTag.replace('slr:dimension:', '')
+        return tag.includes(this.tags.code)
+      }).replace(this.tags.code, '')
+    } else if (dimensionTag.includes(this.tags.facet)) {
+      dimension = dimensionTag.replace(this.tags.facet, '')
       category = _.find(annotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' }).exact
     } else {
       callback(new Error('This annotation is not belonged to a dimension.'))

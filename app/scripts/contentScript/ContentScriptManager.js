@@ -8,6 +8,7 @@ const GroupSelector = require('./GroupSelector')
 const ConfigDecisionHelper = require('./ConfigDecisionHelper')
 const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
 const AugmentationManager = require('./AugmentationManager')
+const UserFilter = require('./UserFilter')
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
@@ -64,6 +65,7 @@ class ContentScriptManager {
         console.debug('No supported configuration found for this group')
         this.destroyAugmentationOperations()
         this.destroyTagsManager()
+        this.destroyUserFilter()
         this.destroyContentAnnotator()
         this.destroySpecificContentManager()
       } else {
@@ -71,7 +73,9 @@ class ContentScriptManager {
         // Tags manager should go before content annotator, depending on the tags manager, the content annotator can change
         this.reloadTagsManager(config, () => {
           this.reloadContentAnnotator(config, () => {
-            this.reloadSpecificContentManager(config)
+            this.reloadUserFilter(config, () => {
+              this.reloadSpecificContentManager(config)
+            })
           })
         })
         this.reloadAugmentationOperations(config)
@@ -127,12 +131,28 @@ class ContentScriptManager {
     }
   }
 
+  reloadUserFilter (config, callback) {
+    // Destroy current augmentation operations
+    this.destroyUserFilter()
+    // Create augmentation operations for the current group
+    window.abwa.userFilter = new UserFilter(config)
+    window.abwa.userFilter.init(callback)
+  }
+
+  destroyUserFilter (callback) {
+    // Destroy current augmentation operations
+    if (!_.isEmpty(window.abwa.userFilter)) {
+      window.abwa.userFilter.destroy()
+    }
+  }
+
   destroy () {
     console.log('Destroying content script manager')
     this.destroyContentTypeManager(() => {
       this.destroyAugmentationOperations()
       this.destroyTagsManager()
       this.destroyContentAnnotator()
+      this.destroyUserFilter()
       window.abwa.groupSelector.destroy(() => {
         window.abwa.sidebar.destroy(() => {
           window.abwa.hypothesisClientManager.destroy(() => {

@@ -46,10 +46,6 @@ class Tag {
     })
     return this.tagButton
   }
-
-  changeRol (newRole) {
-    this.tagButton.setAttribute('role', newRole)
-  }
 }
 
 Tag.roles = {
@@ -100,16 +96,14 @@ class TagManager {
     this.initTagsStructure(() => {
       this.initEventHandlers(() => {
         this.initAllTags(() => {
-          this.initIndexTags(() => {
-            if (window.abwa.modeManager.mode === ModeManager.modes.highlight) {
-              this.showAllTags()
-            } else {
-              this.showIndexTags()
-            }
-            if (_.isFunction(callback)) {
-              callback()
-            }
-          })
+          if (window.abwa.modeManager.mode === ModeManager.modes.highlight) {
+            this.showAllTagsContainer()
+          } else {
+            this.showIndexTagsContainer()
+          }
+          if (_.isFunction(callback)) {
+            callback()
+          }
         })
       })
     })
@@ -359,24 +353,30 @@ class TagManager {
   }
 
   initEventHandlers (callback) {
+    // For mode change
     this.events.modeChange = {element: document, event: Events.modeChanged, handler: (event) => { this.modeChangeHandler(event) }}
     this.events.modeChange.element.addEventListener(this.events.modeChange.event, this.events.modeChange.handler, false)
+    // For user filter change
+    this.events.updatedCurrentAnnotationsEvent = {element: document, event: Events.updatedCurrentAnnotations, handler: this.createUpdatedCurrentAnnotationsEventHandler()}
+    this.events.updatedCurrentAnnotationsEvent.element.addEventListener(this.events.updatedCurrentAnnotationsEvent.event, this.events.updatedCurrentAnnotationsEvent.handler, false)
     if (_.isFunction(callback)) {
       callback()
     }
   }
 
-  modeChangeHandler (event) {
-    if (event.detail.mode === ModeManager.modes.highlight) {
-      // Show all the tags
-      this.showAllTags()
-    } else if (event.detail.mode === ModeManager.modes.index) {
-      // TODO Update index tags
-      this.showIndexTags()
+  createUpdatedCurrentAnnotationsEventHandler () {
+    return (event) => {
+      // Retrieve current annotations
+      let currentAnnotations = event.detail.currentAnnotations
+      // Update index tags menu
+      this.updateIndexTags(currentAnnotations)
     }
   }
 
-  initIndexTags (callback) {
+  updateIndexTags (currentAnnotations) {
+    let tagsIndexContainer = document.querySelector('#tagsIndex')
+    tagsIndexContainer.innerHTML = ''
+    // Retrieve group annotations
     let groupAnnotations = this.model.groupAnnotations
     let groupTags = {}
     for (let i = 0; i < groupAnnotations.length; i++) {
@@ -385,67 +385,58 @@ class TagManager {
         groupTags[groupTag] = new TagGroup({name: groupTag, namespace: this.model.namespace, group: this.model.config.grouped.group})
       }
     }
-    // Retrieve current annotations
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-      url: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
-      uri: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
-      group: window.abwa.groupSelector.currentGroup.id
-    }, (err, documentAnnotations) => {
-      if (err) {
-        console.error('Unable to load annotations') // TODO Show message to user
-      } else {
-        // Retrieve tags of the namespace
-        documentAnnotations = _.filter(documentAnnotations, (annotation) => {
-          return this.hasANamespace(annotation, this.model.namespace)
-        })
-        // Get only tags of subgroups or groups
-        groupAnnotations = _.filter(groupAnnotations, (annotation) => {
-          return this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.group) ||
-            this.hasATag(annotation, this.model.namespace + ':' + this.model.config.grouped.subgroup)
-        })
-        // Group active subgroups by groups
-        for (let i = 0; i < documentAnnotations.length; i++) {
-          let annotationGroupData = this.getGroupAndSubgroup(documentAnnotations[i])
-          // If not already subgroup, define it
-          if (!_.find(groupTags[annotationGroupData.group].tags, (tag) => { return tag.name === annotationGroupData.subgroup })) {
-            // Create tag and add to its group
-            // If has subgroup
-            if (annotationGroupData.subgroup) {
-              let tagName = annotationGroupData.subgroup
-              let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
-              groupTags[annotationGroupData.group].tags.push(new Tag({
-                name: tagName,
-                namespace: this.model.namespace,
-                options: {color: color},
-                tags: [
-                  this.model.namespace + ':' + this.model.config.grouped.relation + ':' + annotationGroupData.group,
-                  this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + annotationGroupData.subgroup
-                ]
-              }))
-            } else { // If doesn't have subgroup (free category)
-              let tagName = annotationGroupData.group
-              let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
-              if (groupTags[annotationGroupData.group].tags.length === 0) {
-                groupTags[annotationGroupData.group].tags.push(new Tag({
-                  name: tagName,
-                  namespace: this.model.namespace,
-                  options: {color: color},
-                  tags: [
-                    this.model.namespace + ':' + this.model.config.grouped.group + ':' + tagName
-                  ]
-                }))
-              }
-            }
+    // Retrieve tags of the namespace
+    let documentAnnotations = _.filter(currentAnnotations, (annotation) => {
+      return this.hasANamespace(annotation, this.model.namespace)
+    })
+    // Group active subgroups by groups
+    for (let i = 0; i < documentAnnotations.length; i++) {
+      let annotationGroupData = this.getGroupAndSubgroup(documentAnnotations[i])
+      // If not already subgroup, define it
+      if (!_.find(groupTags[annotationGroupData.group].tags, (tag) => { return tag.name === annotationGroupData.subgroup })) {
+        // Create tag and add to its group
+        // If has subgroup
+        if (annotationGroupData.subgroup) {
+          let tagName = annotationGroupData.subgroup
+          let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
+          groupTags[annotationGroupData.group].tags.push(new Tag({
+            name: tagName,
+            namespace: this.model.namespace,
+            options: {color: color},
+            tags: [
+              this.model.namespace + ':' + this.model.config.grouped.relation + ':' + annotationGroupData.group,
+              this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + annotationGroupData.subgroup
+            ]
+          }))
+        } else { // If doesn't have subgroup (free category)
+          let tagName = annotationGroupData.group
+          let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
+          if (groupTags[annotationGroupData.group].tags.length === 0) {
+            groupTags[annotationGroupData.group].tags.push(new Tag({
+              name: tagName,
+              namespace: this.model.namespace,
+              options: {color: color},
+              tags: [
+                this.model.namespace + ':' + this.model.config.grouped.group + ':' + tagName
+              ]
+            }))
           }
         }
-        this.currentIndexTags = _.values(groupTags)
-        // Generate tag groups and buttons
-        this.createIndexTagsButtons()
-        if (_.isFunction(callback)) {
-          callback()
-        }
       }
-    })
+    }
+    this.currentIndexTags = _.values(groupTags)
+    // Generate tag groups and buttons
+    this.createIndexTagsButtons()
+  }
+
+  modeChangeHandler (event) {
+    if (event.detail.mode === ModeManager.modes.highlight) {
+      // Show all the tags
+      this.showAllTagsContainer()
+    } else if (event.detail.mode === ModeManager.modes.index) {
+      // TODO Update index tags (it is not really required because everytime user create/delete annotation is updated)
+      this.showIndexTagsContainer()
+    }
   }
 
   createIndexTagsButtons (callback) {
@@ -490,12 +481,12 @@ class TagManager {
     return {group: group, subgroup: subGroup}
   }
 
-  showAllTags () {
+  showAllTagsContainer () {
     $(this.tagsContainer.index).attr('aria-hidden', 'true')
     $(this.tagsContainer.annotate).attr('aria-hidden', 'false')
   }
 
-  showIndexTags () {
+  showIndexTagsContainer () {
     $(this.tagsContainer.index).attr('aria-hidden', 'false')
     $(this.tagsContainer.annotate).attr('aria-hidden', 'true')
   }

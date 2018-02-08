@@ -43,10 +43,48 @@ class TextAnnotator extends ContentAnnotator {
     this.initSelectionEvents(() => {
       this.initAnnotateEvent(() => {
         this.initModeChangeEvent(() => {
-          if (_.isFunction(callback)) {
-            callback()
-          }
+          this.initUserFilterChangeEvent(() => {
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          })
         })
+      })
+    })
+  }
+
+  initUserFilterChangeEvent (callback) {
+    this.events.userFilterChangeEvent = {element: document, event: Events.userFilterChange, handler: this.createUserFilterChangeEventHandler()}
+    this.events.userFilterChangeEvent.element.addEventListener(this.events.userFilterChangeEvent.event, this.events.userFilterChangeEvent.handler, false)
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
+
+  createUserFilterChangeEventHandler () {
+    return (event) => {
+      // This is only allowed in mode index
+      if (window.abwa.modeManager.mode === ModeManager.modes.index) {
+        let filteredUsers = event.detail.filteredUsers
+        // Unhighlight all annotations
+        this.unHighlightAllAnnotations()
+        // Retrieve annotations for filtered users
+        this.currentAnnotations = this.retrieveAnnotationsForUsers(filteredUsers)
+        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+        this.highlightAnnotations(this.currentAnnotations)
+      }
+    }
+  }
+
+  /**
+   * Retrieve from all annotations for the current document, those who user is one of the list in users
+   * @param users
+   * @returns {Array}
+   */
+  retrieveAnnotationsForUsers (users) {
+    return _.filter(this.allAnnotations, (annotation) => {
+      return _.find(users, (user) => {
+        return annotation.user === 'acct:' + user + '@hypothes.is'
       })
     })
   }
@@ -65,12 +103,14 @@ class TextAnnotator extends ContentAnnotator {
       if (window.abwa.modeManager.mode === ModeManager.modes.index) {
         // Highlight all annotations
         this.currentAnnotations = this.allAnnotations
+        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
         this.disableSelectionEvent()
       } else {
         // Unhighlight all annotations
         this.unHighlightAllAnnotations()
         // Highlight only annotations from current user
         this.currentAnnotations = this.retrieveCurrentAnnotations()
+        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
         this.highlightAnnotations(this.currentAnnotations)
         // Activate selection event and sidebar functionality
         this.activateSelectionEvent()
@@ -137,7 +177,9 @@ class TextAnnotator extends ContentAnnotator {
         } else {
           // Add to annotations
           this.currentAnnotations.push(annotation)
+          LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
           this.allAnnotations.push(annotation)
+          LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
           // Send event annotation is created
           LanguageUtils.dispatchCustomEvent(Events.annotationCreated, {annotation: annotation})
           console.debug('Created annotation with ID: ' + annotation.id)
@@ -224,6 +266,10 @@ class TextAnnotator extends ContentAnnotator {
     }
   }
 
+  /**
+   * Initializes annotations observer, to ensure dynamic web pages maintain highlights on the screen
+   * @param callback Callback when initialization finishes
+   */
   initAnnotationsObserver (callback) {
     this.observerInterval = setInterval(() => {
       if (this.currentAnnotations) {
@@ -277,8 +323,10 @@ class TextAnnotator extends ContentAnnotator {
           }
         }
         this.allAnnotations = taggedAnnotations || []
+        LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
         // Current annotations will be
         this.currentAnnotations = this.retrieveCurrentAnnotations()
+        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
         // Highlight annotations in the DOM
         this.highlightAnnotations(this.currentAnnotations)
       }
@@ -412,9 +460,11 @@ class TextAnnotator extends ContentAnnotator {
                     _.remove(this.currentAnnotations, (currentAnnotation) => {
                       return currentAnnotation.id === annotation.id
                     })
+                    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
                     _.remove(this.allAnnotations, (currentAnnotation) => {
                       return currentAnnotation.id === annotation.id
                     })
+                    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {currentAnnotations: this.allAnnotations})
                     // Unhighlight annotation highlight elements
                     DOMTextUtils.unHighlightElements([...document.querySelectorAll('[data-annotation-id="' + annotation.id + '"]')])
                     console.debug('Deleted annotation ' + annotation.id)
