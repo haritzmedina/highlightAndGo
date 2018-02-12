@@ -1,5 +1,4 @@
 const _ = require('lodash')
-const swal = require('sweetalert2')
 
 const HypothesisClient = require('./HypothesisClient')
 
@@ -60,8 +59,8 @@ class HypothesisClientManager {
   }
 
   askUserToLogInHypothesis (callback) {
-    // Send ask cuestion
-    // Ask user to login in hypothesis
+    let swal = require('sweetalert2')
+    // Ask question
     swal({
       title: 'Hypothes.is login required', // TODO i18n
       text: chrome.i18n.getMessage('HypothesisLoginRequired'),
