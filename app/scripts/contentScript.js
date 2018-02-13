@@ -16,7 +16,9 @@ window.addEventListener('load', () => {
         }
       } else if (msg.action === 'destroyContentScript') {
         if (window.abwa.contentScriptManager.status === ContentScriptManager.status.initialized) {
-          window.abwa.contentScriptManager.destroy()
+          window.abwa.contentScriptManager.destroy(() => {
+            window.abwa = {} // Clean window.abwa variable
+          })
         }
       }
     })

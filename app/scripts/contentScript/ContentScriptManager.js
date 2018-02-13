@@ -146,7 +146,7 @@ class ContentScriptManager {
     }
   }
 
-  destroy () {
+  destroy (callback) {
     console.log('Destroying content script manager')
     this.destroyContentTypeManager(() => {
       this.destroyAugmentationOperations()
@@ -157,6 +157,9 @@ class ContentScriptManager {
         window.abwa.sidebar.destroy(() => {
           window.abwa.hypothesisClientManager.destroy(() => {
             this.status = ContentScriptManager.status.notInitialized
+            if (_.isFunction(callback)) {
+              callback()
+            }
           })
         })
       })
