@@ -74,7 +74,7 @@ class MappingStudyManager {
       }
       // Retrieve if multivalued
       if (_.find(facetTags, (tag) => { return tag.includes('slr:multivalued') })) {
-        facet.inductive = true
+        facet.multivalued = true
       }
       // Retrieve if inductive
       if (_.find(facetTags, (tag) => { return tag.includes('slr:inductive') })) {
