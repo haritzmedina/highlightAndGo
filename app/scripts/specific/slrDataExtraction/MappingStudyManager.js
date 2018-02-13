@@ -104,6 +104,7 @@ class MappingStudyManager {
         codes.push(code)
       }
     }
+    return codes
   }
 }
 

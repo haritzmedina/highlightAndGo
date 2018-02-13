@@ -1,6 +1,5 @@
 const $ = require('jquery')
 const _ = require('lodash')
-const Events = require('../../contentScript/Events')
 const URLUtils = require('../../utils/URLUtils')
 const SheetUtils = require('../../utils/SheetUtils')
 const Config = require('../../Config')
@@ -10,6 +9,9 @@ const swal = require('sweetalert2')
 const BackToSpreadsheetLink = require('./BackToSpreadsheetLink')
 const PrimaryStudySheetManager = require('./PrimaryStudySheetManager')
 const MappingStudyManager = require('./MappingStudyManager')
+const CreateAnnotationManager = require('./CreateAnnotationManager')
+const DeleteAnnotationManager = require('./DeleteAnnotationManager')
+const ValidateAnnotationManager = require('./ValidateAnnotationManager')
 
 class SLRDataExtractionContentScript {
   constructor () {
@@ -33,9 +35,15 @@ class SLRDataExtractionContentScript {
         // Create link to back to spreadsheet
         window.abwa.specific.backToSpreadsheetLink = new BackToSpreadsheetLink()
         window.abwa.specific.backToSpreadsheetLink.init()
-        // TODO Create annotation handler
-        // TODO Delete annotation handler
-        // TODO Validation handler
+        // Create annotation handler
+        window.abwa.specific.createAnnotationManager = new CreateAnnotationManager()
+        window.abwa.specific.createAnnotationManager.init()
+        // Delete annotation handler
+        window.abwa.specific.deleteAnnotationManager = new DeleteAnnotationManager()
+        window.abwa.specific.deleteAnnotationManager.init()
+        // Validation handler
+        window.abwa.specific.validateAnnotationManager = new ValidateAnnotationManager()
+        window.abwa.specific.validateAnnotationManager.init()
       })
       /*
       // Listen to event when annotation is created
@@ -70,31 +78,14 @@ class SLRDataExtractionContentScript {
     })
   }
 
-  initBackToSpreadsheetLink (callback) {
-    // Retrieve current spreadsheet id
-    this.retrieveSpreadsheetMetadataForCurrentGroup((err, spreadsheetMetadata) => {
-      if (err) {
-        console.error(new Error('Unable to retrieve spreadsheet asociated with this group'))
-      } else {
-        this.askUserToLogInSheets((token) => {
-          this.getSheet(spreadsheetMetadata, token, (sheet) => {
-            let data = sheet.data[0].rowData
-            // Retrieve current primary study row
-            let primaryStudyRow = this.retrievePrimaryStudyRow(data)
-            // Construct link to spreadsheet
-            this.linkToSLR = document.createElement('a')
-            this.linkToSLR.href = 'https://docs.google.com/spreadsheets/d/' + spreadsheetMetadata.spreadsheetId + '/edit#gid=' +
-              spreadsheetMetadata.sheetId + '&range=A' + (primaryStudyRow + 1)
-            this.linkToSLR.innerText = 'Back to spreadsheet' // TODO i18n
-            this.linkToSLR.target = '_blank'
-            $('#groupBody').append(this.linkToSLR)
-            if (_.isFunction(callback)) {
-              callback()
-            }
-          })
-        })
-      }
-    })
+  destroy () {
+    // TODO Destroy managers
+    window.abwa.specific.mappingStudyManager.destroy()
+    window.abwa.specific.primaryStudySheetManager.destroy()
+    window.abwa.specific.backToSpreadsheetLink.destroy()
+    window.abwa.specific.createAnnotationManager.destroy()
+    window.abwa.specific.deleteAnnotationManager.destroy()
+    window.abwa.specific.validateAnnotationManager.destroy()
   }
 
   addClassificationToGSheet (classificationAnnotation, callback) {
@@ -192,12 +183,6 @@ class SLRDataExtractionContentScript {
         }
       }
     })
-  }
-
-  destroy () {
-    if (this.linkToSLR) {
-      $(this.linkToSLR).remove()
-    }
   }
 
   hasATag (annotation, tag) {

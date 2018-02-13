@@ -11,5 +11,10 @@ mark {
 }
 
 .textLayer .highlight.selected {
-  background-color: rgba(0,0,0,0)
+  background-color: rgba(0,0,0,0);
+}
+
+/* Fix for background black on pdf using swal2 */
+.swal2-shown {
+  height: 100% !important;
 }

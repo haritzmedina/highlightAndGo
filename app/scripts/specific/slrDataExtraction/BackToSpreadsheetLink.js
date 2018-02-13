@@ -1,5 +1,6 @@
 const $ = require('jquery')
 const _ = require('lodash')
+const swal = require('sweetalert2')
 
 class BackToSpreadsheetLink {
   constructor () {
@@ -11,6 +12,11 @@ class BackToSpreadsheetLink {
     window.abwa.specific.primaryStudySheetManager.retrievePrimaryStudyRow((err, primaryStudyRow) => {
       let rowInSheet = null
       if (err || primaryStudyRow === 0) {
+        swal({
+          type: 'warning',
+          title: 'Oops...',
+          text: 'This primary study is not in your hypersheet. Please add it if you want to classify it.'
+        })
         rowInSheet = 1
         // Create advert icon
         let warningImageUrl = chrome.extension.getURL('/images/warning.png')

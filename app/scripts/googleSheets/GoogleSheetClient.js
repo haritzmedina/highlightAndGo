@@ -60,6 +60,47 @@ class GoogleSheetClient {
       }
     }
   }
+
+  updateCell (data, callback) {
+    $.ajax({
+      async: true,
+      crossDomain: true,
+      method: 'POST',
+      url: 'https://sheets.googleapis.com/v4/spreadsheets/' + data.spreadsheetId + ':batchUpdate',
+      headers: {
+        'Authorization': 'Bearer ' + this.token,
+        'Content-Type': 'application/json'
+      },
+      data: JSON.stringify({
+        requests: [{'repeatCell': {
+          'range': {
+            'sheetId': data.sheetId,
+            'startRowIndex': data.row,
+            'endRowIndex': data.row + 1,
+            'startColumnIndex': data.column,
+            'endColumnIndex': data.column + 1
+          },
+          'cell': {
+            'userEnteredFormat': {
+              'backgroundColor': data.backgroundColor
+            },
+            'userEnteredValue': {
+              'formulaValue': '=HYPERLINK("' + data.link + '", "' + data.value + '")'
+            }
+          },
+          'fields': 'userEnteredFormat(backgroundColor), userEnteredValue(formulaValue)'
+        }
+        }]
+      })
+    }).done(() => {
+      console.debug('Set color for row %s, column %s ', data.row, data.column)
+      if (_.isFunction(callback)) {
+        callback(null)
+      }
+    }).fail((xhr, textStatus) => {
+      callback(new Error('Error while updating cell'))
+    })
+  }
 }
 
 module.exports = GoogleSheetClient

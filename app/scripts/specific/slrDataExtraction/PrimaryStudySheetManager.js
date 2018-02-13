@@ -6,9 +6,8 @@ const URLUtils = require('../../utils/URLUtils')
 
 class PrimaryStudySheetManager {
   constructor () {
-    this.primaryStudy = null
-    this.spreadsheetMetadata = {}
     this.sheetData = null
+    this.primaryStudyRow = null
   }
 
   init (callback) {
@@ -77,13 +76,9 @@ class PrimaryStudySheetManager {
         console.debug('Primary study row %s', primaryStudyRow)
         if (_.isFunction(callback)) {
           if (primaryStudyRow > 0) {
+            this.primaryStudyRow = primaryStudyRow
             callback(null, primaryStudyRow)
           } else {
-            swal({
-              type: 'warning',
-              title: 'Oops...',
-              text: 'This primary study is not in your hypersheet. Please add it if you want to update your mapping study.'
-            })
             callback(new Error('Primary study not found in your hypersheet'))
           }
         }
@@ -106,6 +101,38 @@ class PrimaryStudySheetManager {
         }
       }
     })
+  }
+
+  getPrimaryStudyLink (callback) {
+    this.retrievePrimaryStudyRow((err, row) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
+      } else {
+        let sheetData = this.sheetData
+        let link = _.at(sheetData, 'data[0].rowData[' + row + '].values[0].hyperlink')
+        if (_.isUndefined(link[0])) {
+          callback(new Error('No link found for current primary study'))
+        } else {
+          callback(null, link[0])
+        }
+      }
+    })
+  }
+
+  getGSheetData (callback) {
+    this.reloadGSheetData((err) => {
+      if (err) {
+        callback(err)
+      } else {
+        callback(null, this.sheetData)
+      }
+    })
+  }
+
+  destroy () {
+
   }
 }
 

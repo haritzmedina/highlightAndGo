@@ -1,3 +1,8 @@
 img.warningSidebar {
   width: 25px;
 }
+
+/* Fix small size sweetalert2 */
+.swal2-container {
+  zoom: 1.5 !important;
+}

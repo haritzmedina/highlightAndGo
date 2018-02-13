@@ -300,6 +300,24 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   loadAnnotations (callback) {
+    this.updateAllAnnotations((err) => {
+      if (err) {
+        // TODO Show user no able to load all annotations
+        console.error('Unable to load annotations')
+      } else {
+        // Current annotations will be
+        this.currentAnnotations = this.retrieveCurrentAnnotations()
+        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+        // Highlight annotations in the DOM
+        this.highlightAnnotations(this.currentAnnotations)
+        if (_.isFunction(callback)) {
+          callback()
+        }
+      }
+    })
+  }
+
+  updateAllAnnotations (callback) {
     // Retrieve current user profile
     this.currentUserProfile = window.abwa.groupSelector.user
     // Retrieve annotations for current url and group
@@ -310,7 +328,9 @@ class TextAnnotator extends ContentAnnotator {
       order: 'asc'
     }, (err, annotations) => {
       if (err) {
-        console.error('Unable to load annotations')
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
       } else {
         // Search tagged annotations
         let tagList = window.abwa.tagManager.getTagsList()
@@ -324,16 +344,25 @@ class TextAnnotator extends ContentAnnotator {
         }
         this.allAnnotations = taggedAnnotations || []
         LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
-        // Current annotations will be
-        this.currentAnnotations = this.retrieveCurrentAnnotations()
-        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
-        // Highlight annotations in the DOM
-        this.highlightAnnotations(this.currentAnnotations)
+        if (_.isFunction(callback)) {
+          callback(null, this.allAnnotations)
+        }
       }
     })
-    if (_.isFunction(callback)) {
-      callback()
-    }
+  }
+
+  getAllAnnotations (callback) {
+    this.updateAllAnnotations((err) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
+      } else {
+        if (_.isFunction(callback)) {
+          callback(null, this.allAnnotations)
+        }
+      }
+    })
   }
 
   retrieveCurrentAnnotations () {

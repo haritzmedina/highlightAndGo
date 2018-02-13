@@ -1,8 +1,8 @@
 const HyperSheetColors = {
   red: {
-    'red': 1,
-    'green': 0.8980392,
-    'blue': 0.6
+    'red': 0.8980392,
+    'green': 0.49803922,
+    'blue': 0.49803922
   },
   white: {
     'red': 1,
