@@ -88,9 +88,12 @@ class HypothesisClientManager {
     })
   }
 
-  destroy () {
+  destroy (callback) {
     if (this.reloadInterval) {
       clearInterval(this.reloadInterval)
+    }
+    if (_.isFunction(callback)) {
+      callback()
     }
   }
 }
