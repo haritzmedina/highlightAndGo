@@ -124,9 +124,13 @@ class PrimaryStudySheetManager {
   getGSheetData (callback) {
     this.reloadGSheetData((err) => {
       if (err) {
-        callback(err)
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
       } else {
-        callback(null, this.sheetData)
+        if (_.isFunction(callback)) {
+          callback(null, this.sheetData)
+        }
       }
     })
   }

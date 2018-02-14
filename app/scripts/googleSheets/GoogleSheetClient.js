@@ -61,7 +61,7 @@ class GoogleSheetClient {
     }
   }
 
-  updateCell (data, callback) {
+  batchUpdate (data, callback) {
     $.ajax({
       async: true,
       crossDomain: true,
@@ -72,34 +72,144 @@ class GoogleSheetClient {
         'Content-Type': 'application/json'
       },
       data: JSON.stringify({
-        requests: [{'repeatCell': {
-          'range': {
-            'sheetId': data.sheetId,
-            'startRowIndex': data.row,
-            'endRowIndex': data.row + 1,
-            'startColumnIndex': data.column,
-            'endColumnIndex': data.column + 1
-          },
-          'cell': {
-            'userEnteredFormat': {
-              'backgroundColor': data.backgroundColor
-            },
-            'userEnteredValue': {
-              'formulaValue': '=HYPERLINK("' + data.link + '", "' + data.value + '")'
-            }
-          },
-          'fields': 'userEnteredFormat(backgroundColor), userEnteredValue(formulaValue)'
-        }
-        }]
+        requests: data.requests
       })
     }).done(() => {
-      console.debug('Set color for row %s, column %s ', data.row, data.column)
+      // TODO Manage responses
       if (_.isFunction(callback)) {
         callback(null)
       }
     }).fail((xhr, textStatus) => {
-      callback(new Error('Error while updating cell'))
+      if (_.isFunction(callback)) {
+        callback(new Error('Error in batch update, error: ' + textStatus))
+      }
     })
+  }
+
+  updateCell (data, callback) {
+    let requests = []
+    requests.push(this.createRequestUpdateCell(data))
+    let batchUpdateData = {
+      spreadsheetId: data.spreadsheetId,
+      requests: requests
+    }
+    this.batchUpdate(batchUpdateData, (err) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
+      } else {
+        if (_.isFunction(callback)) {
+          callback(null)
+        }
+      }
+    })
+  }
+
+  /**
+   *
+   * @param {{sheetId: number, row: number, column: number, backgroundColor: *, link: string, value: string, numberOfColumns: number, numberOfRows: number}} data
+   * @returns {{repeatCell: {range: {sheetId: *|null, startRowIndex: number, endRowIndex: number, startColumnIndex, endColumnIndex: *}, cell: {userEnteredFormat: {backgroundColor}, userEnteredValue: {formulaValue: string}}, fields: string}}}
+   */
+  createRequestUpdateCell (data) {
+    data.numberOfColumns = _.isNumber(data.numberOfColumns) ? data.numberOfColumns : 1
+    data.numberOfRows = _.isNumber(data.numberOfRows) ? data.numberOfRows : 1
+    let formulaValue = _.isString(data.link) ? '=HYPERLINK("' + data.link + '", "' + data.value + '")' : data.value
+    return {
+      'repeatCell': {
+        'range': {
+          'sheetId': data.sheetId,
+          'startRowIndex': data.row,
+          'endRowIndex': data.row + data.numberOfRows,
+          'startColumnIndex': data.column,
+          'endColumnIndex': data.column + data.numberOfColumns
+        },
+        'cell': {
+          'userEnteredFormat': {
+            'backgroundColor': data.backgroundColor
+          },
+          'userEnteredValue': {
+            'formulaValue': formulaValue
+          }
+        },
+        'fields': 'userEnteredFormat(backgroundColor), userEnteredValue(formulaValue)'
+      }
+    }
+  }
+
+  createRequestUpdateCells (data) {
+    return {
+      'updateCells': {
+        'rows': {
+          'values': data.cells
+        },
+        'fields': '*',
+        'range': data.range
+      }
+    }
+  }
+
+  /**
+   * Create a request for google sheet to copy a cell from source to destination.
+   * @param {{sheetId: number, sourceRow: number, pasteType: string, sourceColumn: number, sourceNumberOfRows: number, sourceNumberOfColumns: number, destinationNumberOfRows: number, destinationNumberOfColumns: number, destinationRow: number, destinationColumn: number}} data
+   * @returns {{copyPaste: {source: {sheetId: number|*|null, startRowIndex: *, endRowIndex: *, startColumnIndex: *, endColumnIndex: *}, destination: {sheetId: number|*|null, startRowIndex: *, endRowIndex: *, startColumnIndex: *, endColumnIndex: *}, pasteType: string, pasteOrientation: string}}}
+   */
+  createRequestCopyCell (data) {
+    // TODO Check required params are defined
+    data.sourceNumberOfColumns = _.isNumber(data.sourceNumberOfColumns) ? data.sourceNumberOfColumns : 1
+    data.sourceNumberOfRows = _.isNumber(data.sourceNumberOfRows) ? data.sourceNumberOfRows : 1
+    data.destinationNumberOfColumns = _.isNumber(data.destinationNumberOfColumns) ? data.destinationNumberOfColumns : 1
+    data.destinationNumberOfRows = _.isNumber(data.destinationNumberOfRows) ? data.destinationNumberOfRows : 1
+    data.pasteType = _.isString(data.pasteType) ? data.pasteType : 'PASTE_NORMAL'
+    return {
+      'copyPaste': {
+        'source': {
+          'sheetId': data.sheetId,
+          'startRowIndex': data.sourceRow,
+          'endRowIndex': data.sourceRow + data.sourceNumberOfRows,
+          'startColumnIndex': data.sourceColumn,
+          'endColumnIndex': data.sourceColumn + data.sourceNumberOfColumns
+        },
+        'destination': {
+          'sheetId': data.sheetId,
+          'startRowIndex': data.destinationRow,
+          'endRowIndex': data.destinationRow + data.destinationNumberOfRows,
+          'startColumnIndex': data.destinationColumn,
+          'endColumnIndex': data.destinationColumn + data.destinationNumberOfColumns
+        },
+        'pasteType': data.pasteType,
+        'pasteOrientation': 'NORMAL'
+      }
+    }
+  }
+
+  /**
+   *
+   * @param {{sheetId: *, length: number}} data
+   * @returns {{appendDimension: {sheetId: *|null, dimension: string, length}}}
+   */
+  createRequestAppendEmptyColumn (data) {
+    return {
+      'appendDimension': {
+        'sheetId': data.sheetId,
+        'dimension': 'COLUMNS',
+        'length': data.length
+      }
+    }
+  }
+
+  createRequestInsertEmptyColumn (data) {
+    data.numberOfColumns = _.isNumber(data.numberOfColumns) ? data.numberOfColumns : 0
+    return {
+      'insertDimension': {
+        'range': {
+          'sheetId': data.sheetId,
+          'dimension': 'COLUMNS',
+          'startIndex': data.startIndex,
+          'endIndex': data.startIndex + data.numberOfColumns
+        }
+      }
+    }
   }
 }
 
