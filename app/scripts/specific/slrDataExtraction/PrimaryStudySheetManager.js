@@ -13,22 +13,23 @@ class PrimaryStudySheetManager {
   init (callback) {
     // Login in google sheets
     this.googleSheetClientManager = new GoogleSheetClientManager()
-    this.googleSheetClientManager.init()
-    this.googleSheetClientManager.logInGoogleSheets((err) => {
-      if (err) {
-        swal({
-          type: 'warning',
-          title: 'Oops...',
-          text: 'It is recommended to give permissions to google sheets. Part of the functionality of the extension will not work correctly.'
-        })
-        if (_.isFunction(callback)) {
-          callback(err)
+    this.googleSheetClientManager.init(() => {
+      this.googleSheetClientManager.logInGoogleSheets((err) => {
+        if (err) {
+          swal({
+            type: 'warning',
+            title: 'Oops...',
+            text: 'It is recommended to give permissions to google sheets. Part of the functionality of the extension will not work correctly.'
+          })
+          if (_.isFunction(callback)) {
+            callback(err)
+          }
+        } else {
+          if (_.isFunction(callback)) {
+            callback(null)
+          }
         }
-      } else {
-        if (_.isFunction(callback)) {
-          callback(null)
-        }
-      }
+      })
     })
   }
 
