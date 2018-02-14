@@ -493,7 +493,7 @@ class TextAnnotator extends ContentAnnotator {
                     _.remove(this.allAnnotations, (currentAnnotation) => {
                       return currentAnnotation.id === annotation.id
                     })
-                    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {currentAnnotations: this.allAnnotations})
+                    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
                     // Unhighlight annotation highlight elements
                     DOMTextUtils.unHighlightElements([...document.querySelectorAll('[data-annotation-id="' + annotation.id + '"]')])
                     console.debug('Deleted annotation ' + annotation.id)

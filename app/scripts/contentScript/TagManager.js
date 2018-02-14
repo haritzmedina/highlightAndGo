@@ -109,20 +109,6 @@ class TagManager {
     })
   }
 
-  getDocumentAnnotations (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
-
-    }, (err, annotations) => {
-      if (err) {
-        alert('Unable to retrieve document annotations')
-      } else {
-        if (_.isFunction(callback)) {
-          callback(annotations)
-        }
-      }
-    })
-  }
-
   getGroupAnnotations (callback) {
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
       url: window.abwa.groupSelector.currentGroup.url,
@@ -171,30 +157,6 @@ class TagManager {
       }
     } else {
       return [] // No tags for current group
-    }
-  }
-
-  retrieveTagByAnnotation (annotation) {
-    if (annotation.tags.length > 0) {
-      if (this.currentTags.length > 0) {
-        if (LanguageUtils.isInstanceOf(this.currentTags[0], Tag)) {
-          for (let i = 0; i < annotation.tags.length; i++) {
-            let tag = _.find(this.currentTags, {name: annotation.tags[i]})
-            if (tag) {
-              return tag
-            }
-          }
-        } else {
-          for (let i = 0; i < annotation.tags.length; i++) {
-            for (let j = 0; j < this.currentTags.length; j++) {
-              let tag = _.find(this.currentTags[j].tags, {name: annotation.tags[i]})
-              if (tag) {
-                return tag
-              }
-            }
-          }
-        }
-      }
     }
   }
 
@@ -322,8 +284,7 @@ class TagManager {
   retrieveTagNameByPrefix (annotationTags, prefix) {
     for (let i = 0; i < annotationTags.length; i++) {
       if (_.startsWith(annotationTags[i].toLowerCase(), prefix.toLowerCase())) {
-        let tagName = _.replace(annotationTags[i], prefix + ':', '')
-        return tagName
+        return _.replace(annotationTags[i], prefix + ':', '')
       }
     }
     return null
@@ -489,14 +450,6 @@ class TagManager {
   showIndexTagsContainer () {
     $(this.tagsContainer.index).attr('aria-hidden', 'false')
     $(this.tagsContainer.annotate).attr('aria-hidden', 'true')
-  }
-
-  retrieveAllGroups () {
-
-  }
-
-  retrieveAllSubgroups () {
-
   }
 }
 

@@ -6,7 +6,7 @@ const LanguageUtils = require('../utils/LanguageUtils')
 
 class UserFilter {
   constructor () {
-    this.filteredUsers = []
+    this.filteredUsers = null
     this.allUsers = []
     this.events = {}
     this.userFilterWrapper = null
@@ -30,6 +30,8 @@ class UserFilter {
         if (_.isFunction(callback)) {
           callback()
         }
+        // Init panel construction (if no annotation event is detected)
+        this.initUsersPanel(window.abwa.contentAnnotator.allAnnotations)
       }
     })
   }
@@ -136,6 +138,36 @@ class UserFilter {
       } else {
         annotations = window.abwa.contentAnnotator.allAnnotations // Or retrieve directly from contentAnnotator
       }
+      this.updateUsersPanel(annotations)
+    }
+  }
+
+  initUsersPanel () {
+    let annotations = window.abwa.contentAnnotator.allAnnotations
+    if (_.isArray(annotations)) {
+      // Retrieve users who had annotated the document
+      this.allUsers = _.uniq(_.map(annotations, (annotation) => {
+        return annotation.user.replace('acct:', '').replace('@hypothes.is', '')
+      }))
+      this.filteredUsers = _.clone(this.allUsers)
+      // Upload sidebar panel with users
+      this.usersContainer.innerHTML = '' // Empty the container
+      for (let i = 0; i < this.allUsers.length; i++) {
+        $(this.usersContainer).append(this.createUserFilterElement(this.allUsers[i]))
+      }
+      // Activate all users
+      let checkboxes = this.usersContainer.querySelectorAll('input')
+      for (let i = 0; i < checkboxes.length; i++) {
+        let currentCheckbox = checkboxes[i]
+        currentCheckbox.checked = true
+      }
+      // If all old filtered users are current all users, just activate all of them
+      this.checkAllActivated()
+    }
+  }
+
+  updateUsersPanel (annotations) {
+    if (_.isArray(annotations)) {
       let oldFilteredUsers = _.clone(this.filteredUsers)
       // Retrieve users who had annotated the document
       this.allUsers = _.uniq(_.map(annotations, (annotation) => {
