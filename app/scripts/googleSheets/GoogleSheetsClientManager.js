@@ -21,12 +21,18 @@ class GoogleSheetsClientManager {
     })
   }
 
-  loadGSheetClient () {
+  loadGSheetClient (callback) {
     this.logInGoogleSheets((err, token) => {
       if (err) {
         this.googleSheetClient = null
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
       } else {
         this.googleSheetClient = new GoogleSheetClient(token)
+        if (_.isFunction(callback)) {
+          callback(null)
+        }
       }
     })
   }
