@@ -114,7 +114,12 @@ class GoogleSheetClient {
   createRequestUpdateCell (data) {
     data.numberOfColumns = _.isNumber(data.numberOfColumns) ? data.numberOfColumns : 1
     data.numberOfRows = _.isNumber(data.numberOfRows) ? data.numberOfRows : 1
-    let formulaValue = _.isString(data.link) ? '=HYPERLINK("' + data.link + '", "' + data.value + '")' : data.value
+    let userEnteredValue = null
+    if (_.isString(data.link)) {
+      userEnteredValue = {'formulaValue': '=HYPERLINK("' + data.link + '", "' + data.value + '")'}
+    } else {
+      userEnteredValue = {'stringValue': data.value}
+    }
     return {
       'repeatCell': {
         'range': {
@@ -128,9 +133,7 @@ class GoogleSheetClient {
           'userEnteredFormat': {
             'backgroundColor': data.backgroundColor
           },
-          'userEnteredValue': {
-            'formulaValue': formulaValue
-          }
+          'userEnteredValue': userEnteredValue
         },
         'fields': 'userEnteredFormat(backgroundColor), userEnteredValue(formulaValue)'
       }

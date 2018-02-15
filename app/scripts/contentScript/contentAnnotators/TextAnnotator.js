@@ -12,6 +12,7 @@ const _ = require('lodash')
 require('components-jqueryui')
 
 const ANNOTATION_OBSERVER_INTERVAL_IN_SECONDS = 3
+const ANNOTATIONS_UPDATE_INTERVAL_IN_SECONDS = 60
 
 class TextAnnotator extends ContentAnnotator {
   constructor (config) {
@@ -19,6 +20,7 @@ class TextAnnotator extends ContentAnnotator {
     this.events = {}
     this.config = config
     this.observerInterval = null
+    this.reloadInterval = null
     this.currentAnnotations = null
     this.allAnnotations = null
     this.currentUserProfile = null
@@ -28,6 +30,8 @@ class TextAnnotator extends ContentAnnotator {
   init (callback) {
     this.initEvents(() => {
       this.initAnnotationsObserver(() => {
+        // Retrieve current user profile
+        this.currentUserProfile = window.abwa.groupSelector.user
         this.loadAnnotations(() => {
           this.initAnnotatorByAnnotation(() => {
             if (_.isFunction(callback)) {
@@ -44,6 +48,7 @@ class TextAnnotator extends ContentAnnotator {
       this.initAnnotateEvent(() => {
         this.initModeChangeEvent(() => {
           this.initUserFilterChangeEvent(() => {
+            this.initReloadAnnotationsEvent() // Reload annotations periodically
             if (_.isFunction(callback)) {
               callback()
             }
@@ -59,6 +64,14 @@ class TextAnnotator extends ContentAnnotator {
     if (_.isFunction(callback)) {
       callback()
     }
+  }
+
+  initReloadAnnotationsEvent () {
+    this.reloadInterval = setInterval(() => {
+      this.updateAllAnnotations(() => {
+        console.debug('annotations updated')
+      })
+    }, ANNOTATIONS_UPDATE_INTERVAL_IN_SECONDS * 1000)
   }
 
   createUserFilterChangeEventHandler () {
@@ -318,8 +331,6 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   updateAllAnnotations (callback) {
-    // Retrieve current user profile
-    this.currentUserProfile = window.abwa.groupSelector.user
     // Retrieve annotations for current url and group
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
       url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
@@ -352,14 +363,30 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   getAllAnnotations (callback) {
-    this.updateAllAnnotations((err) => {
+    // Retrieve annotations for current url and group
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+      url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+      group: window.abwa.groupSelector.currentGroup.id,
+      order: 'asc'
+    }, (err, annotations) => {
       if (err) {
         if (_.isFunction(callback)) {
           callback(err)
         }
       } else {
+        // Search tagged annotations
+        let tagList = window.abwa.tagManager.getTagsList()
+        let taggedAnnotations = []
+        for (let i = 0; i < annotations.length; i++) {
+          // Check if annotation contains a tag of current group
+          let tag = TagManager.retrieveTagForAnnotation(annotations[i], tagList)
+          if (tag) {
+            taggedAnnotations.push(annotations[i])
+          }
+        }
         if (_.isFunction(callback)) {
-          callback(null, this.allAnnotations)
+          callback(null, taggedAnnotations)
         }
       }
     })
@@ -481,10 +508,9 @@ class TextAnnotator extends ContentAnnotator {
                 } else {
                   if (!result.deleted) {
                     // Alert user error happened
+                    // TODO swal
                     alert('Error deleting hypothesis annotation, please try it again')
                   } else {
-                    // Dispatch deleted annotation event
-                    LanguageUtils.dispatchCustomEvent(Events.annotationDeleted, {annotation: annotation})
                     // Remove annotation from data model
                     _.remove(this.currentAnnotations, (currentAnnotation) => {
                       return currentAnnotation.id === annotation.id
@@ -494,6 +520,8 @@ class TextAnnotator extends ContentAnnotator {
                       return currentAnnotation.id === annotation.id
                     })
                     LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+                    // Dispatch deleted annotation event
+                    LanguageUtils.dispatchCustomEvent(Events.annotationDeleted, {annotation: annotation})
                     // Unhighlight annotation highlight elements
                     DOMTextUtils.unHighlightElements([...document.querySelectorAll('[data-annotation-id="' + annotation.id + '"]')])
                     console.debug('Deleted annotation ' + annotation.id)
@@ -569,8 +597,10 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   destroy () {
-    // Remove observer
+    // Remove observer interval
     clearInterval(this.observerInterval)
+    // Remove reload interval
+    clearInterval(this.reloadInterval)
     // Remove event listeners
     let events = _.values(this.events)
     for (let i = 0; i < events.length; i++) {

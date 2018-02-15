@@ -44,6 +44,9 @@ class SLRDataExtractionContentScript {
         // Validation handler
         window.abwa.specific.validateAnnotationManager = new ValidateAnnotationManager()
         window.abwa.specific.validateAnnotationManager.init()
+        if (_.isFunction(callback)) {
+          callback()
+        }
       })
       /*
       // Listen to event when annotation is created
