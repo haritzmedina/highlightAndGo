@@ -15,7 +15,7 @@ class DeleteAnnotationManager {
   }
 
   init (callback) {
-    // Create event for annotation create
+    // Create event for annotation delete
     this.events.annotationDeleted = {element: document, event: Events.annotationDeleted, handler: this.createAnnotationDeletedEventHandler()}
     this.events.annotationDeleted.element.addEventListener(this.events.annotationDeleted.event, this.events.annotationDeleted.handler, false)
     if (_.isFunction(callback)) {

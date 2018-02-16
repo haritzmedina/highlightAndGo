@@ -2,8 +2,8 @@ const Events = {
   annotate: 'annotate',
   annotationCreated: 'annotationCreated',
   annotationDeleted: 'annotationDeleted',
+  annotationValidated: 'annotationValidated',
   modeChanged: 'modeChanged',
-  validateAnnotation: 'validateAnnotation',
   userFilterChange: 'userFilterChange',
   updatedAllAnnotations: 'updatedAllAnnotations',
   updatedCurrentAnnotations: 'updatedCurrentAnnotations'

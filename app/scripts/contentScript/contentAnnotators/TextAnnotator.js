@@ -498,7 +498,7 @@ class TextAnnotator extends ContentAnnotator {
           callback: (key) => {
             if (key === 'validate') {
               // Validate annotation category
-              LanguageUtils.dispatchCustomEvent(Events.validateAnnotation, {annotation: annotation})
+              LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation})
             } else if (key === 'delete') {
               // Delete annotation
               window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (err, result) => {

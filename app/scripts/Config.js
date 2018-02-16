@@ -21,6 +21,7 @@ const Config = {
       statics: {
         multivalued: 'multivalued',
         inductive: 'inductive',
+        validated: 'validated',
         spreadsheet: 'spreadsheet'
       }
     }

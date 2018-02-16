@@ -157,12 +157,12 @@ class CommonHypersheetManager {
 
   /**
    *
-   * @param {Facet} facet
+   * @param {String} facetName
    * @param annotation
    * @param {Object} backgroundColor
    * @param {Function} callback
    */
-  static updateInductiveFacetInGSheet (facet, annotation, backgroundColor, callback) {
+  static updateInductiveFacetInGSheet (facetName, annotation, backgroundColor, callback) {
     // Retrieve link for primary study
     window.abwa.specific.primaryStudySheetManager.getPrimaryStudyLink((err, primaryStudyLink) => {
       if (err) {
@@ -176,7 +176,7 @@ class CommonHypersheetManager {
         let row = window.abwa.specific.primaryStudySheetManager.primaryStudyRow
         let sheetData = window.abwa.specific.primaryStudySheetManager.sheetData
         let column = _.findIndex(sheetData.data[0].rowData[0].values, (cell) => {
-          return cell.formattedValue === facet.name
+          return cell.formattedValue === facetName
         })
         // Retrieve value for the cell (text annotated)
         let value = CommonHypersheetManager.getAnnotationValue(annotation)

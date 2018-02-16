@@ -1,8 +1,7 @@
-const _ = require('lodash')
-
 const MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH = 5000
 const MAX_NUMBER_OF_CALL_RETRIES = 5
 
+const _ = require('lodash')
 let $
 if (typeof window === 'undefined') {
   $ = require('jquery')(global.window)
@@ -160,11 +159,12 @@ class HypothesisClient {
       'crossDomain': true,
       'url': url,
       'method': 'PATCH',
+      'contentType': 'application/json',
       'headers': {
         'authorization': 'Bearer ' + this.token,
         'cache-control': 'no-cache'
       },
-      'data': data
+      'data': JSON.stringify(data)
     }
     $.ajax(settings).done((response) => {
       callback(null, response)
