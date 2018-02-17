@@ -106,6 +106,10 @@ class MappingStudyManager {
     }
     return codes
   }
+
+  destroy () {
+    // Nothing to destroy in this class
+  }
 }
 
 module.exports = MappingStudyManager

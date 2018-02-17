@@ -96,7 +96,7 @@ class CommonHypersheetManager {
                     startRowIndex: window.abwa.specific.primaryStudySheetManager.primaryStudyRow,
                     startColumnIndex: startIndex,
                     endRowIndex: window.abwa.specific.primaryStudySheetManager.primaryStudyRow + 1,
-                    endColumnIndex: lastColumnIndex + 1
+                    endColumnIndex: lastColumnIndex
                   }
                 })
                 requests.push(updateCellsRequest)

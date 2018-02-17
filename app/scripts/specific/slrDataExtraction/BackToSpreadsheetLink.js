@@ -27,8 +27,8 @@ class BackToSpreadsheetLink {
       } else {
         rowInSheet = primaryStudyRow + 1
       }
-      let spreadsheetId = window.abwa.specific.primaryStudySheetManager.mappingStudy
-      let sheetId = window.abwa.specific.primaryStudySheetManager.mappingStudy
+      let spreadsheetId = window.abwa.specific.mappingStudyManager.mappingStudy.spreadsheetId
+      let sheetId = window.abwa.specific.mappingStudyManager.mappingStudy.sheetId
       // Construct link to spreadsheet
       this.linkToSLR = document.createElement('a')
       this.linkToSLR.href = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit#gid=' + sheetId + '&range=A' + rowInSheet
