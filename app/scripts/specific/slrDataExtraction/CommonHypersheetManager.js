@@ -86,8 +86,8 @@ class CommonHypersheetManager {
                   callback(err)
                 }
               } else {
-                // Retrieve last column number (if new columns are created, calculate, else lastIndex
-                let lastColumnIndex = (cells.length - columnsForFacet + 1) > 0 ? lastIndex + cells.length - columnsForFacet + 1 : lastIndex
+                // Retrieve last column number (if new columns are created, calculate, else lastIndex + 1
+                let lastColumnIndex = (cells.length - columnsForFacet + 1) > 0 ? lastIndex + cells.length - columnsForFacet + 1 : lastIndex + 1
                 // Create request to insert the values to spreadsheet
                 let updateCellsRequest = window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.createRequestUpdateCells({
                   cells: gSheetCells,
