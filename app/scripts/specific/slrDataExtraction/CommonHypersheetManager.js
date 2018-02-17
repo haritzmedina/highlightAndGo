@@ -64,7 +64,7 @@ class CommonHypersheetManager {
               // Need to create new column to insert all the facets
               let appendColumnRequest = window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.createRequestInsertEmptyColumn({
                 sheetId: window.abwa.specific.mappingStudyManager.mappingStudy.sheetId,
-                startIndex: lastIndex,
+                startIndex: lastIndex + 1,
                 numberOfColumns: cells.length - columnsForFacet
               })
               requests.push(appendColumnRequest)

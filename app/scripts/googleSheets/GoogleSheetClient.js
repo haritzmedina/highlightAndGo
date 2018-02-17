@@ -210,7 +210,8 @@ class GoogleSheetClient {
           'dimension': 'COLUMNS',
           'startIndex': data.startIndex,
           'endIndex': data.startIndex + data.numberOfColumns
-        }
+        },
+        'inheritFromBefore': false
       }
     }
   }
