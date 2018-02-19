@@ -10,7 +10,8 @@ class DeleteAnnotationManager {
     this.tags = {
       isCodeOf: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.relation + ':',
       facet: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.group + ':',
-      code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':'
+      code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':',
+      validated: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.validated
     }
   }
 
@@ -139,6 +140,17 @@ class DeleteAnnotationManager {
         }), (iterAnnotation) => { // Filter current annotation if is retrieved in allAnnotations
           return !_.isEqual(iterAnnotation.id, deletedAnnotation.id)
         })
+        // Retrieve validation annotations for current facet
+        let validationAnnotations = _.filter(allAnnotations, (annotation) => {
+          return _.find(annotation.tags, (tag) => {
+            return _.includes(tag, this.tags.validated)
+          }) && _.every(annotation.references, (reference) => {
+            return _.find(facetAnnotations, (facetAnnotation) => {
+              return facetAnnotation.id === reference
+            })
+          })
+        })
+        facetAnnotations = _.concat(facetAnnotations, validationAnnotations)
         // Update classification with current annotations for this facet
         CommonHypersheetManager.updateClassificationMonovalued(facetAnnotations, code.facet, (err, result) => {
           if (err) {
@@ -171,6 +183,17 @@ class DeleteAnnotationManager {
         }), (iterAnnotation) => { // Filter current annotation if is retrieved in allAnnotations
           return !_.isEqual(iterAnnotation.id, deletedAnnotation.id)
         })
+        // Retrieve validation annotations for current facet
+        let validationAnnotations = _.filter(allAnnotations, (annotation) => {
+          return _.find(annotation.tags, (tag) => {
+            return _.includes(tag, this.tags.validated)
+          }) && _.every(annotation.references, (reference) => {
+            return _.find(facetAnnotations, (facetAnnotation) => {
+              return facetAnnotation.id === reference
+            })
+          })
+        })
+        facetAnnotations = _.concat(facetAnnotations, validationAnnotations)
         CommonHypersheetManager.updateClassificationInductive(facetAnnotations, facet, (err) => {
           if (err) {
             if (_.isFunction(callback)) {
@@ -202,6 +225,17 @@ class DeleteAnnotationManager {
         }), (iterAnnotation) => { // Filter current annotation if is retrieved in allAnnotations
           return !_.isEqual(iterAnnotation.id, deletedAnnotation.id)
         })
+        // Retrieve validation annotations for current facet
+        let validationAnnotations = _.filter(allAnnotations, (annotation) => {
+          return _.find(annotation.tags, (tag) => {
+            return _.includes(tag, this.tags.validated)
+          }) && _.every(annotation.references, (reference) => {
+            return _.find(facetAnnotations, (facetAnnotation) => {
+              return facetAnnotation.id === reference
+            })
+          })
+        })
+        facetAnnotations = _.concat(facetAnnotations, validationAnnotations)
         CommonHypersheetManager.updateClassificationMultivalued(facetAnnotations, code.facet, (err) => {
           if (err) {
             if (_.isFunction(callback)) {

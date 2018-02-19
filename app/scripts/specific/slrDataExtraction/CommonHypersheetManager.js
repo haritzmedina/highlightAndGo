@@ -1,9 +1,10 @@
 const HyperSheetColors = require('./HyperSheetColors')
 const _ = require('lodash')
 const Config = require('../../Config')
+const TagManager = require('../../contentScript/TagManager')
 
 class CommonHypersheetManager {
-  static updateClassificationMultivalued (facetAnnotations, facet, callback) {
+  static updateClassificationMultivalued (facetAnnotations, facetName, callback) {
     let requests = [] // Requests to send to google sheets api
     // List all users who annotate the facet
     let uniqueUsers = _.uniq(_.map(facetAnnotations, (facetAnnotation) => { return facetAnnotation.user }))
@@ -13,29 +14,45 @@ class CommonHypersheetManager {
         return tag.includes(CommonHypersheetManager.tags.code)
       })
     }))
+    // Remove if any undefined is found (with slr:validated is created an undefined element)
+    uniqCodeTags = _.reject(uniqCodeTags, (tag) => { return _.isUndefined(tag) })
     let cells = []
     for (let i = 0; i < uniqCodeTags.length; i++) {
       let uniqCodeTag = uniqCodeTags[i]
       let cell = {
         code: uniqCodeTag.replace(CommonHypersheetManager.tags.code, '')
       }
-      // If more than one user has classified this primary study
-      if (uniqueUsers.length > 1) {
-        // Check if all users have used this code
-        if (CommonHypersheetManager.allUsersHaveCode(facetAnnotations, uniqueUsers, uniqCodeTag)) {
-          cell.color = HyperSheetColors.yellow // All users used code
-        } else {
-          cell.color = HyperSheetColors.red // Non all users used code
-        }
-      } else {
-        cell.color = HyperSheetColors.white
-      }
-      // Get oldest annotation for code
-      cell.annotation = _.find(facetAnnotations, (annotation) => {
-        return _.find(annotation.tags, (tag) => {
-          return tag === uniqCodeTag
+      // Check if any of the annotations for this code is referenced by validate annotation and validate annotation is newer than all of them
+      let newestAnnotationResult = this.isValidatedAnnotationNewest(facetAnnotations, uniqCodeTag)
+      if (_.isObject(newestAnnotationResult)) {
+        console.debug('Code %s from multivalued facet %s is validated', uniqCodeTag, facetName)
+        cell.color = HyperSheetColors.green
+        // Retrieve referenced annotation
+        let referencedAnnotation = _.find(facetAnnotations, (facetAnnotation) => {
+          return _.find(newestAnnotationResult.references, (reference) => {
+            return reference === facetAnnotation.id
+          })
         })
-      })
+        cell.annotation = referencedAnnotation
+      } else {
+        // If more than one user has classified this primary study
+        if (uniqueUsers.length > 1) {
+          // Check if all users have used this code
+          if (CommonHypersheetManager.allUsersHaveCode(facetAnnotations, uniqueUsers, uniqCodeTag)) {
+            cell.color = HyperSheetColors.yellow // All users used code
+          } else {
+            cell.color = HyperSheetColors.red // Non all users used code
+          }
+        } else {
+          cell.color = HyperSheetColors.white
+        }
+        // Get oldest annotation for code
+        cell.annotation = _.find(facetAnnotations, (annotation) => {
+          return _.find(annotation.tags, (tag) => {
+            return tag === uniqCodeTag
+          })
+        })
+      }
       cells.push(cell)
     }
     // Order cells by name
@@ -49,8 +66,8 @@ class CommonHypersheetManager {
       } else {
         // Retrieve start and end columns for facet
         let headersRow = sheetData.data[0].rowData[0].values
-        let startIndex = _.findIndex(headersRow, (cell) => { return cell.formattedValue === facet })
-        let lastIndex = _.findLastIndex(headersRow, (cell) => { return cell.formattedValue === facet })
+        let startIndex = _.findIndex(headersRow, (cell) => { return cell.formattedValue === facetName })
+        let lastIndex = _.findLastIndex(headersRow, (cell) => { return cell.formattedValue === facetName })
         if (startIndex === -1 || lastIndex === -1) {
           callback(new Error('Unable to find column for current facet'))
         } else {
@@ -141,7 +158,7 @@ class CommonHypersheetManager {
       let uniqueUsers = _.uniq(_.map(facetAnnotations, (facetAnnotation) => { return facetAnnotation.user }))
       // If more than one yellow, in other case white
       let color = uniqueUsers.length > 1 ? HyperSheetColors.yellow : HyperSheetColors.white
-      CommonHypersheetManager.updateInductiveFacetInGSheet(facet, facetAnnotations[0], color, (err, result) => {
+      CommonHypersheetManager.updateInductiveFacetInGSheet(facet.name, facetAnnotations[0], color, (err, result) => {
         if (err) {
           if (_.isFunction(callback)) {
             callback(err)
@@ -162,7 +179,7 @@ class CommonHypersheetManager {
    * @param {Object} backgroundColor
    * @param {Function} callback
    */
-  static updateInductiveFacetInGSheet (facet, annotation, backgroundColor, callback) {
+  static updateInductiveFacetInGSheet (facetName, annotation, backgroundColor, callback) {
     // Retrieve link for primary study
     window.abwa.specific.primaryStudySheetManager.getPrimaryStudyLink((err, primaryStudyLink) => {
       if (err) {
@@ -176,7 +193,7 @@ class CommonHypersheetManager {
         let row = window.abwa.specific.primaryStudySheetManager.primaryStudyRow
         let sheetData = window.abwa.specific.primaryStudySheetManager.sheetData
         let column = _.findIndex(sheetData.data[0].rowData[0].values, (cell) => {
-          return cell.formattedValue === facet.name
+          return cell.formattedValue === facetName
         })
         // Retrieve value for the cell (text annotated)
         let value = CommonHypersheetManager.getAnnotationValue(annotation)
@@ -228,40 +245,47 @@ class CommonHypersheetManager {
         }
       })
     } else {
-      // Retrieve oldest annotation's code
-      let codeNameTag = _.find(facetAnnotations[0].tags, (tag) => { return tag.includes(CommonHypersheetManager.tags.code) })
-      if (!_.isString(codeNameTag)) {
-        if (_.isFunction(callback)) {
-          callback(new Error('Error while updating hypersheet. Oldest annotation hasn\'t code tag'))
-        }
-      } else {
+      // Order by date
+      let orderedFacetAnnotations = _.reverse(_.sortBy(facetAnnotations, (annotation) => { return new Date(annotation.updated) }))
+      // If newest annotation is validation, validate, else, remove all validations from facetAnnotations array
+      if (_.find(orderedFacetAnnotations[0].tags, (tag) => { return tag === this.tags.validated })) {
+        // Get the annotation who is referenced by validation
+        let validatedAnnotation = _.find(facetAnnotations, (annotation) => { return annotation.id === orderedFacetAnnotations[0].references[0] })
+        let codeNameTag = _.find(validatedAnnotation, (tag) => { return tag.includes(CommonHypersheetManager.tags.code) })
         let codeName = codeNameTag.replace(CommonHypersheetManager.tags.code, '')
-        if (facetAnnotations.length > 1) { // Other annotations are with same facet
-          // Retrieve all used codes to classify the current facet
-          let uniqueCodes = _.uniq(_.map(facetAnnotations, (facetAnnotation) => {
-            return _.find(facetAnnotation.tags, (tag) => {
-              return tag.includes(CommonHypersheetManager.tags.code)
-            })
-          }))
-          if (uniqueCodes.length > 1) { // More than one is used, red background
-            // Set in red background and maintain the oldest one annotation code
-            CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.red, (err, result) => {
-              if (err) {
-                if (_.isFunction(callback)) {
-                  callback(err)
-                }
-              } else {
-                if (_.isFunction(callback)) {
-                  callback(null, result)
-                }
-              }
-            })
+        CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, validatedAnnotation, HyperSheetColors.green, (err, result) => {
+          if (err) {
+            if (_.isFunction(callback)) {
+              callback(err)
+            }
           } else {
-            // Retrieve users who use the code in facet
-            let uniqueUsers = _.uniq(_.map(facetAnnotations, (facetAnnotation) => { return facetAnnotation.user }))
-            if (uniqueUsers.length > 1) { // More than one reviewer has classified using same facet and code
-              // Set in yellow background
-              CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.yellow, (err, result) => {
+            if (_.isFunction(callback)) {
+              callback(null, result)
+            }
+          }
+        })
+      } else {
+        facetAnnotations = _.filter(facetAnnotations, (annotation) => {
+          return _.find(annotation.tags, (tag) => { return tag !== this.tags.validated })
+        })
+        // Retrieve oldest annotation's code
+        let codeNameTag = _.find(facetAnnotations[0].tags, (tag) => { return tag.includes(CommonHypersheetManager.tags.code) })
+        if (!_.isString(codeNameTag)) {
+          if (_.isFunction(callback)) {
+            callback(new Error('Error while updating hypersheet. Oldest annotation hasn\'t code tag'))
+          }
+        } else {
+          let codeName = codeNameTag.replace(CommonHypersheetManager.tags.code, '')
+          if (facetAnnotations.length > 1) { // Other annotations are with same facet
+            // Retrieve all used codes to classify the current facet
+            let uniqueCodes = _.uniq(_.map(facetAnnotations, (facetAnnotation) => {
+              return _.find(facetAnnotation.tags, (tag) => {
+                return tag.includes(CommonHypersheetManager.tags.code)
+              })
+            }))
+            if (uniqueCodes.length > 1) { // More than one is used, red background
+              // Set in red background and maintain the oldest one annotation code
+              CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.red, (err, result) => {
                 if (err) {
                   if (_.isFunction(callback)) {
                     callback(err)
@@ -273,32 +297,49 @@ class CommonHypersheetManager {
                 }
               })
             } else {
-              // Is the same user with the same code, set in white background with the unique code
-              CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.white, (err, result) => {
-                if (err) {
-                  if (_.isFunction(callback)) {
-                    callback(err)
+              // Retrieve users who use the code in facet
+              let uniqueUsers = _.uniq(_.map(facetAnnotations, (facetAnnotation) => { return facetAnnotation.user }))
+              if (uniqueUsers.length > 1) { // More than one reviewer has classified using same facet and code
+                // Set in yellow background
+                CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.yellow, (err, result) => {
+                  if (err) {
+                    if (_.isFunction(callback)) {
+                      callback(err)
+                    }
+                  } else {
+                    if (_.isFunction(callback)) {
+                      callback(null, result)
+                    }
                   }
-                } else {
-                  if (_.isFunction(callback)) {
-                    callback(null)
+                })
+              } else {
+                // Is the same user with the same code, set in white background with the unique code
+                CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.white, (err, result) => {
+                  if (err) {
+                    if (_.isFunction(callback)) {
+                      callback(err)
+                    }
+                  } else {
+                    if (_.isFunction(callback)) {
+                      callback(null)
+                    }
                   }
+                })
+              }
+            }
+          } else { // No other annotation is found with same facet
+            CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.white, (err, result) => {
+              if (err) {
+                if (_.isFunction(callback)) {
+                  callback(err)
                 }
-              })
-            }
+              } else {
+                if (_.isFunction(callback)) {
+                  callback(null, result)
+                }
+              }
+            })
           }
-        } else { // No other annotation is found with same facet
-          CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.white, (err, result) => {
-            if (err) {
-              if (_.isFunction(callback)) {
-                callback(err)
-              }
-            } else {
-              if (_.isFunction(callback)) {
-                callback(null, result)
-              }
-            }
-          })
         }
       }
     }
@@ -417,17 +458,35 @@ class CommonHypersheetManager {
   }
 
   static getAllAnnotations (callback) {
-    window.abwa.contentAnnotator.getAllAnnotations((err, allAnnotations) => {
+    // Retrieve annotations for current url and group
+    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+      url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+      group: window.abwa.groupSelector.currentGroup.id,
+      order: 'asc'
+    }, (err, annotations) => {
       if (err) {
-        allAnnotations = window.abwa.contentAnnotator.allAnnotations // Retrieve near-latest annotations
-      }
-      if (_.isArray(allAnnotations)) {
         if (_.isFunction(callback)) {
-          callback(null, allAnnotations)
+          callback(err)
         }
       } else {
+        // Search tagged annotations
+        let tagList = window.abwa.tagManager.getTagsList()
+        let taggedAnnotations = []
+        for (let i = 0; i < annotations.length; i++) {
+          // Check if annotation contains a tag of current group
+          let tag = TagManager.retrieveTagForAnnotation(annotations[i], tagList)
+          if (tag) {
+            taggedAnnotations.push(annotations[i])
+          } else {
+            // If has validated tag
+            if (_.find(annotations[i].tags, (tag) => { return tag === this.tags.validated })) {
+              taggedAnnotations.push(annotations[i])
+            }
+          }
+        }
         if (_.isFunction(callback)) {
-          callback(new Error('No annotations instance found for this document. Fatal error!'))
+          callback(null, taggedAnnotations)
         }
       }
     })
@@ -475,12 +534,44 @@ class CommonHypersheetManager {
       return null
     }
   }
+
+  static isValidatedAnnotationNewest (facetAnnotations, uniqCodeTag) {
+    let validatedAnnotations = _.filter(facetAnnotations, (annotation) => {
+      return _.find(annotation.tags, (tag) => {
+        return tag === CommonHypersheetManager.tags.validated
+      })
+    })
+    let codeAnnotations = _.filter(facetAnnotations, (facetAnnotation) => { return _.find(facetAnnotation.tags, (tag) => { return tag === uniqCodeTag }) })
+    // Check if any of the validated annotations is for current code
+    let validatedAnnotationsForCode = _.filter(validatedAnnotations, (validatedAnnotation) => {
+      return _.find(codeAnnotations, (codeAnnotation) => {
+        return _.find(validatedAnnotation.references, (reference) => {
+          return reference === codeAnnotation.id
+        })
+      })
+    })
+    if (validatedAnnotationsForCode.length > 0) {
+      let orderedAnnotations = _.reverse(_.sortBy(_.concat(codeAnnotations, validatedAnnotationsForCode), (annotation) => {
+        return new Date(annotation.updated)
+      }))
+      // If newest annotation is validation
+      if (_.find(orderedAnnotations[0].tags, (tag) => { return tag === this.tags.validated })) {
+        console.log('Validated %s', uniqCodeTag)
+        return orderedAnnotations[0]
+      } else {
+        return null
+      }
+    } else {
+      return null
+    }
+  }
 }
 
 CommonHypersheetManager.tags = {
   isCodeOf: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.relation + ':',
   facet: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.group + ':',
-  code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':'
+  code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':',
+  validated: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.validated
 }
 
 module.exports = CommonHypersheetManager

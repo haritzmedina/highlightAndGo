@@ -637,9 +637,13 @@ class TextAnnotator extends ContentAnnotator {
             this.initAnnotatorByAnnotation()
           }, 2000)
         } else {
-          $('html').animate({
-            scrollTop: ($(firstElementToScroll).offset().top - 200) + 'px'
-          }, 300)
+          if (_.isElement(firstElementToScroll)) {
+            $('html').animate({
+              scrollTop: ($(firstElementToScroll).offset().top - 200) + 'px'
+            }, 300)
+          } else {
+            // Unable to go to the annotation
+          }
         }
       }
     }

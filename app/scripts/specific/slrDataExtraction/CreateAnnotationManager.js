@@ -10,7 +10,8 @@ class CreateAnnotationManager {
     this.tags = {
       isCodeOf: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.relation + ':',
       facet: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.group + ':',
-      code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':'
+      code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':',
+      validated: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.validated
     }
   }
 
@@ -130,6 +131,17 @@ class CreateAnnotationManager {
           return !_.isEqual(iterAnnotation.id, currentAnnotation.id)
         })
         facetAnnotations.push(currentAnnotation) // Add current annotation
+        // Retrieve validation annotations for current facet
+        let validationAnnotations = _.filter(allAnnotations, (annotation) => {
+          return _.find(annotation.tags, (tag) => {
+            return _.includes(tag, this.tags.validated)
+          }) && _.every(annotation.references, (reference) => {
+            return _.find(facetAnnotations, (facetAnnotation) => {
+              return facetAnnotation.id === reference
+            })
+          })
+        })
+        facetAnnotations = _.concat(facetAnnotations, validationAnnotations)
         CommonHypersheetManager.updateClassificationMultivalued(facetAnnotations, code.facet, (err) => {
           if (err) {
             if (_.isFunction(callback)) {
@@ -194,6 +206,17 @@ class CreateAnnotationManager {
           return !_.isEqual(iterAnnotation.id, currentAnnotation.id)
         })
         facetAnnotations.push(currentAnnotation)
+        // Retrieve validation annotations for current facet
+        let validationAnnotations = _.filter(allAnnotations, (annotation) => {
+          return _.find(annotation.tags, (tag) => {
+            return _.includes(tag, this.tags.validated)
+          }) && _.every(annotation.references, (reference) => {
+            return _.find(facetAnnotations, (facetAnnotation) => {
+              return facetAnnotation.id === reference
+            })
+          })
+        })
+        facetAnnotations = _.concat(facetAnnotations, validationAnnotations)
         // Update classification with current annotations for this facet
         CommonHypersheetManager.updateClassificationMonovalued(facetAnnotations, code.facet, (err, result) => {
           if (err) {

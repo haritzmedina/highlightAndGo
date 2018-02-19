@@ -11,7 +11,8 @@ class ValidateAnnotationManager {
     this.tags = {
       isCodeOf: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.relation + ':',
       facet: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.group + ':',
-      code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':'
+      code: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':',
+      validated: Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.validated
     }
   }
 
@@ -30,23 +31,49 @@ class ValidateAnnotationManager {
       console.debug('Validating annotation ' + annotation.id)
       let typeOfFacetData = this.typeOfFacet(annotation)
       if (_.isObject(typeOfFacetData)) {
-        this.validateClassificationOnHypersheet(typeOfFacetData, (err, result) => {
+        // Remove old validation annotations
+        this.removeOldValidationAnnotations(typeOfFacetData, (err, result) => {
           if (err) {
-            // TODO Show user an error number
             console.error(err)
             swal({
               type: 'error',
               title: 'Oops...',
-              text: 'Unable to update hypersheet. Ensure you have permission to update it and try it again.'
+              text: 'Unable to validate the classification. Unable to remove previously validate annotation.'
             })
           } else {
-            // Nothing to do, everything went okay
-            swal({ // TODO i18n
-              position: 'top-end',
-              type: 'success',
-              title: 'Correctly validated',
-              showConfirmButton: false,
-              timer: 1500
+            // Create new validation annotation
+            this.createNewValidationAnnotation(typeOfFacetData, (err, validateAnnotation) => {
+              if (err) {
+                console.error(err)
+                swal({
+                  type: 'error',
+                  title: 'Oops...',
+                  text: 'Unable to validate the classification. Unable to create validate annotation.'
+                })
+              } else {
+                typeOfFacetData.validateAnnotation = validateAnnotation
+                this.validateClassificationOnHypersheet(typeOfFacetData, (err, result) => {
+                  if (err) {
+                    // TODO Show user an error number
+                    console.error(err)
+                    swal({
+                      type: 'error',
+                      title: 'Oops...',
+                      text: 'Unable to update hypersheet. Ensure you have permission to update it and try it again.'
+                    })
+                  } else {
+                    console.debug('Validated annotation ' + annotation.id)
+                    // Nothing to do, everything went okay
+                    swal({ // TODO i18n
+                      position: 'top-end',
+                      type: 'success',
+                      title: 'Correctly validated',
+                      showConfirmButton: false,
+                      timer: 1500
+                    })
+                  }
+                })
+              }
             })
           }
         })
@@ -91,60 +118,48 @@ class ValidateAnnotationManager {
           }
         })
     } else if (typeOfFacetData.typeOfFacet === 'multivalued') {
-      window.abwa.specific.primaryStudySheetManager.getGSheetData((err, sheetData) => {
+      CommonHypersheetManager.getAllAnnotations((err, allAnnotations) => {
         if (err) {
+          // Error while updating hypersheet
           if (_.isFunction(callback)) {
             callback(err)
           }
         } else {
-          // TODO Detect conflict
-          // Retrieve row
-          let primaryStudyRow = window.abwa.specific.primaryStudySheetManager.primaryStudyRow
-          let headersRow = sheetData.data[0].rowData[0].values
-          let facetStartColumn = _.findIndex(headersRow, (cell) => { return cell.formattedValue === typeOfFacetData.facet.name })
-          let facetLastColumn = _.findLastIndex(headersRow, (cell) => { return cell.formattedValue === typeOfFacetData.facet.name })
-          // Find cell for selected code
-          let row = sheetData.data[0].rowData[primaryStudyRow].values
-          let facetCells = _.slice(row, facetStartColumn, facetLastColumn + 1)
-          let facetCellsCodeIndex = _.findIndex(facetCells, (cell) => { return cell.formattedValue === typeOfFacetData.code.name })
-          if (facetCellsCodeIndex === -1) {
-            callback(new Error('Validated code on multivalued facet is not found.'))
-          } else {
-            // Retrieve link for primary study
-            window.abwa.specific.primaryStudySheetManager.getPrimaryStudyLink((err, primaryStudyLink) => {
+          // Retrieve annotations with same facet
+          let facetAnnotations = _.filter(_.filter(allAnnotations, (annotation) => {
+            return _.find(annotation.tags, (tag) => {
+              return _.includes(tag, typeOfFacetData.facet.name)
+            })
+          }), (iterAnnotation) => { // Filter current annotation and validateAnnotation if is retrieved in allAnnotations
+            return !_.isEqual(iterAnnotation.id, typeOfFacetData.annotation.id) || !_.isEqual(iterAnnotation.id, typeOfFacetData.validateAnnotation.id)
+          })
+          facetAnnotations.push(typeOfFacetData.annotation) // Add current annotation
+          // Retrieve validation annotations for current facet
+          let validationAnnotations = _.filter(allAnnotations, (annotation) => {
+            return _.find(annotation.tags, (tag) => {
+              return _.includes(tag, this.tags.validated)
+            }) && _.every(annotation.references, (reference) => {
+              return _.find(facetAnnotations, (facetAnnotation) => {
+                return facetAnnotation.id === reference
+              })
+            })
+          })
+          validationAnnotations.push(typeOfFacetData.validateAnnotation) // Add validate annotation
+          facetAnnotations = _.concat(facetAnnotations, validationAnnotations)
+          CommonHypersheetManager.updateClassificationMultivalued(
+            facetAnnotations,
+            typeOfFacetData.facet.name,
+            (err, result) => {
               if (err) {
                 if (_.isFunction(callback)) {
                   callback(err)
                 }
               } else {
-                // Create link for annotation
-                let link = CommonHypersheetManager.getAnnotationUrl(typeOfFacetData.annotation, primaryStudyLink)
-                // Create request to update the cell
-                let request = window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.createRequestUpdateCell({
-                  row: primaryStudyRow,
-                  column: facetCellsCodeIndex + facetStartColumn,
-                  value: typeOfFacetData.code.name,
-                  link: link,
-                  backgroundColor: HyperSheetColors.green,
-                  sheetId: window.abwa.specific.mappingStudyManager.mappingStudy.sheetId
-                })
-                window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.batchUpdate({
-                  spreadsheetId: window.abwa.specific.mappingStudyManager.mappingStudy.spreadsheetId,
-                  requests: [request]
-                }, (err, result) => {
-                  if (err) {
-                    if (_.isFunction(callback)) {
-                      callback(err)
-                    }
-                  } else {
-                    if (_.isFunction(callback)) {
-                      callback(null, result)
-                    }
-                  }
-                })
+                if (_.isFunction(callback)) {
+                  callback()
+                }
               }
             })
-          }
         }
       })
     }
@@ -224,6 +239,128 @@ class ValidateAnnotationManager {
       } else {
         return null
       }
+    }
+  }
+
+  removeOldValidationAnnotations (typeOfFacetData, callback) {
+    if (typeOfFacetData.typeOfFacet === 'monovalued' || typeOfFacetData.typeOfFacet === 'inductive') {
+      window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+        url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
+        uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+        group: window.abwa.groupSelector.currentGroup.id,
+        user: window.abwa.groupSelector.user.userid,
+        order: 'asc',
+        tag: this.tags.validated
+      }, (err, annotations) => {
+        if (err) {
+          if (_.isFunction(callback)) {
+            callback(err)
+          }
+        } else {
+          // Remove all annotations
+          let promises = []
+          for (let i = 0; i < annotations.length; i++) {
+            let annotationId = annotations[i].id
+            promises.push(new Promise((resolve, reject) => {
+              window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotationId, (err, result) => {
+                if (err) {
+                  reject(err)
+                } else {
+                  resolve(result)
+                }
+              })
+            }))
+          }
+          Promise.all(promises).catch(() => {
+            if (_.isFunction(callback)) {
+              callback(new Error('Error while deleting previous validations from Hypothes.is'))
+            }
+          }).then(() => {
+            if (_.isFunction(callback)) {
+              callback(null)
+            }
+          })
+        }
+      })
+    } else if (typeOfFacetData.typeOfFacet === 'multivalued') {
+      // Remove old validations for current facet + code
+      CommonHypersheetManager.getAllAnnotations((err, allAnnotations) => {
+        if (err) {
+          if (_.isFunction(callback)) {
+            callback(err)
+          }
+        } else {
+          console.log(typeOfFacetData)
+          let facetCodeAnnotations = _.filter(allAnnotations, (annotation) => {
+            return _.find(annotation.tags, (tag) => {
+              return tag === 'slr:isCodeOf:' + typeOfFacetData.facet.name
+            }) && _.find(annotation.tags, (tag) => {
+              return tag === 'slr:code:' + typeOfFacetData.code.name
+            })
+          })
+          // Retrieve validation annotations for current facet and user
+          let validationAnnotations = _.filter(allAnnotations, (annotation) => {
+            return _.find(annotation.tags, (tag) => {
+              return _.includes(tag, this.tags.validated)
+            }) && _.every(annotation.references, (reference) => {
+              return _.find(facetCodeAnnotations, (facetCodeAnnotation) => {
+                return facetCodeAnnotation.id === reference
+              })
+            }) && annotation.user === window.abwa.groupSelector.user.userid
+          })
+          // Remove all validate annotations which has same facet and code
+          let promises = []
+          for (let i = 0; i < validationAnnotations.length; i++) {
+            let annotationId = validationAnnotations[i].id
+            promises.push(new Promise((resolve, reject) => {
+              window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotationId, (err, result) => {
+                if (err) {
+                  reject(err)
+                } else {
+                  resolve(result)
+                }
+              })
+            }))
+          }
+          Promise.all(promises).catch(() => {
+            if (_.isFunction(callback)) {
+              callback(new Error('Error while deleting previous validations from Hypothes.is'))
+            }
+          }).then(() => {
+            if (_.isFunction(callback)) {
+              callback(null)
+            }
+          })
+        }
+      })
+    }
+  }
+
+  createNewValidationAnnotation (typeOfFacetData, callback) {
+    window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(this.constructValidatedAnnotation(typeOfFacetData.annotation.id), (err, annotation) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
+      } else {
+        if (_.isFunction(callback)) {
+          callback(null, annotation)
+        }
+      }
+    })
+  }
+
+  constructValidatedAnnotation (referenceAnnotationId) {
+    return {
+      group: window.abwa.groupSelector.currentGroup.id,
+      permissions: {
+        read: ['group:' + window.abwa.groupSelector.currentGroup.id]
+      },
+      references: [referenceAnnotationId],
+      tags: [this.tags.validated],
+      target: [],
+      text: '',
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
     }
   }
 }

@@ -38,7 +38,7 @@ class HypothesisClient {
           $.ajax(this)
         } else {
           if (_.isFunction(callback)) {
-            callback(new Error(), [])
+            callback(new Error('Unable to create annotation after ' + this.retryLimit + 'retries.'), [])
           }
         }
       },
