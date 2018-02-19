@@ -1,4 +1,5 @@
 # Highlight And Go
+[![Build Status](https://travis-ci.com/haritzmedina/highlightAndGo.svg?token=iYaEys7GiGsu2prhEJWx&branch=master)](https://travis-ci.com/haritzmedina/highlightAndGo)
 
 Chrome extension that tracks highlighting activity while reading primary studies, and accordingly populates the Google Sheets application at hand.
 
