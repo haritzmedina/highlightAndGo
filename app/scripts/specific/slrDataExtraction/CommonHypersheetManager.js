@@ -87,7 +87,7 @@ class CommonHypersheetManager {
                 }
               } else {
                 // Retrieve last column number (if new columns are created, calculate, else lastIndex
-                let lastColumnIndex = (cells.length - columnsForFacet + 1) > 0 ? lastIndex + cells.length - columnsForFacet + 1 : lastIndex
+                let lastColumnIndex = (cells.length - columnsForFacet + 1) > 0 ? lastIndex + cells.length - columnsForFacet + 1 : lastIndex + 1
                 // Create request to insert the values to spreadsheet
                 let updateCellsRequest = window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.createRequestUpdateCells({
                   cells: gSheetCells,
@@ -96,7 +96,7 @@ class CommonHypersheetManager {
                     startRowIndex: window.abwa.specific.primaryStudySheetManager.primaryStudyRow,
                     startColumnIndex: startIndex,
                     endRowIndex: window.abwa.specific.primaryStudySheetManager.primaryStudyRow + 1,
-                    endColumnIndex: lastColumnIndex + 1
+                    endColumnIndex: lastColumnIndex
                   }
                 })
                 requests.push(updateCellsRequest)
@@ -162,7 +162,7 @@ class CommonHypersheetManager {
    * @param {Object} backgroundColor
    * @param {Function} callback
    */
-  static updateInductiveFacetInGSheet (facetName, annotation, backgroundColor, callback) {
+  static updateInductiveFacetInGSheet (facet, annotation, backgroundColor, callback) {
     // Retrieve link for primary study
     window.abwa.specific.primaryStudySheetManager.getPrimaryStudyLink((err, primaryStudyLink) => {
       if (err) {
@@ -176,11 +176,11 @@ class CommonHypersheetManager {
         let row = window.abwa.specific.primaryStudySheetManager.primaryStudyRow
         let sheetData = window.abwa.specific.primaryStudySheetManager.sheetData
         let column = _.findIndex(sheetData.data[0].rowData[0].values, (cell) => {
-          return cell.formattedValue === facetName
+          return cell.formattedValue === facet.name
         })
         // Retrieve value for the cell (text annotated)
         let value = CommonHypersheetManager.getAnnotationValue(annotation)
-        if (row !== 0 && column !== 0 && _.isString(link)) {
+        if (row > 0 && column > 0 && _.isString(link)) {
           window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.updateCell({
             row: row,
             column: column,
@@ -200,6 +200,14 @@ class CommonHypersheetManager {
               }
             }
           })
+        } else {
+          if (_.isFunction(callback)) {
+            if (row > 0 && column > 0) {
+              callback(new Error('Column or row is not found in hypersheet'))
+            } else {
+              callback(new Error('Unable to create the link to the annotation'))
+            }
+          }
         }
       }
     })
@@ -265,10 +273,18 @@ class CommonHypersheetManager {
                 }
               })
             } else {
-              // Is the same user with the same code, nothing to update
-              if (_.isFunction(callback)) {
-                callback(null)
-              }
+              // Is the same user with the same code, set in white background with the unique code
+              CommonHypersheetManager.updateMonovaluedFacetInGSheet(facetName, codeName, facetAnnotations[0], HyperSheetColors.white, (err, result) => {
+                if (err) {
+                  if (_.isFunction(callback)) {
+                    callback(err)
+                  }
+                } else {
+                  if (_.isFunction(callback)) {
+                    callback(null)
+                  }
+                }
+              })
             }
           }
         } else { // No other annotation is found with same facet
