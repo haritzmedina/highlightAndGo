@@ -27,12 +27,12 @@ class DeleteAnnotationManager {
     return (event) => {
       this.deleteClassificationFromHypersheet(event.detail.annotation, (err) => {
         if (err) {
-          // TODO Show user a better error message than defined by exceptions
+          // TODO Show user an error number
           console.error(err)
           swal({
             type: 'error',
             title: 'Oops...',
-            text: 'Unable to update hypersheet: ' + err.message
+            text: 'Unable to update hypersheet. Ensure you have permission to update it and try it again.'
           })
         } else {
           // Nothing to do

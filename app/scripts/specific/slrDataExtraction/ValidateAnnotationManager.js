@@ -32,12 +32,12 @@ class ValidateAnnotationManager {
       if (_.isObject(typeOfFacetData)) {
         this.validateClassificationOnHypersheet(typeOfFacetData, (err, result) => {
           if (err) {
-            // TODO Show user a better error message than defined by exceptions
+            // TODO Show user an error number
             console.error(err)
             swal({
               type: 'error',
               title: 'Oops...',
-              text: 'Unable to update spreadsheet: ' + err.message
+              text: 'Unable to update hypersheet. Ensure you have permission to update it and try it again.'
             })
           } else {
             // Nothing to do, everything went okay
