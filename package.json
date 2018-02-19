@@ -89,7 +89,7 @@
     "gulp-zip": "^4.1.0",
     "jasmine-core": "^2.99.1",
     "js-yaml": "^3.10.0",
-    "jsdom": "git+https://github.com/randomUserEASE/jsdom.git#master",
+    "jsdom": "git+https://github.com/haritzmedina/jsdom.git#master",
     "karma": "^1.7.0",
     "karma-babel-preprocessor": "^7.0.0",
     "karma-chrome-launcher": "^2.1.1",
