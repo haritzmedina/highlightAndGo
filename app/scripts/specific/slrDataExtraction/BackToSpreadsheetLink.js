@@ -45,8 +45,13 @@ class BackToSpreadsheetLink {
     })
   }
 
-  destroy () {
-
+  destroy (callback) {
+    // Remove the link to spreadsheet container
+    $(this.warningImage).remove()
+    $(this.linkToSLR).remove()
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 }
 
