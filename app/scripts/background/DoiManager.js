@@ -6,6 +6,7 @@ class DoiManager {
   constructor () {
     this.doiUrlFilterObject = { 'urls': ['*://*.doi.org/*', '*://doi.org/*'] }
     this.scienceDirect = { 'urls': ['*://www.sciencedirect.com/science/article/pii/*'] }
+    this.dropbox = {'urls': ['*://www.dropbox.com/s/*?raw=1*']}
   }
 
   init () {
@@ -24,7 +25,6 @@ class DoiManager {
       responseDetails.responseHeaders[2].value = redirectUrl
       return {responseHeaders: responseDetails.responseHeaders}
     }, this.doiUrlFilterObject, ['responseHeaders', 'blocking'])
-
     // Requests to sciencedirect, redirection from linkinghub.elsevier.com (parse doi and hag if present)
     chrome.webRequest.onBeforeSendHeaders.addListener((requestHeaders) => {
       let referer = _.find(requestHeaders.requestHeaders, (requestHeader) => { return requestHeader.name === 'Referer' })
@@ -57,6 +57,13 @@ class DoiManager {
         })
       }
     }, this.scienceDirect, ['requestHeaders', 'blocking'])
+    // Request to dropbox
+    chrome.webRequest.onHeadersReceived.addListener((responseDetails) => {
+      let redirectUrl = responseDetails.responseHeaders[5].value
+      redirectUrl += '#url::' + responseDetails.url
+      responseDetails.responseHeaders[5].value = redirectUrl
+      return {responseHeaders: responseDetails.responseHeaders}
+    }, this.dropbox, ['responseHeaders', 'blocking'])
   }
 
   extractAnnotationId (url) {
