@@ -60,7 +60,11 @@ class DoiManager {
     // Request to dropbox
     chrome.webRequest.onHeadersReceived.addListener((responseDetails) => {
       let redirectUrl = responseDetails.responseHeaders[5].value
-      redirectUrl += '#url::' + responseDetails.url
+      redirectUrl += '#url::' + responseDetails.url.split('#')[0] // Get only the url of the document
+      let annotationId = this.extractAnnotationId(responseDetails.url)
+      if (annotationId) {
+        redirectUrl += '&hag:' + annotationId
+      }
       responseDetails.responseHeaders[5].value = redirectUrl
       return {responseHeaders: responseDetails.responseHeaders}
     }, this.dropbox, ['responseHeaders', 'blocking'])
