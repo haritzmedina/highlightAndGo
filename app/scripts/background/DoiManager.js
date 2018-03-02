@@ -59,8 +59,8 @@ class DoiManager {
     }, this.scienceDirect, ['requestHeaders', 'blocking'])
     // Request to dropbox
     chrome.webRequest.onHeadersReceived.addListener((responseDetails) => {
-      let redirectUrl = _.find(responseDetails.responseHeaders, (header) => { return header.name === 'Location' }).value
-      let index = _.findIndex(responseDetails.responseHeaders, (header) => { return header.name === 'Location' })
+      let redirectUrl = _.find(responseDetails.responseHeaders, (header) => { return header.name.toLowerCase() === 'location' }).value
+      let index = _.findIndex(responseDetails.responseHeaders, (header) => { return header.name.toLowerCase() === 'location' })
       redirectUrl += '#url::' + responseDetails.url.split('#')[0] // Get only the url of the document
       let annotationId = this.extractAnnotationId(responseDetails.url)
       if (annotationId) {
