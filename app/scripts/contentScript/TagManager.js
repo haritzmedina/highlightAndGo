@@ -223,7 +223,7 @@ class TagManager {
         tagGroupsAnnotations[groupTag] = new TagGroup({name: groupTag, namespace: this.model.namespace, group: this.model.config.grouped.group})
       }
     }
-    let groups = _.keys(tagGroupsAnnotations)
+    let groups = _.sortBy(_.keys(tagGroupsAnnotations))
     let colorList = ColorUtils.getDifferentColors(groups.length)
     let colors = {}
     for (let i = 0; i < groups.length; i++) {
@@ -256,19 +256,36 @@ class TagManager {
         }
       }
     }
+    // Reorder the codes by name
+    tagGroupsAnnotations = _.map(tagGroupsAnnotations, (tagGroup) => { tagGroup.tags = _.sortBy(tagGroup.tags, 'name'); return tagGroup })
+    // Set color for each code
+    tagGroupsAnnotations = _.map(tagGroupsAnnotations, (tagGroup) => {
+      if (tagGroup.tags.length > 0) {
+        tagGroup.tags = _.map(tagGroup.tags, (tag, index) => {
+          let color = ColorUtils.setAlphaToColor(colors[tagGroup.config.name], 0.2 + index / tagGroup.tags.length * 0.8)
+          tag.options.color = color
+          tag.color = color
+          return tag
+        })
+      }
+      return tagGroup
+    })
     // For groups without sub elements
     let emptyGroups = _.filter(tagGroupsAnnotations, (group) => { return group.tags.length === 0 })
     for (let j = 0; j < emptyGroups.length; j++) {
       let options = {color: ColorUtils.setAlphaToColor(colors[emptyGroups[j].config.name], 0.5)}
-      tagGroupsAnnotations[emptyGroups[j].config.name].tags.push(new Tag({
-        name: emptyGroups[j].config.name,
-        namespace: emptyGroups[j].namespace,
-        options: options,
-        tags: [emptyGroups[j].config.namespace + ':' + emptyGroups[j].config.group + ':' + emptyGroups[j].config.name]
-      }))
+      let index = _.findIndex(tagGroupsAnnotations, (tagGroup) => { return tagGroup.config.name === emptyGroups[j].config.name })
+      if (index > 0) {
+        tagGroupsAnnotations[index].tags.push(new Tag({
+          name: emptyGroups[j].config.name,
+          namespace: emptyGroups[j].namespace,
+          options: options,
+          tags: [emptyGroups[j].config.namespace + ':' + emptyGroups[j].config.group + ':' + emptyGroups[j].config.name]
+        }))
+      }
     }
     // Hash to array
-    return _.values(tagGroupsAnnotations)
+    return _.sortBy(tagGroupsAnnotations, 'config.name')
   }
 
   destroy () {
