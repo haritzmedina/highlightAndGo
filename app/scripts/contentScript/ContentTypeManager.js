@@ -5,6 +5,7 @@ class ContentTypeManager {
   constructor () {
     this.pdfFingerprint = null
     this.documentURL = null
+    this.urlParam = null
     this.documentType = ContentTypeManager.documentTypes.html // By default document type is html
   }
 
@@ -15,19 +16,28 @@ class ContentTypeManager {
       // Load publication metadata
       this.tryToLoadDoi()
       this.tryToLoadPublicationPDF()
+      this.tryToLoadURLParam()
       // If current web is pdf viewer.html, set document type as pdf
       if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
         this.waitUntilPDFViewerLoad(() => {
           this.pdfFingerprint = window.PDFViewerApplication.pdfDocument.pdfInfo.fingerprint
-          this.documentURL = window.PDFViewerApplication.url
+          if (this.urlParam) {
+            this.documentURL = this.urlParam
+          } else {
+            this.documentURL = window.PDFViewerApplication.url
+          }
           this.documentType = ContentTypeManager.documentTypes.pdf
           if (_.isFunction(callback)) {
             callback()
           }
         })
       } else {
+        if (this.urlParam) {
+          this.documentURL = this.urlParam
+        } else {
+          this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
+        }
         this.documentType = ContentTypeManager.documentTypes.html
-        this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
         if (_.isFunction(callback)) {
           callback()
         }
@@ -73,6 +83,14 @@ class ContentTypeManager {
       }
     }
     // TODO Try to load doi from chrome tab storage
+  }
+
+  tryToLoadURLParam () {
+    let decodedUri = decodeURIComponent(window.location.href)
+    let params = URLUtils.extractHashParamsFromUrl(decodedUri, '::')
+    if (!_.isEmpty(params) && !_.isEmpty(params.url)) {
+      this.urlParam = params.url
+    }
   }
 
   tryToLoadPublicationPDF () {

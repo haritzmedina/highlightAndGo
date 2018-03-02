@@ -1,3 +1,5 @@
+const _ = require('lodash')
+
 class URLUtils {
   /**
    * Given a url with format https://domain.org#elem:abc&elem:bcd it returns you the object {elem: 'abc', elem: 'bcd'}
@@ -25,8 +27,12 @@ class URLUtils {
    * @param url2
    */
   static areSameURI (url1, url2) {
-    let cleanUrl1 = url1.replace(/(^\w+:|^)\/\//, '').split('#')[0]
-    let cleanUrl2 = url2.replace(/(^\w+:|^)\/\//, '').split('#')[0]
+    let cleanUrl1 = decodeURI(url1)
+    let cleanUrl2 = decodeURI(url2)
+    cleanUrl1 = cleanUrl1.replace(/(^\w+:|^)\/\//, '').split('#')[0] // Remove protocol and hash params
+    cleanUrl1 = _.replace(_.replace(cleanUrl1, /\+/g, ''), /\s/g, '') // Remove + symbols and whitespaces
+    cleanUrl2 = cleanUrl2.replace(/(^\w+:|^)\/\//, '').split('#')[0]
+    cleanUrl2 = _.replace(_.replace(cleanUrl2, /\+/g, ''), /\s/g, '')
     return cleanUrl1 === cleanUrl2
   }
 

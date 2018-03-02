@@ -2,7 +2,7 @@
   "name": "__MSG_appName__",
   "short_name": "__MSG_appShortName__",
   "description": "__MSG_appDescription__",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "manifest_version": 2,
   "default_locale": "en",
   "icons": {
@@ -56,7 +56,8 @@
     "webRequestBlocking",
     "*://doi.org/*",
     "*://dx.doi.org/*",
-    "*://www.sciencedirect.com/science/article/pii/*"
+    "*://www.sciencedirect.com/science/article/pii/*",
+    "*://www.dropbox.com/s/"
   ],
   "oauth2": {
     "client_id": "1008657588862-k3t7glpcvdrtc43dsmktkjudufh9m5ho.apps.googleusercontent.com",
