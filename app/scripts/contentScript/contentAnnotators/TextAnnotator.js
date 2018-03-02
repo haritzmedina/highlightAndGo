@@ -12,6 +12,7 @@ const _ = require('lodash')
 require('components-jqueryui')
 
 const ANNOTATION_OBSERVER_INTERVAL_IN_SECONDS = 3
+const REMOVE_OVERLAYS_INTERVAL_IN_SECONDS = 3
 const ANNOTATIONS_UPDATE_INTERVAL_IN_SECONDS = 60
 
 class TextAnnotator extends ContentAnnotator {
@@ -21,6 +22,7 @@ class TextAnnotator extends ContentAnnotator {
     this.config = config
     this.observerInterval = null
     this.reloadInterval = null
+    this.removeOverlaysInterval = null
     this.currentAnnotations = null
     this.allAnnotations = null
     this.currentUserProfile = null
@@ -56,6 +58,7 @@ class TextAnnotator extends ContentAnnotator {
         })
       })
     })
+    this.initRemoveOverlaysInPDFs()
   }
 
   initUserFilterChangeEvent (callback) {
@@ -601,6 +604,10 @@ class TextAnnotator extends ContentAnnotator {
     clearInterval(this.observerInterval)
     // Remove reload interval
     clearInterval(this.reloadInterval)
+    // Remove overlays interval
+    if (this.removeOverlaysInterval) {
+      clearInterval(this.removeOverlaysInterval)
+    }
     // Remove event listeners
     let events = _.values(this.events)
     for (let i = 0; i < events.length; i++) {
@@ -649,6 +656,15 @@ class TextAnnotator extends ContentAnnotator {
     }
     if (_.isFunction(callback)) {
       callback()
+    }
+  }
+
+  initRemoveOverlaysInPDFs () {
+    if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+      this.removeOverlaysInterval = setInterval(() => {
+        // Remove third party made annotations created overlays periodically
+        document.querySelectorAll('[data-annotation-id]').forEach((elem) => { $(elem).remove() })
+      }, REMOVE_OVERLAYS_INTERVAL_IN_SECONDS * 1000)
     }
   }
 }
