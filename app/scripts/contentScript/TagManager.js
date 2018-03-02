@@ -115,7 +115,7 @@ class TagManager {
       order: 'desc'
     }, (err, annotations) => {
       if (err) {
-        alert('Unable to retrieve document annotations')
+        window.alert('Unable to retrieve document annotations') // TODO Swal
       } else {
         // Retrieve tags which has the namespace
         annotations = _.filter(annotations, (annotation) => {
@@ -138,6 +138,10 @@ class TagManager {
     $.get(tagWrapperUrl, (html) => {
       $('#abwaSidebarContainer').append($.parseHTML(html))
       this.tagsContainer = {annotate: document.querySelector('#tagsAnnotate'), index: document.querySelector('#tagsIndex')}
+      if (this.model.namespace === 'exam') {
+        // Hide the content of the tags sidebar until they are ordered
+        $(this.tagsContainer.annotate).hide()
+      }
       if (_.isFunction(callback)) {
         callback()
       }
@@ -237,17 +241,10 @@ class TagManager {
         if (_.isArray(tagGroupsAnnotations[groupBelongedTo].tags)) {
           // Load options from annotation text body
           let options = jsYaml.load(tagAnnotation.text)
-          // If color is not defined, define one per group
-          if (_.isEmpty(options)) {
-            options = {}
-          }
-          if (_.isEmpty(options.color)) {
-            options.color = ColorUtils.setAlphaToColor(colors[groupBelongedTo], (0.2 + tagGroupsAnnotations[groupBelongedTo].tags.length * 0.1))
-          }
           tagGroupsAnnotations[groupBelongedTo].tags.push(new Tag({
             name: tagName,
             namespace: this.model.namespace,
-            options: options,
+            options: options || {},
             tags: [
               this.model.namespace + ':' + this.model.config.grouped.relation + ':' + groupBelongedTo,
               this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + tagName]
@@ -376,16 +373,21 @@ class TagManager {
         // If has subgroup
         if (annotationGroupData.subgroup) {
           let tagName = annotationGroupData.subgroup
-          let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
-          groupTags[annotationGroupData.group].tags.push(new Tag({
-            name: tagName,
-            namespace: this.model.namespace,
-            options: {color: color},
-            tags: [
-              this.model.namespace + ':' + this.model.config.grouped.relation + ':' + annotationGroupData.group,
-              this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + annotationGroupData.subgroup
-            ]
-          }))
+          let tagGroup = _.find(window.abwa.tagManager.model.currentTags, (groupTag) => { return groupTag.config.name === annotationGroupData.group })
+          let tag = _.find(tagGroup.tags, (tag) => { return tag.name === annotationGroupData.subgroup })
+          if (_.has(tag, 'color')) {
+            groupTags[annotationGroupData.group].tags.push(new Tag({
+              name: tagName,
+              namespace: this.model.namespace,
+              options: {color: tag.color},
+              tags: [
+                this.model.namespace + ':' + this.model.config.grouped.relation + ':' + annotationGroupData.group,
+                this.model.namespace + ':' + this.model.config.grouped.subgroup + ':' + annotationGroupData.subgroup
+              ]
+            }))
+          } else {
+            console.error('Error parsing tags in sidebar') // TODO Show user
+          }
         } else { // If doesn't have subgroup (free category)
           let tagName = annotationGroupData.group
           let color = _.find(window.abwa.tagManager.getTagsList(), (tag) => { return tag.name === tagName }).color
@@ -402,7 +404,10 @@ class TagManager {
         }
       }
     }
-    this.currentIndexTags = _.values(groupTags)
+    // Order code for each group
+    groupTags = _.map(groupTags, (tagGroup) => { tagGroup.tags = _.sortBy(tagGroup.tags, 'name'); return tagGroup })
+    // Order the groups
+    this.currentIndexTags = _.sortBy(groupTags, 'config.name')
     // Generate tag groups and buttons
     this.createIndexTagsButtons()
   }
@@ -418,7 +423,7 @@ class TagManager {
   }
 
   createIndexTagsButtons (callback) {
-    // If it is an array is not grouped
+    // If it is a non empty array, add buttons
     if (this.currentIndexTags.length > 0) {
       if (LanguageUtils.isInstanceOf(this.currentIndexTags[0], Tag)) {
         for (let i = 0; i < this.currentIndexTags.length; i++) {
