@@ -663,7 +663,7 @@ class TextAnnotator extends ContentAnnotator {
     if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
       this.removeOverlaysInterval = setInterval(() => {
         // Remove third party made annotations created overlays periodically
-        document.querySelectorAll('[data-annotation-id]').forEach((elem) => { $(elem).remove() })
+        document.querySelectorAll('section[data-annotation-id]').forEach((elem) => { $(elem).remove() })
       }, REMOVE_OVERLAYS_INTERVAL_IN_SECONDS * 1000)
     }
   }
