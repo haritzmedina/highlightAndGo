@@ -272,7 +272,7 @@ class TagManager {
     for (let j = 0; j < emptyGroups.length; j++) {
       let options = {color: ColorUtils.setAlphaToColor(colors[emptyGroups[j].config.name], 0.5)}
       let index = _.findIndex(tagGroupsAnnotations, (tagGroup) => { return tagGroup.config.name === emptyGroups[j].config.name })
-      if (index > 0) {
+      if (index >= 0) {
         tagGroupsAnnotations[index].tags.push(new Tag({
           name: emptyGroups[j].config.name,
           namespace: emptyGroups[j].namespace,
