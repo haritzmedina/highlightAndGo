@@ -140,7 +140,7 @@ class TagManager {
       this.tagsContainer = {annotate: document.querySelector('#tagsAnnotate'), index: document.querySelector('#tagsIndex')}
       if (this.model.namespace === 'exam') {
         // Hide the content of the tags sidebar until they are ordered
-        $(this.tagsContainer.annotate).hide()
+        this.tagsContainer.annotate.dataset.examHidden = 'true'
       }
       if (_.isFunction(callback)) {
         callback()
