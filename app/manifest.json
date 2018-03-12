@@ -16,14 +16,14 @@
   "content_scripts": [
     {
       "matches": ["*://*/*"],
-      "exclude_matches": ["https://docs.google.com/spreadsheets/d/*", "https://hypothes.is/login"],
+      "exclude_matches": ["https://docs.google.com/spreadsheets/d/*", "https://docs.google.com/spreadsheets/u/0/d/*", "https://hypothes.is/login"],
       "js": ["scripts/contentScript.js"],
       "css": ["styles/contentScript.css"],
       "run_at": "document_end",
       "all_frames": false
     },
     {
-      "matches": ["https://docs.google.com/spreadsheets/d/*"],
+      "matches": ["https://docs.google.com/spreadsheets/d/*", "https://docs.google.com/spreadsheets/u/0/d/*"],
       "js": ["scripts/googleSheetsContentScript.js"],
       "run_at": "document_end"
     },
