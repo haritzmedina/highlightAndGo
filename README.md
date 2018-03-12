@@ -4,8 +4,9 @@
 Chrome extension that tracks highlighting activity while reading primary studies, and accordingly populates the Google Sheets application at hand.
 
 # For End-users
+End users require a hypothesis and Google Sheet account. Download extension from [Chrome Store](https://chrome.google.com/webstore/detail/highlightgo/bihmalipgnlomidlpekdnoohiejppfmo).
 
-End users require a hypothesis and Google Sheet account. The extension can be downloaded from [Chrome Store](https://chrome.google.com/webstore/detail/highlightgo/bihmalipgnlomidlpekdnoohiejppfmo).
+End-users documentation is in the [For End-users wiki page](https://github.com/haritzmedina/highlightAndGo/wiki/For-end-users).
 
 # For developers
 
