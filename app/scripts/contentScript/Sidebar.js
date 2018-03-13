@@ -13,16 +13,35 @@ class Sidebar {
   initSidebarStructure (callback) {
     let sidebarURL = chrome.extension.getURL('pages/sidebar/sidebar.html')
     $.get(sidebarURL, (html) => {
-      // Append sidebar to content
-      $('body').append($.parseHTML(html))
-      // Initialize sidebar labels
-      this.initSidebarLabels()
-      // Initialize sidebar toggle button
-      this.initSidebarButton()
-      if (_.isFunction(callback)) {
-        callback()
-      }
+      this.waitUntilBodyLoads(() => {
+        // Append sidebar to content
+        $('body').append($.parseHTML(html))
+        // Initialize sidebar labels
+        this.initSidebarLabels()
+        // Initialize sidebar toggle button
+        this.initSidebarButton()
+        if (_.isFunction(callback)) {
+          callback()
+        }
+      })
     })
+  }
+
+  waitUntilBodyLoads (callback) {
+    let counter = 0
+    let checkBodyLoads = () => {
+      if (_.isElement(document.body)) {
+        callback()
+      } else {
+        if (counter === 1000) {
+          console.error('The webpage is not loaded after 50 seconds, reload the webpage.')
+        } else {
+          counter++
+          setTimeout(checkBodyLoads, 50)
+        }
+      }
+    }
+    checkBodyLoads()
   }
 
   initSidebarLabels () {}

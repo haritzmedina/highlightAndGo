@@ -19,7 +19,7 @@
       "exclude_matches": ["https://docs.google.com/spreadsheets/d/*", "https://docs.google.com/spreadsheets/u/0/d/*", "https://hypothes.is/login"],
       "js": ["scripts/contentScript.js"],
       "css": ["styles/contentScript.css"],
-      "run_at": "document_end",
+      "run_at": "document_start",
       "all_frames": false
     },
     {
