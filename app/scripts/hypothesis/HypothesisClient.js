@@ -126,7 +126,7 @@ class HypothesisClient {
       }
     }
     $.ajax(settings).done((response) => {
-      callback(response)
+      callback(null, response)
     })
   }
 
@@ -192,46 +192,53 @@ class HypothesisClient {
     let annotations = []
     this.searchBunchAnnotations(data, 0, (err, response) => {
       if (err) {
-        console.error('Unable to retrieve annotations')
+        console.error('Unable to retrieve annotations from Hypothes.is')
+        callback(new Error('Unable to retrieve annotations from Hypothes.is. Check internet connection and permissions.'))
       } else {
         // Concat first time done annotations
         annotations = annotations.concat(response.rows)
-        // Set maximum of queries
-        let total = data.limit || response.total
-        if (total > MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH) {
-          total = MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH // Limit the number of results
-        }
-        // Retrieve the rest of annotations
-        let promises = []
-        for (let i = annotations.length; i < total; i += 200) {
-          let iterationData = Object.assign({}, data)
-          if (total < i + 200) {
-            iterationData.limit = total % 200
-          } else {
-            iterationData.limit = 200
-          }
-          // Create a promise for each request to do
-          promises.push(new Promise((resolve, reject) => {
-            this.searchBunchAnnotations(iterationData, i, (err, response) => {
-              if (err) {
-                reject(new Error(err)) // TODO Manage error
-              } else {
-                annotations = annotations.concat(response.rows)
-                resolve()
-              }
-            })
-          }))
-        }
-        // Execute all the promises
-        Promise.all(promises).catch((reasons) => {
+        if (response.total === response.rows.length) { // If already retrieved results are all, no required to do more calls
           if (_.isFunction(callback)) {
-            callback(new Error('Unable to retrieve annotations'))
+            callback(null, response.rows)
           }
-        }).then(() => {
-          if (_.isFunction(callback)) {
-            callback(null, annotations)
+        } else {
+          // Set maximum of queries
+          let total = data.limit || response.total
+          if (total > MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH) {
+            total = MAX_NUMBER_OF_ANNOTATIONS_TO_SEARCH // Limit the number of results
           }
-        })
+          // Retrieve the rest of annotations
+          let promises = []
+          for (let i = annotations.length; i < total; i += 200) {
+            let iterationData = Object.assign({}, data)
+            if (total < i + 200) {
+              iterationData.limit = total % 200
+            } else {
+              iterationData.limit = 200
+            }
+            // Create a promise for each request to do
+            promises.push(new Promise((resolve, reject) => {
+              this.searchBunchAnnotations(iterationData, i, (err, response) => {
+                if (err) {
+                  reject(new Error(err)) // TODO Manage error
+                } else {
+                  annotations = annotations.concat(response.rows)
+                  resolve()
+                }
+              })
+            }))
+          }
+          // Execute all the promises
+          Promise.all(promises).catch((reasons) => {
+            if (_.isFunction(callback)) {
+              callback(new Error('Unable to retrieve annotations'))
+            }
+          }).then(() => {
+            if (_.isFunction(callback)) {
+              callback(null, annotations)
+            }
+          })
+        }
       }
     })
   }
@@ -313,7 +320,7 @@ Content-Disposition: form-data; name="submit"
 submit
 -----------------------------sep--
 `
-        let req = new XMLHttpRequest()
+        let req = new window.XMLHttpRequest()
         req.open('POST', 'https://hypothes.is/groups/new', true)
         req.setRequestHeader('Content-Type', 'multipart/form-data; boundary=---------------------------sep')
         req.onload = function () {

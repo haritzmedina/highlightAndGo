@@ -43,13 +43,19 @@ class GroupSelector {
     if (window.abwa.annotationBasedInitializer.initAnnotation) {
       let annotationGroupId = window.abwa.annotationBasedInitializer.initAnnotation.group
       // Load group of annotation
-      this.retrieveHypothesisGroups((groups) => {
-        // Set current group
-        this.currentGroup = _.find(groups, (group) => { return group.id === annotationGroupId })
-        // Save to chrome storage current group
-        ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.currentGroup)}, ChromeStorage.local)
-        if (_.isFunction(callback)) {
-          callback()
+      this.retrieveHypothesisGroups((err, groups) => {
+        if (err) {
+          if (_.isFunction(callback)) {
+            callback(err)
+          }
+        } else {
+          // Set current group
+          this.currentGroup = _.find(groups, (group) => { return group.id === annotationGroupId })
+          // Save to chrome storage current group
+          ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.currentGroup)}, ChromeStorage.local)
+          if (_.isFunction(callback)) {
+            callback()
+          }
         }
       })
     } else { // If initialization annotation is not set
@@ -57,7 +63,9 @@ class GroupSelector {
         // Retrieve last saved group
         ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
           if (err) {
-            throw new Error('Unable to retrieve current selected group')
+            if (_.isFunction(callback)) {
+              callback(new Error('Unable to retrieve current selected group'))
+            }
           } else {
             // Parse chrome storage result
             if (!_.isEmpty(savedCurrentGroup) && savedCurrentGroup.data) {
@@ -65,9 +73,9 @@ class GroupSelector {
             } else {
               this.currentGroup = defaultGroup
             }
-          }
-          if (_.isFunction(callback)) {
-            callback()
+            if (_.isFunction(callback)) {
+              callback()
+            }
           }
         })
       } else {
@@ -132,10 +140,16 @@ class GroupSelector {
   }
 
   retrieveHypothesisGroups (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.getUserProfile((profile) => {
-      this.user = profile
-      if (_.isFunction(callback)) {
-        callback(profile.groups)
+    window.abwa.hypothesisClientManager.hypothesisClient.getUserProfile((err, profile) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
+      } else {
+        this.user = profile
+        if (_.isFunction(callback)) {
+          callback(null, profile.groups)
+        }
       }
     })
   }
