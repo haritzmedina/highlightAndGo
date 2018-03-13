@@ -46,78 +46,145 @@ class DOMTextUtils {
    * @param className
    * @param id
    * @param data
+   * @param exhaustive Runs all the algorithms until annotation match is found. For intensive CPU webpages maybe you are interested in disable this option. When disable, the last and more CPU use algorithm tryRetrieveRangeTextSelector is not executed
    * @returns {NodeList}
    * @throws TypeError
    */
-  static highlightContent (selectors, className, id, data) {
-    let range = this.retrieveRange(selectors)
-    let nodes = DOM.getLeafNodesInRange(range)
-    if (nodes.length > 0) {
-      let startNode = nodes.shift()
-      if (nodes.length > 0) { // start and end nodes are not the same
-        let endNode = nodes.pop()
-        let nodesBetween = nodes
-        // Start node
-        let startWrapper = document.createElement('mark')
-        $(startWrapper).addClass(className)
-        startWrapper.dataset.annotationId = id
-        startWrapper.dataset.startNode = ''
-        startWrapper.dataset.highlightClassName = className
-        startWrapper.innerText = startNode.nodeValue.slice(range.startOffset, startNode.nodeValue.length)
-        let nonHighlightedText = startNode.nodeValue.slice(0, range.startOffset)
-        this.replaceContent(startNode, nonHighlightedText + startWrapper.outerHTML)
-        // End node
-        let endWrapper = document.createElement('mark')
-        $(endWrapper).addClass(className)
-        endWrapper.dataset.annotationId = id
-        endWrapper.dataset.endNode = ''
-        endWrapper.dataset.highlightClassName = className
-        endWrapper.innerText = endNode.nodeValue.slice(0, range.endOffset)
-        nonHighlightedText = endNode.nodeValue.slice(range.endOffset, endNode.nodeValue.length)
-        this.replaceContent(endNode, endWrapper.outerHTML + nonHighlightedText)
-        // Nodes between
-        nodesBetween.forEach(nodeBetween => {
-          let leafNodes = this.retrieveLeafNodes(nodeBetween)
-          for (let i = 0; i < leafNodes.length; i++) {
-            if (leafNodes[i].textContent.length > 0 && (leafNodes[i].parentNode !== endNode && leafNodes[i].parentNode !== startNode)) {
-              let wrapper = document.createElement('mark')
-              $(wrapper).addClass(className)
-              wrapper.dataset.annotationId = id
-              wrapper.dataset.endNode = ''
-              wrapper.dataset.highlightClassName = className
-              $(leafNodes[i]).wrap(wrapper)
+  static highlightContent (selectors, className, id, data, exhaustive = true) {
+    let range = this.retrieveRange(selectors, exhaustive)
+    if (range) {
+      let nodes = DOM.getLeafNodesInRange(range)
+      if (nodes.length > 0) {
+        let startNode = nodes.shift()
+        if (nodes.length > 0) { // start and end nodes are not the same
+          let endNode = nodes.pop()
+          let nodesBetween = nodes
+          // Start node
+          let startWrapper = document.createElement('mark')
+          $(startWrapper).addClass(className)
+          startWrapper.dataset.annotationId = id
+          startWrapper.dataset.startNode = ''
+          startWrapper.dataset.highlightClassName = className
+          DOMTextUtils.wrapNodeContent(startNode, startWrapper, range.startOffset, startNode.nodeValue.length)
+          // End node
+          let endWrapper = document.createElement('mark')
+          $(endWrapper).addClass(className)
+          endWrapper.dataset.annotationId = id
+          endWrapper.dataset.endNode = ''
+          endWrapper.dataset.highlightClassName = className
+          DOMTextUtils.wrapNodeContent(endNode, endWrapper, 0, range.endOffset)
+          // Nodes between
+          nodesBetween.forEach(nodeBetween => {
+            let leafNodes = this.retrieveLeafNodes(nodeBetween)
+            for (let i = 0; i < leafNodes.length; i++) {
+              if (leafNodes[i].textContent.length > 0 && (leafNodes[i].parentNode !== endNode && leafNodes[i].parentNode !== startNode)) {
+                let wrapper = document.createElement('mark')
+                $(wrapper).addClass(className)
+                wrapper.dataset.annotationId = id
+                wrapper.dataset.endNode = ''
+                wrapper.dataset.highlightClassName = className
+                $(leafNodes[i]).wrap(wrapper)
+              }
             }
-          }
-        })
-      } else {
-        let wrapper = document.createElement('mark')
-        $(wrapper).addClass(className)
-        wrapper.dataset.highlightClassName = className
-        wrapper.dataset.annotationId = id
-        wrapper.innerHTML = startNode.nodeValue.slice(range.startOffset, range.endOffset)
-        let newStringifiedContent = startNode.nodeValue.slice(0, range.startOffset) + wrapper.outerHTML + startNode.nodeValue.slice(range.endOffset, startNode.nodeValue.length)
-        DOMTextUtils.replaceContent(startNode, newStringifiedContent)
+          })
+        } else {
+          let wrapper = document.createElement('mark')
+          $(wrapper).addClass(className)
+          wrapper.dataset.highlightClassName = className
+          wrapper.dataset.annotationId = id
+          DOMTextUtils.wrapNodeContent(startNode, wrapper, range.startOffset, range.endOffset)
+        }
       }
     }
     return document.querySelectorAll('[data-annotation-id=\'' + id + '\']')
   }
 
-  static retrieveRange (selectors) {
+  /**
+   * Wraps node content from start to end position in the wrapper
+   * @param node
+   * @param wrapper
+   * @param startPosition
+   * @param endPosition
+   */
+  static wrapNodeContent (node, wrapper, startPosition, endPosition) {
+    if (node.nodeType === 3) {
+      wrapper.textContent = node.nodeValue.slice(startPosition, endPosition)
+      let nodeArray = [
+        document.createTextNode(node.nodeValue.slice(0, startPosition)), // Previous to wrapper text
+        wrapper.outerHTML, // Highlighted text
+        document.createTextNode(node.nodeValue.slice(endPosition, node.nodeValue.length)) // After to wrapper text
+      ]
+      node.parentNode.insertBefore(nodeArray[0], node)
+      node.parentNode.insertBefore($(nodeArray[1])[0], node)
+      node.parentNode.insertBefore(nodeArray[2], node)
+      node.parentNode.removeChild(node) // Remove original node
+    } else {
+      wrapper.innerHTML = node.nodeValue.slice(startPosition, endPosition)
+      let newStringifiedContent = node.nodeValue.slice(0, startPosition) + wrapper.outerHTML + node.nodeValue.slice(endPosition, node.nodeValue.length)
+      DOMTextUtils.replaceContent(node, newStringifiedContent)
+    }
+  }
+
+  static retrieveRange (selectors, exhaustive = true) {
     let fragmentSelector = _.find(selectors, (selector) => { return selector.type === 'FragmentSelector' })
+    let rangeSelector = _.find(selectors, (selector) => { return selector.type === 'RangeSelector' })
     let textQuoteSelector = _.find(selectors, (selector) => { return selector.type === 'TextQuoteSelector' })
     let textPositionSelector = _.find(selectors, (selector) => { return selector.type === 'TextPositionSelector' })
     let range = null
-    if (fragmentSelector) { // It is an element of DOM
-      let fragmentElement = document.querySelector('#' + fragmentSelector.value)
-      range = DOMTextUtils.tryRetrieveRangeTextSelector(fragmentElement, textQuoteSelector)
+    if (_.isObject(fragmentSelector) || _.isObject(rangeSelector)) { // It is an element of DOM
+      let fragmentElement = null
+      if (_.has(fragmentSelector, 'value')) {
+        fragmentElement = document.querySelector('#' + fragmentSelector.value)
+      }
+      if (_.isElement(fragmentElement)) {
+        range = DOMTextUtils.tryRetrieveRangeTextSelector(fragmentElement, textQuoteSelector)
+      } else {
+        let startRangeElement = null
+        if (_.has(rangeSelector, 'startContainer')) {
+          startRangeElement = document.evaluate('.' + rangeSelector.startContainer, document, null, window.XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+        }
+        let endRangeElement = null
+        if (_.has(rangeSelector, 'endContainer')) {
+          endRangeElement = document.evaluate('.' + rangeSelector.endContainer, document, null, window.XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+        }
+        if (_.isElement(startRangeElement) && _.isElement(endRangeElement)) {
+          range = DOMTextUtils.tryRetrieveRangeTextSelector(fragmentElement, textQuoteSelector)
+        } else {
+          range = DOMTextUtils.tryRetrieveRangeTextPositionSelector(textPositionSelector, textQuoteSelector.exact)
+          if (!range) {
+            if (exhaustive) { // Try by hard exhaustive
+              range = DOMTextUtils.tryRetrieveRangeTextSelector(document.body, textQuoteSelector)
+              if (!range) {
+                range = DOMTextUtils.retrieveRangeTextSelectorUsingNativeFind(textQuoteSelector.exact, textPositionSelector)
+              }
+            } else {
+              range = DOMTextUtils.retrieveRangeTextSelectorUsingNativeFind(textQuoteSelector.exact, textPositionSelector)
+            }
+          }
+        }
+      }
     } else if (textQuoteSelector && textPositionSelector) { // It is a text of PDF
-      range = DOMTextUtils.tryRetrieveRangeTextSelector(document.body, textQuoteSelector)
+      range = DOMTextUtils.tryRetrieveRangeTextPositionSelector(textPositionSelector, textQuoteSelector.exact)
+      if (!range) {
+        if (exhaustive) { // Try by hard exhaustive
+          range = DOMTextUtils.tryRetrieveRangeTextSelector(document.body, textQuoteSelector)
+        }
+      }
     }
     return range
   }
 
+  static tryRetrieveRangeTextPositionSelector (textPositionSelector, exactText) {
+    let possibleRange = domAnchorTextPosition.toRange(document.body, textPositionSelector.start, textPositionSelector.end)
+    if (possibleRange && possibleRange.toString() === exactText) {
+      return possibleRange
+    } else {
+      return null
+    }
+  }
+
   static tryRetrieveRangeTextSelector (fragmentElement, textQuoteSelector) {
-    if (fragmentElement === document) {
+    if (_.isNull(fragmentElement) || document.children[0] === fragmentElement) {
       return null
     }
     let range = null
@@ -126,7 +193,61 @@ class DOMTextUtils {
     } catch (e) {
       range = DOMTextUtils.tryRetrieveRangeTextSelector(fragmentElement.parentNode, textQuoteSelector)
     }
+    if (_.isNull(range)) {
+      range = DOMTextUtils.tryRetrieveRangeTextSelector(fragmentElement.parentNode, textQuoteSelector)
+    }
     return range
+  }
+
+  static findAllMatches (str) {
+    // Get current selection range for set again after the algorithm
+    let userSelection = window.getSelection().getRangeAt(0)
+    // Find matches using window.find
+    let matches = []
+    let findResult = document.execCommand('FindString', true, str)
+    let currentMatch = window.getSelection().getRangeAt(0).cloneRange()
+    // Search forward of the current position
+    while (findResult && _.isUndefined(_.find(matches, (match) => { return match.startOffset === currentMatch.startOffset || match.endOffset === currentMatch.endOffset }))) {
+      matches.push(window.getSelection().getRangeAt(0).cloneRange())
+      findResult = document.execCommand('FindString', true, str)
+      currentMatch = window.getSelection().getRangeAt(0).cloneRange()
+    }
+    // Set current selection as the former one set by the user
+    window.getSelection().removeAllRanges()
+    window.getSelection().addRange(userSelection)
+    return _.uniq(matches)
+  }
+
+  static retrieveRangeTextSelectorUsingNativeFind (exact, textPositionSelector) {
+    let matches = DOMTextUtils.findAllMatches(exact)
+    if (matches.length === 0) {
+      return null
+    } else if (matches.length === 1) {
+      return matches[0]
+    } else if (matches.length > 1) {
+      // Try to find by position selector
+      let matchedTextPositionSelectors = _.map(matches, (match) => {
+        return DOMTextUtils.getTextPositionSelector(match)
+      })
+      let matchedRange = _.find(matchedTextPositionSelectors, (matchedSelector) => {
+        return matchedSelector.start === textPositionSelector.start && matchedSelector.end === textPositionSelector.end
+      })
+      if (matchedRange) {
+        return matchedRange
+      } else {
+        let range = domAnchorTextPosition.toRange(document.body, textPositionSelector.start, textPositionSelector.end)
+        matchedRange = _.find(matches, (matchRange) => {
+          return range.startOffset === matchRange.startOffset && range.endOffset === matchRange.endOffset
+        })
+        if (matchedRange) {
+          return matchedRange
+        } else {
+          return matches[0] // Return the first match
+        }
+      }
+    } else {
+      return null
+    }
   }
 
   static replaceContent (oldNode, newNode) {
@@ -138,7 +259,7 @@ class DOMTextUtils {
   }
 
   static retrieveFirstTextNode (element) {
-    if (element.nodeType === Node.TEXT_NODE) {
+    if (element.nodeType === window.Node.TEXT_NODE) {
       return element
     } else {
       if (element.firstChild) {
