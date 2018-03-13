@@ -35,6 +35,15 @@
       "matches": ["*://www.sciencedirect.com/science/article/pii/*"],
       "js": ["scripts/scienceDirectContentScript.js"],
       "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://hypothes.is/groups/*/*"
+      ],
+      "js": [
+        "scripts/hypothesisGroupContentScript.js"
+      ],
+      "run_at": "document_end"
     }
   ],
   "page_action": {
