@@ -1,10 +1,15 @@
 const _ = require('lodash')
+const Events = require('./Events')
 const URLUtils = require('../utils/URLUtils')
+const LanguageUtils = require('../utils/LanguageUtils')
+
+const URL_CHANGE_INTERVAL_IN_SECONDS = 1
 
 class ContentTypeManager {
   constructor () {
     this.pdfFingerprint = null
     this.documentURL = null
+    this.urlChangeInterval = null
     this.urlParam = null
     this.documentType = ContentTypeManager.documentTypes.html // By default document type is html
   }
@@ -38,6 +43,8 @@ class ContentTypeManager {
           this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
         }
         this.documentType = ContentTypeManager.documentTypes.html
+        // Support in ajax websites web url change
+        this.initSupportWebURLChange()
         if (_.isFunction(callback)) {
           callback()
         }
@@ -54,6 +61,7 @@ class ContentTypeManager {
         callback()
       }
     }
+    clearInterval(this.urlChangeInterval)
   }
 
   waitUntilPDFViewerLoad (callback) {
@@ -119,6 +127,18 @@ class ContentTypeManager {
 
   getDocumentURIToSaveInHypothesis () {
     return this.documentURL
+  }
+
+  initSupportWebURLChange () {
+    this.urlChangeInterval = setInterval(() => {
+      let newUrl = URLUtils.retrieveMainUrl(window.location.href)
+      if (newUrl !== this.documentURL) {
+        console.debug('Document URL updated from %s to %s', this.documentURL, newUrl)
+        this.documentURL = newUrl
+        // Dispatch event
+        LanguageUtils.dispatchCustomEvent(Events.updatedDocumentURL, {url: this.documentURL})
+      }
+    }, URL_CHANGE_INTERVAL_IN_SECONDS * 1000)
   }
 }
 

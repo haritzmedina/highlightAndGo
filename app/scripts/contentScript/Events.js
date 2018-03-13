@@ -6,7 +6,8 @@ const Events = {
   modeChanged: 'modeChanged',
   userFilterChange: 'userFilterChange',
   updatedAllAnnotations: 'updatedAllAnnotations',
-  updatedCurrentAnnotations: 'updatedCurrentAnnotations'
+  updatedCurrentAnnotations: 'updatedCurrentAnnotations',
+  updatedDocumentURL: 'updatedDocumentURL'
 }
 
 module.exports = Events
