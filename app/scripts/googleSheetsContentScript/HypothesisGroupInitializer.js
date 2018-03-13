@@ -23,69 +23,76 @@ class HypothesisGroupInitializer {
 
   initializeHypothesisGroup (callback) {
     // Get if current hypothesis group exists
-    window.hag.hypothesisClientManager.hypothesisClient.getUserProfile((userProfile) => {
-      let group = _.find(userProfile.groups, (group) => {
-        return group.name === this.mappingStudy.name.substr(0, 25)
-      })
-      // Create the group if not exists
-      if (_.isEmpty(group)) {
-        this.createHypothesisGroup((err) => {
-          if (err) {
-            swal('Oops!', // TODO i18n
-              'There was a problem while creating the hypothes.is group. Please reload the page and try it again. <br/>' +
-              'If the error continues, please contact administrator.',
-              'error') // Show to the user the error
-            if (_.isFunction(callback)) {
-              callback(err)
-            }
-          } else {
-            this.createFacetsAndCodes((err) => {
-              if (err) {
-                swal('Oops!', // TODO i18n
-                  'There was a problem while creating buttons for the sidebar. Please reload the page and try it again. <br/>' +
-                  'If the error continues, please contact the administrator.',
-                  'error') // Show to the user the error
-                // Remove created hypothesis group
-                this.removeGroup()
-                if (_.isFunction(callback)) {
-                  callback(err)
-                }
-              } else {
-                this.createRelationGSheetGroup((err) => {
-                  if (err) {
-                    swal('Oops!', // TODO i18n
-                      'There was a problem while relating the tool with the spreadsheet. Please reload the page and try it again. <br/>' +
-                      'If error continues, please contact administrator.',
-                      'error') // Show to the user the error
-                    // Remove created hypothesis group
-                    this.removeGroup()
-                    if (_.isFunction(callback)) {
-                      callback(err)
-                    }
-                  } else {
-                    // Save as current group the generated one
-                    ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.mappingStudy.hypothesisGroup)}, ChromeStorage.local)
-                    // When window.focus
-                    swal('Correctly configured', // TODO i18n
-                      chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + this.mappingStudy.hypothesisGroup.url + '" target="_blank">' + this.mappingStudy.hypothesisGroup.url + '</a>',
-                      'success')
-                    if (_.isFunction(callback)) {
-                      callback()
-                    }
-                  }
-                })
-              }
-            })
-          }
-        })
-      } else {
-        swal('The group ' + group.name + ' already exists', // TODO i18n
-          chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '" target="_blank">' + group.url + '</a>',
-          'info')
+    window.hag.hypothesisClientManager.hypothesisClient.getUserProfile((err, userProfile) => {
+      if (err) {
         if (_.isFunction(callback)) {
-          callback()
+          callback(err)
         }
-        // TODO Update Hypothesis group
+      } else {
+        this.userProfile = userProfile
+        let group = _.find(userProfile.groups, (group) => {
+          return group.name === this.mappingStudy.name.substr(0, 25)
+        })
+        // Create the group if not exists
+        if (_.isEmpty(group)) {
+          this.createHypothesisGroup((err) => {
+            if (err) {
+              swal('Oops!', // TODO i18n
+                'There was a problem while creating the hypothes.is group. Please reload the page and try it again. <br/>' +
+                'If the error continues, please contact administrator.',
+                'error') // Show to the user the error
+              if (_.isFunction(callback)) {
+                callback(err)
+              }
+            } else {
+              this.createFacetsAndCodes((err) => {
+                if (err) {
+                  swal('Oops!', // TODO i18n
+                    'There was a problem while creating buttons for the sidebar. Please reload the page and try it again. <br/>' +
+                    'If the error continues, please contact the administrator.',
+                    'error') // Show to the user the error
+                  // Remove created hypothesis group
+                  this.removeGroup()
+                  if (_.isFunction(callback)) {
+                    callback(err)
+                  }
+                } else {
+                  this.createRelationGSheetGroup((err) => {
+                    if (err) {
+                      swal('Oops!', // TODO i18n
+                        'There was a problem while relating the tool with the spreadsheet. Please reload the page and try it again. <br/>' +
+                        'If error continues, please contact administrator.',
+                        'error') // Show to the user the error
+                      // Remove created hypothesis group
+                      this.removeGroup()
+                      if (_.isFunction(callback)) {
+                        callback(err)
+                      }
+                    } else {
+                      // Save as current group the generated one
+                      ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.mappingStudy.hypothesisGroup)}, ChromeStorage.local)
+                      // When window.focus
+                      swal('Correctly configured', // TODO i18n
+                        chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + this.mappingStudy.hypothesisGroup.url + '" target="_blank">' + this.mappingStudy.hypothesisGroup.url + '</a>',
+                        'success')
+                      if (_.isFunction(callback)) {
+                        callback()
+                      }
+                    }
+                  })
+                }
+              })
+            }
+          })
+        } else {
+          swal('The group ' + group.name + ' already exists', // TODO i18n
+            chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + group.url + '" target="_blank">' + group.url + '</a>',
+            'info')
+          if (_.isFunction(callback)) {
+            callback()
+          }
+          // TODO Update Hypothesis group
+        }
       }
     })
   }
