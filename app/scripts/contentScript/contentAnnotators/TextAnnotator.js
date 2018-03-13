@@ -31,11 +31,17 @@ class TextAnnotator extends ContentAnnotator {
 
   init (callback) {
     this.initEvents(() => {
-      this.initAnnotationsObserver(() => {
-        // Retrieve current user profile
-        this.currentUserProfile = window.abwa.groupSelector.user
-        this.loadAnnotations(() => {
-          this.initAnnotatorByAnnotation(() => {
+      // Retrieve current user profile
+      this.currentUserProfile = window.abwa.groupSelector.user
+      this.loadAnnotations(() => {
+        this.initAnnotatorByAnnotation(() => {
+          // Check if something is selected after loading annotations and display sidebar
+          if (document.getSelection().toString().length !== 0) {
+            if ($(document.getSelection().anchorNode).parents('#abwaSidebarWrapper').toArray().length === 0) {
+              this.openSidebar()
+            }
+          }
+          this.initAnnotationsObserver(() => {
             if (_.isFunction(callback)) {
               callback()
             }
@@ -50,15 +56,35 @@ class TextAnnotator extends ContentAnnotator {
       this.initAnnotateEvent(() => {
         this.initModeChangeEvent(() => {
           this.initUserFilterChangeEvent(() => {
-            this.initReloadAnnotationsEvent() // Reload annotations periodically
-            if (_.isFunction(callback)) {
-              callback()
-            }
+            this.initReloadAnnotationsEvent(() => {
+              this.initDocumentURLChangeEvent(() => {
+                // Reload annotations periodically
+                if (_.isFunction(callback)) {
+                  callback()
+                }
+              })
+            })
           })
         })
       })
     })
     this.initRemoveOverlaysInPDFs()
+  }
+
+  initDocumentURLChangeEvent (callback) {
+    this.events.documentURLChangeEvent = {element: document, event: Events.updatedDocumentURL, handler: this.createDocumentURLChangeEventHandler()}
+    this.events.documentURLChangeEvent.element.addEventListener(this.events.documentURLChangeEvent.event, this.events.documentURLChangeEvent.handler, false)
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
+
+  createDocumentURLChangeEventHandler (callback) {
+    return () => {
+      this.loadAnnotations(() => {
+        console.debug('annotations updated')
+      })
+    }
   }
 
   initUserFilterChangeEvent (callback) {
@@ -69,12 +95,15 @@ class TextAnnotator extends ContentAnnotator {
     }
   }
 
-  initReloadAnnotationsEvent () {
+  initReloadAnnotationsEvent (callback) {
     this.reloadInterval = setInterval(() => {
       this.updateAllAnnotations(() => {
         console.debug('annotations updated')
       })
     }, ANNOTATIONS_UPDATE_INTERVAL_IN_SECONDS * 1000)
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
   createUserFilterChangeEventHandler () {
@@ -127,7 +156,6 @@ class TextAnnotator extends ContentAnnotator {
         // Highlight only annotations from current user
         this.currentAnnotations = this.retrieveCurrentAnnotations()
         LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
-        this.highlightAnnotations(this.currentAnnotations)
         // Activate selection event and sidebar functionality
         this.activateSelectionEvent()
       }
@@ -147,12 +175,12 @@ class TextAnnotator extends ContentAnnotator {
       let selectors = []
       // If selection is empty, return null
       if (document.getSelection().toString().length === 0) {
-        alert('Nothing to highlight, current selection is empty') // Show user message
+        window.alert('Nothing to highlight, current selection is empty') // TODO change by swal
         return
       }
       // If selection is child of sidebar, return null
       if ($(document.getSelection().anchorNode).parents('#annotatorSidebarWrapper').toArray().length !== 0) {
-        alert('The selected content cannot be highlighted, is not part of the document') // Show user message
+        window.alert('The selected content cannot be highlighted, is not part of the document') // TODO change by swal
         return
       }
       let range = document.getSelection().getRangeAt(0)
@@ -189,7 +217,7 @@ class TextAnnotator extends ContentAnnotator {
       let annotation = TextAnnotator.constructAnnotation(selectors, event.detail.tags)
       window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(annotation, (err, annotation) => {
         if (err) {
-          alert('Unexpected error, unable to create annotation')
+          window.alert('Unexpected error, unable to create annotation')
         } else {
           // Add to annotations
           this.currentAnnotations.push(annotation)
@@ -253,6 +281,7 @@ class TextAnnotator extends ContentAnnotator {
 
   initSelectionEvents (callback) {
     if (_.isEmpty(window.abwa.annotationBasedInitializer.initAnnotation)) {
+      // Create selection event
       this.activateSelectionEvent(() => {
         if (_.isFunction(callback)) {
           callback()
@@ -295,12 +324,12 @@ class TextAnnotator extends ContentAnnotator {
           let element = document.querySelector('[data-annotation-id="' + annotation.id + '"]')
           // If annotation doesn't exist, try to find it
           if (!_.isElement(element)) {
-            setTimeout(() => { this.highlightAnnotation(annotation) }, 0)
+            Promise.resolve().then(() => { this.highlightAnnotation(annotation) })
           }
         }
       }
     }, ANNOTATION_OBSERVER_INTERVAL_IN_SECONDS * 1000)
-    // TODO Improve the way to highlight to avoid this interval
+    // TODO Improve the way to highlight to avoid this interval (when search in PDFs it is highlighted empty element instead of element)
     this.cleanInterval = setInterval(() => {
       let highlightedElements = document.querySelectorAll('.highlightedAnnotation')
       highlightedElements.forEach((element) => {
@@ -424,8 +453,18 @@ class TextAnnotator extends ContentAnnotator {
     let tagList = window.abwa.tagManager.getTagsList()
     let tagForAnnotation = TagManager.retrieveTagForAnnotation(annotation, tagList)
     try {
-      let highlightedElements = DOMTextUtils.highlightContent(
-        annotation.target[0].selector, classNameToHighlight, annotation.id)
+      let highlightedElements = []
+      // TODO Remove this case for google drive
+      if (window.location.href.includes('drive.google.com')) {
+        // Ensure popup exists
+        if (document.querySelector('.a-b-r-x')) {
+          highlightedElements = DOMTextUtils.highlightContent(
+            annotation.target[0].selector, classNameToHighlight, annotation.id)
+        }
+      } else {
+        highlightedElements = DOMTextUtils.highlightContent(
+          annotation.target[0].selector, classNameToHighlight, annotation.id)
+      }
       // Highlight in same color as button
       highlightedElements.forEach(highlightedElement => {
         // If need to highlight, set the color corresponding to, in other case, maintain its original color
@@ -434,7 +473,15 @@ class TextAnnotator extends ContentAnnotator {
         highlightedElement.dataset.color = tagForAnnotation.color
         highlightedElement.dataset.tags = tagForAnnotation.tags
         let user = annotation.user.replace('acct:', '').replace('@hypothes.is', '')
-        highlightedElement.title = 'Author: ' + user + '\n' + 'Category: ' + tagForAnnotation.name
+        if (this.config.namespace === Config.exams.namespace) {
+          let tagGroup = _.find(window.abwa.tagManager.currentTags, (tagGroup) => { return _.find(tagGroup.tags, tagForAnnotation) })
+          let highestMark = _.last(tagGroup.tags).name
+          highlightedElement.title = 'Rubric: ' + tagGroup.config.name + '\nMark: ' + tagForAnnotation.name + ' of ' + highestMark
+        } else if (this.config.namespace === Config.slrDataExtraction.namespace) {
+          highlightedElement.title = 'Author: ' + user + '\n' + 'Category: ' + tagForAnnotation.name
+        } else {
+          highlightedElement.title = 'Author: ' + user + '\n'
+        }
       })
       // Create context menu event for highlighted elements
       this.createContextMenuForAnnotation(annotation)
@@ -442,6 +489,7 @@ class TextAnnotator extends ContentAnnotator {
       this.createNextAnnotationHandler(annotation)
     } catch (e) {
       // TODO Handle error (maybe send in callback the error ¿?
+      callback(new Error('Element not found'))
     } finally {
       if (_.isFunction(callback)) {
         callback()
@@ -512,7 +560,7 @@ class TextAnnotator extends ContentAnnotator {
                   if (!result.deleted) {
                     // Alert user error happened
                     // TODO swal
-                    alert('Error deleting hypothesis annotation, please try it again')
+                    window.alert('Error deleting hypothesis annotation, please try it again')
                   } else {
                     // Remove annotation from data model
                     _.remove(this.currentAnnotations, (currentAnnotation) => {
@@ -544,7 +592,7 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   mouseUpOnDocumentHandlerConstructor () {
-    return () => {
+    return (event) => {
       // Check if something is selected
       if (document.getSelection().toString().length !== 0) {
         if ($(event.target).parents('#abwaSidebarWrapper').toArray().length === 0) {
@@ -602,6 +650,8 @@ class TextAnnotator extends ContentAnnotator {
   destroy () {
     // Remove observer interval
     clearInterval(this.observerInterval)
+    // Clean interval
+    clearInterval(this.cleanInterval)
     // Remove reload interval
     clearInterval(this.reloadInterval)
     // Remove overlays interval
