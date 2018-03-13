@@ -42,7 +42,7 @@ class BackToSpreadsheetLink {
       if (_.isFunction(callback)) {
         callback()
       }
-    })
+    }, false)
   }
 
   destroy (callback) {

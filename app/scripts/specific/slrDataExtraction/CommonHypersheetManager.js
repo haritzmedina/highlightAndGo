@@ -190,7 +190,7 @@ class CommonHypersheetManager {
         // Get link for cell
         let link = CommonHypersheetManager.getAnnotationUrl(annotation, primaryStudyLink)
         // Retrieve row and cell
-        let row = window.abwa.specific.primaryStudySheetManager.primaryStudyRow
+        let row = window.abwa.specific.primaryStudySheetManager.primaryStudyRow // It is already updated by getPrimaryStudyLink
         let sheetData = window.abwa.specific.primaryStudySheetManager.sheetData
         let column = _.findIndex(sheetData.data[0].rowData[0].values, (cell) => {
           return cell.formattedValue === facetName
@@ -352,33 +352,38 @@ class CommonHypersheetManager {
           callback(err)
         }
       } else {
-        let row = window.abwa.specific.primaryStudySheetManager.primaryStudyRow
-        let column = _.findIndex(sheetData.data[0].rowData[0].values, (cell) => {
-          return cell.formattedValue === facetName
-        })
-        if (row !== 0 && column !== 0) {
-          let request = window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.createRequestUpdateCell({
-            row: row,
-            column: column,
-            value: '',
-            backgroundColor: HyperSheetColors.white,
-            sheetId: window.abwa.specific.mappingStudyManager.mappingStudy.sheetId
-          })
-          window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.batchUpdate({
-            spreadsheetId: window.abwa.specific.mappingStudyManager.mappingStudy.spreadsheetId,
-            requests: [request]
-          }, (err, result) => {
-            if (err) {
-              if (_.isFunction(callback)) {
-                callback(err)
-              }
-            } else {
-              if (_.isFunction(callback)) {
-                callback(null, result)
-              }
+        window.abwa.specific.primaryStudySheetManager.retrievePrimaryStudyRow((err, row) => {
+          if (err) {
+            callback(err)
+          } else {
+            let column = _.findIndex(sheetData.data[0].rowData[0].values, (cell) => {
+              return cell.formattedValue === facetName
+            })
+            if (row !== 0 && column !== 0) {
+              let request = window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.createRequestUpdateCell({
+                row: row,
+                column: column,
+                value: '',
+                backgroundColor: HyperSheetColors.white,
+                sheetId: window.abwa.specific.mappingStudyManager.mappingStudy.sheetId
+              })
+              window.abwa.specific.primaryStudySheetManager.googleSheetClientManager.googleSheetClient.batchUpdate({
+                spreadsheetId: window.abwa.specific.mappingStudyManager.mappingStudy.spreadsheetId,
+                requests: [request]
+              }, (err, result) => {
+                if (err) {
+                  if (_.isFunction(callback)) {
+                    callback(err)
+                  }
+                } else {
+                  if (_.isFunction(callback)) {
+                    callback(null, result)
+                  }
+                }
+              })
             }
-          })
-        }
+          }
+        }, true)
       }
     })
   }
@@ -394,7 +399,7 @@ class CommonHypersheetManager {
         // Get link for cell
         let link = CommonHypersheetManager.getAnnotationUrl(currentAnnotation, primaryStudyLink)
         // Retrieve row and cell
-        let row = window.abwa.specific.primaryStudySheetManager.primaryStudyRow
+        let row = window.abwa.specific.primaryStudySheetManager.primaryStudyRow // It is already updated by getPrimaryStudyLink call
         let sheetData = window.abwa.specific.primaryStudySheetManager.sheetData
         let column = _.findIndex(sheetData.data[0].rowData[0].values, (cell) => {
           return cell.formattedValue === facetName
@@ -440,7 +445,10 @@ class CommonHypersheetManager {
           let codeCell = codeCells[i]
           let link = CommonHypersheetManager.getAnnotationUrl(codeCell.annotation, primaryStudyLink)
           let value = codeCell.code
-          let formulaValue = '=HYPERLINK("' + link + '", "' + value + '")'
+          let formulaValue = '=HYPERLINK("' + link + '"; "' + value.replace(/"/g, '""') + '")'
+          if (!_.isNaN(_.toNumber(value))) { // If is a number, change
+            formulaValue = '=HYPERLINK("' + link + '"; ' + _.toNumber(value) + ')'
+          }
           gSheetCells.push({
             'userEnteredFormat': {
               'backgroundColor': codeCell.color
