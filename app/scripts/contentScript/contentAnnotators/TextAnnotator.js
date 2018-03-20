@@ -623,6 +623,7 @@ class TextAnnotator extends ContentAnnotator {
       let queryTextSelector = _.find(annotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
       if (queryTextSelector && queryTextSelector.exact) {
         window.PDFViewerApplication.findController.executeCommand('find', {query: queryTextSelector.exact, phraseSearch: true})
+        this.removeFindTagsInPDFs()
       }
     } else { // Else, try to find the annotation by data-annotation-id element attribute
       let firstElementToScroll = document.querySelector('[data-annotation-id="' + annotation.id + '"]')
@@ -685,6 +686,7 @@ class TextAnnotator extends ContentAnnotator {
         let queryTextSelector = _.find(initAnnotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
         if (queryTextSelector && queryTextSelector.exact) {
           window.PDFViewerApplication.findController.executeCommand('find', {query: queryTextSelector.exact, phraseSearch: true})
+          this.removeFindTagsInPDFs()
         }
       } else { // Else, try to find the annotation by data-annotation-id element attribute
         let firstElementToScroll = document.querySelector('[data-annotation-id="' + initAnnotation.id + '"]')
@@ -716,6 +718,24 @@ class TextAnnotator extends ContentAnnotator {
         document.querySelectorAll('section[data-annotation-id]').forEach((elem) => { $(elem).remove() })
       }, REMOVE_OVERLAYS_INTERVAL_IN_SECONDS * 1000)
     }
+  }
+
+  removeFindTagsInPDFs () {
+    setTimeout(() => {
+      // Remove class for middle selected elements in find function of PDF.js
+      document.querySelectorAll('.highlight.selected.middle').forEach(elem => {
+        $(elem).removeClass('highlight selected middle')
+      })
+      // Remove wrap for begin and end selected elements in find function of PDF.js
+      document.querySelectorAll('.highlight.selected').forEach(elem => {
+        if (elem.children.length === 1) {
+          $(elem.children[0]).unwrap()
+        } else {
+          $(document.createTextNode(elem.innerText)).insertAfter(elem)
+          $(elem).remove()
+        }
+      })
+    }, 1000)
   }
 }
 
