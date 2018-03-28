@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Statistic">
+    <option name="excludedDirectories">
+      <list>
+        <option value="$PROJECT_DIR$/promo" />
+        <option value="$PROJECT_DIR$/tasks" />
+        <option value="$PROJECT_DIR$/app/content/pdfjs" />
+        <option value="$PROJECT_DIR$/packages" />
+        <option value="$PROJECT_DIR$/dist" />
+      </list>
+    </option>
+  </component>
+</project>
