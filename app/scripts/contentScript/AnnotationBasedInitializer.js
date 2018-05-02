@@ -10,16 +10,22 @@ class AnnotationBasedInitializer {
     // Check if annotation is in hash params
     let annotationId = AnnotationBasedInitializer.getAnnotationHashParam()
     if (annotationId) {
-      window.abwa.hypothesisClientManager.hypothesisClient.fetchAnnotation(annotationId, (err, annotation) => {
-        if (err) {
-          console.error(err)
-        } else {
-          this.initAnnotation = annotation
-        }
+      if (_.isObject(window.abwa.hypothesisClientManager.hypothesisClient)) {
+        window.abwa.hypothesisClientManager.hypothesisClient.fetchAnnotation(annotationId, (err, annotation) => {
+          if (err) {
+            console.error(err)
+          } else {
+            this.initAnnotation = annotation
+          }
+          if (_.isFunction(callback)) {
+            callback(annotation)
+          }
+        })
+      } else {
         if (_.isFunction(callback)) {
-          callback(annotation)
+          callback(null)
         }
-      })
+      }
     } else {
       if (_.isFunction(callback)) {
         callback(null)

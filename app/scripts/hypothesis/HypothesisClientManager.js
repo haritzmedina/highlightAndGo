@@ -17,21 +17,28 @@ class HypothesisClientManager {
       this.reloadInterval = setInterval(() => {
         this.reloadHypothesisClient()
       }, reloadIntervalInSeconds * 1000)
-      if (_.isFunction(callback)) {
-        callback()
+      if (_.isNull(this.hypothesisToken)) {
+        if (_.isFunction(callback)) {
+          callback(new Error('User is not logged in'))
+        }
+      } else {
+        if (_.isFunction(callback)) {
+          callback()
+        }
       }
     })
   }
 
   reloadHypothesisClient (callback) {
     chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
-      if (this.hypothesisToken !== token) {
-        this.hypothesisToken = token
-        if (this.hypothesisToken) {
+      if (!_.isNull(token)) {
+        if (this.hypothesisToken !== token) {
+          this.hypothesisToken = token
           this.hypothesisClient = new HypothesisClient(token)
-        } else {
-          this.hypothesisClient = new HypothesisClient()
         }
+      } else {
+        this.hypothesisToken = null
+        this.hypothesisClient = new HypothesisClient()
       }
       if (_.isFunction(callback)) {
         callback()

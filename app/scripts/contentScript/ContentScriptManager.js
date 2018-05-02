@@ -23,25 +23,35 @@ class ContentScriptManager {
     this.status = ContentScriptManager.status.initializing
     this.loadContentTypeManager(() => {
       window.abwa.hypothesisClientManager = new HypothesisClientManager()
-      window.abwa.hypothesisClientManager.init(() => {
-        window.abwa.sidebar = new Sidebar()
-        window.abwa.sidebar.init(() => {
-          window.abwa.annotationBasedInitializer = new AnnotationBasedInitializer()
-          window.abwa.annotationBasedInitializer.init(() => {
+      window.abwa.hypothesisClientManager.init((err) => {
+        if (err) {
+          window.abwa.sidebar = new Sidebar()
+          window.abwa.sidebar.init(() => {
             window.abwa.groupSelector = new GroupSelector()
             window.abwa.groupSelector.init(() => {
-              window.abwa.modeManager = new ModeManager()
-              window.abwa.modeManager.init(() => {
-                // Reload for first time the content by group
-                this.reloadContentByGroup()
-                // Initialize listener for group change to reload the content
-                this.initListenerForGroupChange()
-                this.status = ContentScriptManager.status.initialized
-                console.log('Initialized content script manager')
+
+            })
+          })
+        } else {
+          window.abwa.sidebar = new Sidebar()
+          window.abwa.sidebar.init(() => {
+            window.abwa.annotationBasedInitializer = new AnnotationBasedInitializer()
+            window.abwa.annotationBasedInitializer.init(() => {
+              window.abwa.groupSelector = new GroupSelector()
+              window.abwa.groupSelector.init(() => {
+                window.abwa.modeManager = new ModeManager()
+                window.abwa.modeManager.init(() => {
+                  // Reload for first time the content by group
+                  this.reloadContentByGroup()
+                  // Initialize listener for group change to reload the content
+                  this.initListenerForGroupChange()
+                  this.status = ContentScriptManager.status.initialized
+                  console.log('Initialized content script manager')
+                })
               })
             })
           })
-        })
+        }
       })
     })
   }

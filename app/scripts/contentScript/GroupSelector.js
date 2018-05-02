@@ -6,6 +6,8 @@ const $ = require('jquery')
 const selectedGroupNamespace = 'hypothesis.currentGroup'
 const defaultGroup = {id: '__world__', name: 'Public', public: true}
 
+const checkHypothesisLoggedInWhenPromptInSeconds = 2 // When not logged in, check if user has logged in
+
 class GroupSelector {
   constructor () {
     this.currentGroup = null
@@ -108,10 +110,26 @@ class GroupSelector {
       $('#loggedInGroupContainer').attr('aria-hidden', 'true')
       // Hide purposes wrapper
       $('#purposesWrapper').attr('aria-hidden', 'true')
+      // Init isLogged checking
+      this.initIsLoggedChecking()
+      // Open the sidebar to show that login is required
+      window.abwa.sidebar.openSidebar()
       if (_.isFunction(callback)) {
         callback()
       }
     }
+  }
+
+  initIsLoggedChecking () {
+    // Check if user has been logged in
+    this.loggedInInterval = setInterval(() => {
+      chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
+        if (!_.isNull(token)) {
+          // Reload the web page
+          window.location.reload()
+        }
+      })
+    }, checkHypothesisLoggedInWhenPromptInSeconds * 1000)
   }
 
   renderGroupsContainer (callback) {
@@ -175,6 +193,10 @@ class GroupSelector {
   }
 
   destroy (callback) {
+    // Destroy intervals
+    if (this.loggedInInterval) {
+      clearInterval(this.loggedInInterval)
+    }
     if (_.isFunction(callback)) {
       callback()
     }
