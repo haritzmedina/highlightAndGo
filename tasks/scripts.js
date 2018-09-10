@@ -20,6 +20,7 @@ gulp.task('scripts', () => {
     .pipe(gulpWebpack({
       devtool: args.sourcemaps ? 'inline-source-map' : false,
       watch: args.watch,
+      mode: 'development',
       plugins: [
         new webpack.ProvidePlugin({
           $: 'jquery',
