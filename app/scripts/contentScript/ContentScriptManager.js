@@ -7,7 +7,6 @@ const TagManager = require('./TagManager')
 const GroupSelector = require('./GroupSelector')
 const ConfigDecisionHelper = require('./ConfigDecisionHelper')
 const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
-const AugmentationManager = require('./AugmentationManager')
 const UserFilter = require('./UserFilter')
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
@@ -88,7 +87,6 @@ class ContentScriptManager {
             })
           })
         })
-        this.reloadAugmentationOperations(config)
       }
     })
   }
@@ -111,14 +109,6 @@ class ContentScriptManager {
     // Create a new tag manager for the current group
     window.abwa.tagManager = new TagManager(config.namespace, config.tags) // TODO Depending on the type of annotator
     window.abwa.tagManager.init(callback)
-  }
-
-  reloadAugmentationOperations (config, callback) {
-    // Destroy current augmentation operations
-    this.destroyAugmentationOperations()
-    // Create augmentation operations for the current group
-    window.abwa.augmentationManager = new AugmentationManager(config)
-    window.abwa.augmentationManager.init()
   }
 
   destroyContentAnnotator () {
