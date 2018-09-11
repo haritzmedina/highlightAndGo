@@ -32,9 +32,7 @@ gulp.task('scripts', () => {
           'process.env.NODE_ENV': JSON.stringify(ENV),
           'process.env.VENDOR': JSON.stringify(args.vendor)
         })
-      ].concat(args.production ? [
-        new webpack.optimize.UglifyJsPlugin()
-      ] : []),
+      ],
       module: {
         rules: [{
           test: /\.js$/,
