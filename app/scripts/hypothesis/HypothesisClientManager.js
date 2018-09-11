@@ -1,6 +1,6 @@
 const _ = require('lodash')
 
-const HypothesisClient = require('./HypothesisClient')
+const HypothesisClient = require('hypothesis-api-client')
 
 const reloadIntervalInSeconds = 10 // Reload the hypothesis client every 10 seconds
 
