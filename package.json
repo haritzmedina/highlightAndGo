@@ -39,6 +39,7 @@
     "jquery-contextmenu": "^2.6.4",
     "jquery-csv": "^0.8.9",
     "lodash": "^4.17.10",
+    "node-sass": "^4.9.4",
     "pdfjs-dist": "^2.0.489",
     "popper.js": "^1.14.3",
     "qtip2": "^3.0.3",
