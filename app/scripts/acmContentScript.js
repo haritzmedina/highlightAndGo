@@ -47,12 +47,20 @@ class ACMContentScript {
     }
   }
 
+  /**
+   * Depending on the article, the ACM-DL shows the DOI in different parts of the document. This function tries to find in the DOM the DOI for the current paper
+   * @returns {*}
+   */
   findDoi () {
     let doiElement = document.querySelector('#divmain > table:nth-child(4) > tbody > tr > td > table > tbody > tr:nth-child(4) > td > span:nth-child(10) > a')
     if (this.checkIfDoiElement(doiElement)) {
       return doiElement.innerText
     }
     doiElement = document.querySelector('#divmain > table > tbody > tr > td:nth-child(1) > table:nth-child(3) > tbody > tr > td > table > tbody > tr:nth-child(5) > td > span:nth-child(10) > a')
+    if (this.checkIfDoiElement(doiElement)) {
+      return doiElement.innerText
+    }
+    doiElement = document.querySelector('#divmain > table > tbody > tr > td:nth-child(1) > table:nth-child(3) > tbody > tr > td > table > tbody > tr:nth-child(4) > td > span:nth-child(10) > a')
     if (this.checkIfDoiElement(doiElement)) {
       return doiElement.innerText
     }

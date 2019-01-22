@@ -1,9 +1,4 @@
-/* @import '../../node_modules/bootstrap/dist/css/bootstrap.min'; */
-
-@import '../scripts/contentScript/operations/Popup/popup';
-@import '../scripts/contentScript/operations/Linkage/linkage';
-
-@import '../../node_modules/jquery-contextmenu/dist/jquery.contextMenu';
+@import '../../node_modules/jquery-contextmenu/src/sass/jquery.contextMenu';
 
 @import './groupSelection';
 @import './tagWrapper';

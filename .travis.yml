@@ -1,9 +1,8 @@
 language: node_js
 node_js:
-  - v8
-dist: trusty # needs Ubuntu Trusty
+  - v10
 addons:
-  - chrome # or google-chrome-stable
+  chrome: stable
 before_install:
   - sudo apt-get update
   - sudo apt-get install g++ build-essential # Build essential to compile the integration-test platform

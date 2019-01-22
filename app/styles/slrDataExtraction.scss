@@ -1,3 +1,5 @@
+@import "./variables";
+
 img.warningSidebar {
   width: 25px;
 }
@@ -5,4 +7,5 @@ img.warningSidebar {
 /* Fix small size sweetalert2 */
 .swal2-container {
   zoom: 1.5 !important;
+  z-index: $sidebarZIndex - 1 !important;
 }

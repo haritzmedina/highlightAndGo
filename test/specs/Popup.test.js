@@ -6,7 +6,7 @@ const { JSDOM } = jsdom
 const { window } = new JSDOM({url: 'https://hypothes.is/api/'})
 global.window = window
 
-const HypothesisClient = require('../../app/scripts/hypothesis/HypothesisClient')
+const HypothesisClient = require('hypothesis-api-client')
 
 const TOKEN = process.env.HYPOTHESIS_TOKEN
 

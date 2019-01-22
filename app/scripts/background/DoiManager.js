@@ -7,6 +7,7 @@ class DoiManager {
     this.doiUrlFilterObject = { 'urls': ['*://*.doi.org/*', '*://doi.org/*'] }
     this.scienceDirect = { 'urls': ['*://www.sciencedirect.com/science/article/pii/*'] }
     this.dropbox = {'urls': ['*://www.dropbox.com/s/*?raw=1*']}
+    this.dropboxContent = {'urls': ['*://*.dropboxusercontent.com/*']}
   }
 
   init () {
@@ -69,6 +70,12 @@ class DoiManager {
       responseDetails.responseHeaders[index].value = redirectUrl
       return {responseHeaders: responseDetails.responseHeaders}
     }, this.dropbox, ['responseHeaders', 'blocking'])
+    // Request dropbox pdf files
+    chrome.webRequest.onBeforeSendHeaders.addListener((details) => {
+      let index = _.findIndex(details.requestHeaders, (header) => { return header.name.toLowerCase() === 'accept' })
+      details.requestHeaders[index].value = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
+      return {requestHeaders: details.requestHeaders}
+    }, this.dropboxContent, ['blocking', 'requestHeaders'])
   }
 
   extractAnnotationId (url) {
