@@ -13,7 +13,6 @@ before_install:
 before_script:
   - npm install -g gulp-cli
   - npm install babel-plugin-transform-es3-member-expression-literals # Fix a bug to compile dom-seek and dom-node-iterator
-  - npm install git+https://github.com/haritzmedina/jsdom.git#master # Fix a bug on gulp-test jsdom not found
 script:
   - gulp
   - gulp test
