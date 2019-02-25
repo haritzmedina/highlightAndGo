@@ -73,7 +73,7 @@ class HypothesisGroupInitializer {
                       ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.mappingStudy.hypothesisGroup)}, ChromeStorage.local)
                       // When window.focus
                       swal('Correctly configured', // TODO i18n
-                        chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + this.mappingStudy.hypothesisGroup.url + '" target="_blank">' + this.mappingStudy.hypothesisGroup.url + '</a>',
+                        chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + this.mappingStudy.hypothesisGroup.url || this.mappingStudy.hypothesisGroup.links.html + '" target="_blank">' + this.mappingStudy.hypothesisGroup.url + '</a>',
                         'success')
                       if (_.isFunction(callback)) {
                         callback()
@@ -98,7 +98,7 @@ class HypothesisGroupInitializer {
   }
 
   createHypothesisGroup (callback) {
-    window.hag.hypothesisClientManager.hypothesisClient.createHypothesisGroup(this.mappingStudy.name, (err, group) => {
+    window.hag.hypothesisClientManager.hypothesisClient.createNewGroup({name: this.mappingStudy.name}, (err, group) => {
       if (err) {
         if (_.isFunction(callback)) {
           callback(err)
@@ -190,7 +190,7 @@ class HypothesisGroupInitializer {
       tags: tags,
       target: [],
       text: '',
-      uri: this.mappingStudy.hypothesisGroup.url // Group url
+      uri: this.mappingStudy.hypothesisGroup.url || this.mappingStudy.hypothesisGroup.links.html // Group url
     }
   }
 
@@ -204,7 +204,7 @@ class HypothesisGroupInitializer {
       tags: [Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.spreadsheet],
       target: [],
       text: 'spreadsheetId: ' + this.mappingStudy.spreadsheetId + '\n' + 'sheetId: ' + this.mappingStudy.sheetId,
-      uri: this.mappingStudy.hypothesisGroup.url // Group url
+      uri: this.mappingStudy.hypothesisGroup.url || this.mappingStudy.hypothesisGroup.links.html // Group url
     }
   }
 

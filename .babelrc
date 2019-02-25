@@ -9,5 +9,6 @@
     }]
   ],
   "plugins": ["transform-es3-property-literals"],
-  "ignore": ["node_modules"]
+  "ignore": ["node_modules"],
+  "retainLines": true
 }
