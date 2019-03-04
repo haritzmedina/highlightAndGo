@@ -1,11 +1,6 @@
 /* eslint-env jasmine, browser */
 /* global browser */
 
-const jsdom = require('jsdom')
-const { JSDOM } = jsdom
-const { window } = new JSDOM({url: 'https://hypothes.is/api/'})
-global.window = window
-
 const HypothesisClient = require('hypothesis-api-client')
 
 const TOKEN = process.env.HYPOTHESIS_TOKEN
