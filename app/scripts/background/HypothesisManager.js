@@ -20,7 +20,7 @@ class HypothesisManager {
     })
 
     // Create an observer to check if user is logged to hypothesis
-    this.retryHypothesisTokenRetrieve()
+    this.createRetryHypothesisTokenRetrieve()
 
     // Initialize replier for login form authentication
     this.initShowHypothesisLoginForm()
@@ -29,12 +29,18 @@ class HypothesisManager {
     this.initResponserForGetToken()
   }
 
-  retryHypothesisTokenRetrieve () {
-    setInterval(() => {
+  createRetryHypothesisTokenRetrieve (intervalSeconds = checkHypothesisLoggedIntervalInSeconds) {
+    let intervalHandler = () => {
       this.retrieveHypothesisToken((err, token) => {
         this.setToken(err, token)
       })
-    }, checkHypothesisLoggedIntervalInSeconds * 1000)
+    }
+    this.retrieveTokenInterval = setInterval(intervalHandler, intervalSeconds * 1000)
+  }
+
+  changeTokenRetrieveInterval (seconds = checkHypothesisLoggedIntervalInSeconds) {
+    clearInterval(this.retrieveTokenInterval)
+    this.createRetryHypothesisTokenRetrieve(seconds)
   }
 
   retrieveHypothesisToken (callback) {
@@ -129,6 +135,10 @@ class HypothesisManager {
       if (request.scope === 'hypothesis') {
         if (request.cmd === 'getToken') {
           sendResponse(this.token)
+        } else if (request.cmd === 'startListeningLogin') {
+          this.changeTokenRetrieveInterval(checkHypothesisLoggedInWhenPromptInSeconds) // Reduce to 0.5 seconds
+        } else if (request.cmd === 'stopListeningLogin') {
+          this.changeTokenRetrieveInterval(checkHypothesisLoggedIntervalInSeconds) // Token retrieve to 20 seconds
         }
       }
     })
