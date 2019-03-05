@@ -3,7 +3,7 @@ const $ = require('jquery')
 class DOM {
   static searchElementByTarget (target) {
     // Check if current page corresponds to target source
-    let currentLocation = location.href.replace(location.hash, '')
+    let currentLocation = window.location.href.replace(window.location.hash, '')
     if (target.source.includes(currentLocation)) {
       let selectors = target.selector
       // Use the best selector
@@ -93,7 +93,11 @@ class DOM {
   }
 
   static getParentNodeWithId (elem) {
-    return $(elem).parents('[id]').get(0).id
+    try {
+      return $(elem).parents('[id]').get(0).id
+    } catch (e) {
+      return null
+    }
   }
 }
 
