@@ -2,6 +2,7 @@ const _ = require('lodash')
 const Events = require('./Events')
 const URLUtils = require('../utils/URLUtils')
 const LanguageUtils = require('../utils/LanguageUtils')
+const CryptoUtils = require('../utils/CryptoUtils')
 
 const URL_CHANGE_INTERVAL_IN_SECONDS = 1
 
@@ -11,6 +12,7 @@ class ContentTypeManager {
     this.documentURL = null
     this.urlChangeInterval = null
     this.urlParam = null
+    this.localFile = false
     this.documentType = ContentTypeManager.documentTypes.html // By default document type is html
   }
 
@@ -25,28 +27,48 @@ class ContentTypeManager {
       // If current web is pdf viewer.html, set document type as pdf
       if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
         this.waitUntilPDFViewerLoad(() => {
+          // Save document type as pdf
+          this.documentType = ContentTypeManager.documentTypes.pdf
+          // Save pdf fingerprint
           this.pdfFingerprint = window.PDFViewerApplication.pdfDocument.pdfInfo.fingerprint
+          // Get document URL
           if (this.urlParam) {
             this.documentURL = this.urlParam
+            if (_.isFunction(callback)) {
+              callback()
+            }
           } else {
-            this.documentURL = window.PDFViewerApplication.url
-          }
-          this.documentType = ContentTypeManager.documentTypes.pdf
-          if (_.isFunction(callback)) {
-            callback()
+            // Is a local file
+            if (window.PDFViewerApplication.url.startsWith('file:///')) {
+              this.localFile = true
+            } else { // Is an online resource
+              // Support in ajax websites web url change, web url can change dynamically, but locals never do
+              this.initSupportWebURLChange()
+              this.documentURL = window.PDFViewerApplication.url
+              if (_.isFunction(callback)) {
+                callback()
+              }
+            }
           }
         })
       } else {
+        this.documentType = ContentTypeManager.documentTypes.html
         if (this.urlParam) {
           this.documentURL = this.urlParam
         } else {
-          this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
-        }
-        this.documentType = ContentTypeManager.documentTypes.html
-        // Support in ajax websites web url change
-        this.initSupportWebURLChange()
-        if (_.isFunction(callback)) {
-          callback()
+          if (window.location.href.startsWith('file:///')) {
+            this.localFile = true
+            this.documentURL = URLUtils.retrieveMainUrl(window.location.href) // TODO Check this, i think this url is not valid
+            // Calculate fingerprint for plain text files
+            this.tryToLoadPlainTextFingerprint()
+          } else {
+            // Support in ajax websites web url change, web url can change dynamically, but local files never do
+            this.initSupportWebURLChange()
+            this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          }
         }
       }
     }
@@ -139,6 +161,14 @@ class ContentTypeManager {
         LanguageUtils.dispatchCustomEvent(Events.updatedDocumentURL, {url: this.documentURL})
       }
     }, URL_CHANGE_INTERVAL_IN_SECONDS * 1000)
+  }
+
+  tryToLoadPlainTextFingerprint () {
+    let fileTextContentElement = document.querySelector('body > pre')
+    if (fileTextContentElement) {
+      let fileTextContent = fileTextContentElement.innerText
+      this.documentFingerprint = CryptoUtils.hash(fileTextContent.innerText)
+    }
   }
 }
 

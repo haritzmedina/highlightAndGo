@@ -5,79 +5,8 @@ const ModeManager = require('./ModeManager')
 const LanguageUtils = require('../utils/LanguageUtils')
 const ColorUtils = require('../utils/ColorUtils')
 const Events = require('./Events')
-
-class Tag {
-  constructor (config) {
-    this.name = config.name
-    this.namespace = config.namespace
-    this.tags = config.tags || [config.namespace + ':' + config.name]
-    if (config.options && config.options.color) {
-      if (!ColorUtils.hasAlpha(config.options.color)) {
-        this.color = ColorUtils.setAlphaToColor(config.options.color, 0.5) // Set a 0.5 alpha to all colors without alpha
-      } else {
-        this.color = config.options.color
-      }
-    } else {
-      this.color = ColorUtils.getHashColor(this.name)
-    }
-    this.options = config.options
-  }
-
-  createButton () {
-    let tagButtonTemplate = document.querySelector('#tagButtonTemplate')
-    this.tagButton = $(tagButtonTemplate.content.firstElementChild).clone().get(0)
-    this.tagButton.innerText = this.name
-    this.tagButton.title = this.name
-    for (let key in this.options) {
-      this.tagButton.dataset[key] = this.options[key]
-    }
-    this.tagButton.dataset.tags = this.tags
-    this.tagButton.setAttribute('role', 'annotation')
-    if (this.color) {
-      $(this.tagButton).css('background-color', this.color)
-    }
-    // Set handler for button
-    this.tagButton.addEventListener('click', (event) => {
-      if (event.target.getAttribute('role') === Tag.roles.annotation) {
-        LanguageUtils.dispatchCustomEvent(Events.annotate, {tags: this.tags})
-      } else if (event.target.getAttribute('role') === Tag.roles.index) {
-        window.abwa.contentAnnotator.goToFirstAnnotationOfTag({tags: this.tags})
-      }
-    })
-    return this.tagButton
-  }
-}
-
-Tag.roles = {
-  annotation: 'annotation',
-  index: 'index'
-}
-
-class TagGroup {
-  constructor (config, tags) {
-    this.config = config
-    this.tags = tags || []
-  }
-
-  createPanel (indexRole) {
-    if (this.tags.length > 0) {
-      let tagGroupTemplate = document.querySelector('#tagGroupTemplate')
-      let tagGroup = $(tagGroupTemplate.content.firstElementChild).clone().get(0)
-      let tagButtonContainer = $(tagGroup).find('.tagButtonContainer')
-      let groupNameSpan = tagGroup.querySelector('.groupName')
-      groupNameSpan.innerText = this.config.name
-      groupNameSpan.title = this.config.name
-      for (let j = 0; j < this.tags.length; j++) {
-        let tagButton = this.tags[j].createButton()
-        if (indexRole) {
-          tagButton.setAttribute('role', Tag.roles.index)
-        }
-        tagButtonContainer.append(tagButton)
-      }
-      return tagGroup
-    }
-  }
-}
+const Tag = require('./Tag')
+const TagGroup = require('./TagGroup')
 
 class TagManager {
   constructor (namespace, config) {
@@ -136,7 +65,7 @@ class TagManager {
   initTagsStructure (callback) {
     let tagWrapperUrl = chrome.extension.getURL('pages/sidebar/tagWrapper.html')
     $.get(tagWrapperUrl, (html) => {
-      $('#abwaSidebarContainer').append($.parseHTML(html))
+      $('#dataExtractionContainer').append($.parseHTML(html))
       this.tagsContainer = {annotate: document.querySelector('#tagsAnnotate'), index: document.querySelector('#tagsIndex')}
       if (this.model.namespace === 'exam') {
         // Hide the content of the tags sidebar until they are ordered

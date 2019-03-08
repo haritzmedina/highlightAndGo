@@ -1,14 +1,30 @@
 <div id="modeWrapper" class="sidebarContainer">
-  <div id="modeHeader" class="containerHeader">
-    <label>Mode</label>
-  </div>
-  <div class="bodyContainer">
-    <div class="containerRow">
-      <label class="annotatorSwitch">
-        <input id="annotatorToggle" type="checkbox" checked="true">
-        <span class="annotatorToggleSlider round"></span>
-      </label>
-      <label id="modeLabel" for="annotatorToggle">Extractor</label>
+  <div id="modeManagerContainer" class="bodyContainer">
+    <div id="codeBookDevelopmentModeSwitch" class="parentModeTitle" aria-expanded="false">Codebook development</div>
+    <div id="codeBookDevelopmentModeContainer" class="parentModeContainer" aria-hidden="true">
+      <div class="containerRow">
+        <div class="modeToggle">
+          <label class="annotatorSwitch">
+            <input id="codebookAnnotatorToggle" class="annotatorToggle" type="checkbox" checked="true">
+            <span class="annotatorToggleSlider round"></span>
+          </label>
+          <label id="codebookModeLabel" for="codebookAnnotatorToggle">Creating</label>
+        </div>
+        <div id="codeBookContainer"></div>
+      </div>
+    </div>
+    <div id="dataExtractionModeSwitch"  class="parentModeTitle" aria-expanded="true">Data extraction</div>
+    <div id="dataExtractionModeContainer" class="parentModeContainer" aria-hidden="false">
+      <div class="containerRow">
+        <div class="modeToggle">
+          <label class="annotatorSwitch">
+            <input id="dataExtractionAnnotatorToggle" class="annotatorToggle" type="checkbox" checked="true">
+            <span class="annotatorToggleSlider round"></span>
+          </label>
+          <label id="modeLabel" for="dataExtractionAnnotatorToggle">Evidencing</label>
+        </div>
+        <div id="dataExtractionContainer"></div>
+      </div>
     </div>
   </div>
 </div>

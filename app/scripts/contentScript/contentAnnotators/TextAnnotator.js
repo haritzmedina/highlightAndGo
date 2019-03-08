@@ -237,6 +237,8 @@ class TextAnnotator extends ContentAnnotator {
 
   static constructAnnotation (selectors, tags) {
     let data = {
+      '@context': 'http://www.w3.org/ns/anno.jsonld',
+      'motivation': 'oa:classifying',
       group: window.abwa.groupSelector.currentGroup.id,
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]

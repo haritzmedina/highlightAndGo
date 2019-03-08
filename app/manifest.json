@@ -15,7 +15,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*/*"],
+      "matches": ["*://*/*", "file:///*/*"],
       "exclude_matches": ["https://docs.google.com/spreadsheets/d/*", "https://docs.google.com/spreadsheets/u/0/d/*", "https://hypothes.is/login"],
       "js": ["scripts/contentScript.js"],
       "css": ["styles/contentScript.css"],
@@ -67,7 +67,8 @@
     "*://dx.doi.org/*",
     "*://www.sciencedirect.com/science/article/pii/*",
     "*://www.dropbox.com/s/",
-    "*://*.dropboxusercontent.com/*"
+    "*://*.dropboxusercontent.com/*",
+    "file://*/*"
   ],
   "oauth2": {
     "client_id": "1008657588862-k3t7glpcvdrtc43dsmktkjudufh9m5ho.apps.googleusercontent.com",

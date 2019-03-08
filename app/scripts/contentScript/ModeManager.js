@@ -8,20 +8,12 @@ class ModeManager {
     if (mode) {
       this.mode = mode
     } else {
-      // If initialization based on annotation
-      if (window.abwa.annotationBasedInitializer.initAnnotation) {
-        // Set index mode
-        this.mode = ModeManager.modes.index
-        // Open sidebar
-        window.abwa.sidebar.openSidebar()
-      } else {
-        this.mode = ModeManager.modes.highlight
-      }
+      this.mode = ModeManager.modes.dataextraction
     }
   }
 
   init (callback) {
-    this.loadSidebarToggle(() => {
+    this.loadHtml(() => {
       this.initEventHandlers(() => {
         if (_.isFunction(callback)) {
           callback()
@@ -30,66 +22,63 @@ class ModeManager {
     })
   }
 
-  loadSidebarToggle (callback) {
+  loadHtml (callback) {
     let sidebarURL = chrome.extension.getURL('pages/sidebar/annotatorMode.html')
     $.get(sidebarURL, (html) => {
       // Append sidebar to content
       $('#abwaSidebarContainer').append($.parseHTML(html))
+      // Create events for toggles
+      this.initEventHandlers()
       // Set toggle status
-      this.setToggleStatus()
-      // Set tags text
-      this.setPanelText()
       if (_.isFunction(callback)) {
         callback()
       }
     })
   }
 
-  setToggleStatus () {
-    if (this.mode === ModeManager.modes.highlight) {
-      this.setHighlightMode()
-    } else {
-      this.setIndexMode()
-    }
+  setCodebookMode () {
+    // Hide all modes
+    this.hideAllModes()
+    // Show codebook mode
+    document.querySelector('#codeBookDevelopmentModeSwitch').setAttribute('aria-expanded', 'true')
+    document.querySelector('#codeBookDevelopmentModeContainer').setAttribute('aria-hidden', 'false')
+    this.mode = ModeManager.modes.codebook
+    LanguageUtils.dispatchCustomEvent(Events.modeChanged, {mode: this.mode})
   }
 
-  setPanelText () {
-    // Mode element
-    let modeHeaderLabel = document.querySelector('#modeHeader label')
-    modeHeaderLabel.innerText = chrome.i18n.getMessage('Mode')
-    let modeLabel = document.querySelector('#modeLabel')
-    if (this.mode === ModeManager.modes.highlight) {
-      modeLabel.innerText = chrome.i18n.getMessage('highlight')
-    } else {
-      modeLabel.innerText = chrome.i18n.getMessage('index')
-    }
+  setDataExtractionMode () {
+    // Hide all modes
+    this.hideAllModes()
+    // Show codebook mode
+    document.querySelector('#dataExtractionModeSwitch').setAttribute('aria-expanded', 'true')
+    document.querySelector('#dataExtractionModeContainer').setAttribute('aria-hidden', 'false')
+    this.mode = ModeManager.modes.dataextraction
+    LanguageUtils.dispatchCustomEvent(Events.modeChanged, {mode: this.mode})
   }
 
-  setHighlightMode () {
-    let annotatorToggle = document.querySelector('#annotatorToggle')
-    let modeLabel = document.querySelector('#modeLabel')
-    annotatorToggle.checked = true
-    modeLabel.innerText = chrome.i18n.getMessage('highlight')
-    this.mode = ModeManager.modes.highlight
-  }
-
-  setIndexMode () {
-    let annotatorToggle = document.querySelector('#annotatorToggle')
-    let modeLabel = document.querySelector('#modeLabel')
-    annotatorToggle.checked = false
-    modeLabel.innerText = chrome.i18n.getMessage('index')
-    this.mode = ModeManager.modes.index
+  hideAllModes () {
+    // Hide all parent modes
+    document.querySelectorAll('.parentModeTitle').forEach((parentModeTitleElement) => {
+      parentModeTitleElement.setAttribute('aria-expanded', 'false')
+    })
+    // Hide all mode containers
+    document.querySelectorAll('.parentModeContainer').forEach((parentModeTitleElement) => {
+      parentModeTitleElement.setAttribute('aria-hidden', 'true')
+    })
   }
 
   initEventHandlers (callback) {
-    let annotatorToggle = document.querySelector('#annotatorToggle')
-    annotatorToggle.addEventListener('click', (event) => {
-      if (annotatorToggle.checked) {
-        this.setHighlightMode()
-      } else {
-        this.setIndexMode()
+    let codeBookDevelopmentModeSwitchElement = document.querySelector('#codeBookDevelopmentModeSwitch')
+    codeBookDevelopmentModeSwitchElement.addEventListener('click', (event) => {
+      if (event.target.getAttribute('aria-expanded') === 'false') {
+        this.setCodebookMode()
       }
-      LanguageUtils.dispatchCustomEvent(Events.modeChanged, {mode: this.mode})
+    })
+    let dataExtractionModeSwitchElement = document.querySelector('#dataExtractionModeSwitch')
+    dataExtractionModeSwitchElement.addEventListener('click', (event) => {
+      if (event.target.getAttribute('aria-expanded') === 'false') {
+        this.setDataExtractionMode()
+      }
     })
     if (_.isFunction(callback)) {
       callback()
@@ -98,8 +87,8 @@ class ModeManager {
 }
 
 ModeManager.modes = {
-  'highlight': 'highlight',
-  'index': 'index'
+  'codebook': 'codebook',
+  'dataextraction': 'dataextraction'
 }
 
 module.exports = ModeManager

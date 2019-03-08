@@ -3,13 +3,12 @@ const _ = require('lodash')
 const ContentTypeManager = require('./ContentTypeManager')
 const ModeManager = require('./ModeManager')
 const Sidebar = require('./Sidebar')
-const TagManager = require('./TagManager')
 const GroupSelector = require('./GroupSelector')
-const ConfigDecisionHelper = require('./ConfigDecisionHelper')
 const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
-const UserFilter = require('./UserFilter')
+const DataExtractionManager = require('./DataExtractionManager')
+const CodeBookDevelopmentManager = require('./CodeBookDevelopmentManager')
+const Events = require('./Events')
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
-const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
 class ContentScriptManager {
   constructor () {
@@ -44,6 +43,8 @@ class ContentScriptManager {
                   this.reloadContentByGroup()
                   // Initialize listener for group change to reload the content
                   this.initListenerForGroupChange()
+                  // Initialize listener for mode change
+                  this.initListenerForModeChange()
                   this.status = ContentScriptManager.status.initialized
                   console.log('Initialized content script manager')
                 })
@@ -60,6 +61,16 @@ class ContentScriptManager {
     document.addEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent, false)
   }
 
+  initListenerForModeChange () {
+    this.events.modeChangeEvent = this.modeChangedEventHandlerCreator()
+    document.addEventListener(Events.modeChanged, this.events.modeChangeEvent, false)
+  }
+
+  reloadModeChange () {
+    this.destroyCodeBookDevelopmentManager()
+    this.reloadDataExtractionManager()
+  }
+
   groupChangedEventHandlerCreator () {
     return (event) => {
       this.reloadContentByGroup()
@@ -67,92 +78,50 @@ class ContentScriptManager {
   }
 
   reloadContentByGroup (callback) {
-    ConfigDecisionHelper.decideWhichConfigApplyToTheGroup(window.abwa.groupSelector.currentGroup, (config) => {
-      // If not configuration is found
-      if (_.isEmpty(config)) {
-        // TODO Inform user no defined configuration found
-        console.debug('No supported configuration found for this group')
-        this.destroyAugmentationOperations()
-        this.destroyTagsManager()
-        this.destroyUserFilter()
-        this.destroyContentAnnotator()
-        this.destroySpecificContentManager()
-      } else {
-        console.debug('Loaded supported configuration %s', config.namespace)
-        // Tags manager should go before content annotator, depending on the tags manager, the content annotator can change
-        this.reloadTagsManager(config, () => {
-          this.reloadContentAnnotator(config, () => {
-            this.reloadUserFilter(config, () => {
-              this.reloadSpecificContentManager(config)
-            })
-          })
-        })
+    this.reloadModeChange()
+  }
+
+  reloadCodeBookDevelopmentManager () {
+    this.destroyDataExtractionManager()
+    this.destroyCodeBookDevelopmentManager()
+    window.abwa.codeBookDevelopmentManager = new CodeBookDevelopmentManager()
+    window.abwa.codeBookDevelopmentManager.init()
+  }
+
+  destroyCodeBookDevelopmentManager () {
+    if (_.isObject(window.abwa.codeBookDevelopmentManager)) {
+      window.abwa.codeBookDevelopmentManager.destroy()
+    }
+  }
+
+  modeChangedEventHandlerCreator () {
+    return (event) => {
+      if (window.abwa.modeManager.mode === ModeManager.modes.dataextraction) {
+        this.reloadDataExtractionManager()
+      } else if (window.abwa.modeManager.mode === ModeManager.modes.codebook) {
+        this.reloadCodeBookDevelopmentManager()
       }
-    })
-  }
-
-  reloadContentAnnotator (config, callback) {
-    // Destroy current content annotator
-    this.destroyContentAnnotator()
-    // Create a new content annotator for the current group
-    if (config.contentAnnotator === 'text') {
-      window.abwa.contentAnnotator = new TextAnnotator(config)
-    } else {
-      window.abwa.contentAnnotator = new TextAnnotator(config) // TODO Depending on the type of annotator
-    }
-    window.abwa.contentAnnotator.init(callback)
-  }
-
-  reloadTagsManager (config, callback) {
-    // Destroy current tag manager
-    this.destroyTagsManager()
-    // Create a new tag manager for the current group
-    window.abwa.tagManager = new TagManager(config.namespace, config.tags) // TODO Depending on the type of annotator
-    window.abwa.tagManager.init(callback)
-  }
-
-  destroyContentAnnotator () {
-    // Destroy current content annotator
-    if (!_.isEmpty(window.abwa.contentAnnotator)) {
-      window.abwa.contentAnnotator.destroy()
     }
   }
 
-  destroyTagsManager () {
-    if (!_.isEmpty(window.abwa.tagManager)) {
-      window.abwa.tagManager.destroy()
-    }
+  reloadDataExtractionManager () {
+    this.destroyDataExtractionManager()
+    this.destroyCodeBookDevelopmentManager()
+    window.abwa.dataExtractionManager = new DataExtractionManager()
+    window.abwa.dataExtractionManager.init()
   }
 
-  destroyAugmentationOperations () {
-    // Destroy current augmentation operations
-    if (!_.isEmpty(window.abwa.augmentationManager)) {
-      window.abwa.augmentationManager.destroy()
-    }
-  }
-
-  reloadUserFilter (config, callback) {
-    // Destroy current augmentation operations
-    this.destroyUserFilter()
-    // Create augmentation operations for the current group
-    window.abwa.userFilter = new UserFilter(config)
-    window.abwa.userFilter.init(callback)
-  }
-
-  destroyUserFilter (callback) {
-    // Destroy current augmentation operations
-    if (!_.isEmpty(window.abwa.userFilter)) {
-      window.abwa.userFilter.destroy()
+  destroyDataExtractionManager () {
+    if (_.isObject(window.abwa.dataExtractionManager)) {
+      window.abwa.dataExtractionManager.destroy()
     }
   }
 
   destroy (callback) {
     console.log('Destroying content script manager')
     this.destroyContentTypeManager(() => {
-      this.destroyAugmentationOperations()
-      this.destroyTagsManager()
-      this.destroyContentAnnotator()
-      this.destroyUserFilter()
+      this.destroyCodeBookDevelopmentManager()
+      this.destroyDataExtractionManager()
       window.abwa.groupSelector.destroy(() => {
         window.abwa.sidebar.destroy(() => {
           window.abwa.hypothesisClientManager.destroy(() => {
@@ -165,22 +134,6 @@ class ContentScriptManager {
       })
       document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
     })
-  }
-
-  reloadSpecificContentManager (config, callback) {
-    // Destroy current specific content manager
-    this.destroySpecificContentManager()
-    if (config.namespace === 'slr') {
-      const SLRDataExtractionContentScript = require('../specific/slrDataExtraction/SLRDataExtractionContentScript')
-      window.abwa.specificContentManager = new SLRDataExtractionContentScript(config)
-      window.abwa.specificContentManager.init()
-    }
-  }
-
-  destroySpecificContentManager () {
-    if (window.abwa.specificContentManager) {
-      window.abwa.specificContentManager.destroy()
-    }
   }
 
   loadContentTypeManager (callback) {
