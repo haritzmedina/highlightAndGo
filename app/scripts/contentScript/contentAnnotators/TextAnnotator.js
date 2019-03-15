@@ -30,6 +30,7 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   init (callback) {
+    console.debug('Initializing text annotator')
     this.initEvents(() => {
       // Retrieve current user profile
       this.currentUserProfile = window.abwa.groupSelector.user
@@ -42,6 +43,7 @@ class TextAnnotator extends ContentAnnotator {
             }
           }
           this.initAnnotationsObserver(() => {
+            console.debug('Initialized text annotator')
             if (_.isFunction(callback)) {
               callback()
             }
@@ -135,31 +137,29 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   initModeChangeEvent (callback) {
-    this.events.modeChangeEvent = {element: document, event: Events.modeChanged, handler: this.createInitModeChangeEventHandler()}
+    this.events.modeChangeEvent = {element: document, event: Events.modeChanged, handler: (event) => { this.modeChangeEventHandler(event) }}
     this.events.modeChangeEvent.element.addEventListener(this.events.modeChangeEvent.event, this.events.modeChangeEvent.handler, false)
     if (_.isFunction(callback)) {
       callback()
     }
   }
 
-  createInitModeChangeEventHandler () {
-    return () => {
-      // If mode is index, disable selection event
-      if (window.abwa.modeManager.mode === ModeManager.modes.index) {
-        // Highlight all annotations
-        this.currentAnnotations = this.allAnnotations
-        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
-        this.disableSelectionEvent()
-      } else {
-        // Unhighlight all annotations
-        this.unHighlightAllAnnotations()
-        // Highlight only annotations from current user
-        this.currentAnnotations = this.retrieveCurrentAnnotations()
-        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+  modeChangeEventHandler (event) {
+    // If mode is codebook or checking, disable selection event
+    if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.codebook) {
+      this.disableSelectionEvent()
+    } else if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
+      // Check current mode for data extraction
+      if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.mapping) {
         // Activate selection event and sidebar functionality
         this.activateSelectionEvent()
+      } else if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.checking) {
+        this.disableSelectionEvent()
       }
     }
+    this.currentAnnotations = this.retrieveCurrentAnnotations()
+    this.redrawAnnotations()
+    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
   }
 
   initAnnotateEvent (callback) {
@@ -172,7 +172,6 @@ class TextAnnotator extends ContentAnnotator {
 
   createAnnotationEventHandler () {
     return (event) => {
-      let selectors = []
       // If selection is empty, return null
       if (document.getSelection().toString().length === 0) {
         window.alert('Nothing to highlight, current selection is empty') // TODO change by swal
@@ -184,35 +183,7 @@ class TextAnnotator extends ContentAnnotator {
         return
       }
       let range = document.getSelection().getRangeAt(0)
-      // Create FragmentSelector
-      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'FragmentSelector' }) !== -1) {
-        let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
-        if (fragmentSelector) {
-          selectors.push(fragmentSelector)
-        }
-      }
-      // Create RangeSelector
-      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'RangeSelector' }) !== -1) {
-        let rangeSelector = DOMTextUtils.getRangeSelector(range)
-        if (rangeSelector) {
-          selectors.push(rangeSelector)
-        }
-      }
-      // Create TextPositionSelector
-      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextPositionSelector' }) !== -1) {
-        let rootElement = window.abwa.contentTypeManager.getDocumentRootElement()
-        let textPositionSelector = DOMTextUtils.getTextPositionSelector(range, rootElement)
-        if (textPositionSelector) {
-          selectors.push(textPositionSelector)
-        }
-      }
-      // Create TextQuoteSelector
-      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextQuoteSelector' }) !== -1) {
-        let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
-        if (textQuoteSelector) {
-          selectors.push(textQuoteSelector)
-        }
-      }
+      let selectors = TextAnnotator.getSelectors(range)
       // Construct the annotation to send to hypothesis
       let annotation = TextAnnotator.constructAnnotation(selectors, event.detail.tags)
       window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(annotation, (err, annotation) => {
@@ -233,6 +204,40 @@ class TextAnnotator extends ContentAnnotator {
         }
       })
     }
+  }
+
+  static getSelectors (range) {
+    let selectors = []
+    // Create FragmentSelector
+    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'FragmentSelector' }) !== -1) {
+      let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
+      if (fragmentSelector) {
+        selectors.push(fragmentSelector)
+      }
+    }
+    // Create RangeSelector
+    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'RangeSelector' }) !== -1) {
+      let rangeSelector = DOMTextUtils.getRangeSelector(range)
+      if (rangeSelector) {
+        selectors.push(rangeSelector)
+      }
+    }
+    // Create TextPositionSelector
+    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextPositionSelector' }) !== -1) {
+      let rootElement = window.abwa.contentTypeManager.getDocumentRootElement()
+      let textPositionSelector = DOMTextUtils.getTextPositionSelector(range, rootElement)
+      if (textPositionSelector) {
+        selectors.push(textPositionSelector)
+      }
+    }
+    // Create TextQuoteSelector
+    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextQuoteSelector' }) !== -1) {
+      let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
+      if (textQuoteSelector) {
+        selectors.push(textQuoteSelector)
+      }
+    }
+    return selectors
   }
 
   static constructAnnotation (selectors, tags) {
@@ -283,7 +288,6 @@ class TextAnnotator extends ContentAnnotator {
 
   initSelectionEvents (callback) {
     if (_.isEmpty(window.abwa.annotationBasedInitializer.initAnnotation)) {
-      // Create selection event
       this.activateSelectionEvent(() => {
         if (_.isFunction(callback)) {
           callback()
@@ -297,17 +301,22 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   activateSelectionEvent (callback) {
-    this.events.mouseUpOnDocumentHandler = {element: document, event: 'mouseup', handler: this.mouseUpOnDocumentHandlerConstructor()}
-    this.events.mouseUpOnDocumentHandler.element.addEventListener(this.events.mouseUpOnDocumentHandler.event, this.events.mouseUpOnDocumentHandler.handler)
-    if (_.isFunction(callback)) {
-      callback()
-    }
+    // Disable to ensure that the event does not exist
+    this.disableSelectionEvent(() => {
+      this.events.mouseUpOnDocumentHandler = {element: document, event: 'mouseup', handler: this.mouseUpOnDocumentHandlerConstructor()}
+      this.events.mouseUpOnDocumentHandler.element.addEventListener(this.events.mouseUpOnDocumentHandler.event, this.events.mouseUpOnDocumentHandler.handler)
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    })
   }
 
   disableSelectionEvent (callback) {
-    this.events.mouseUpOnDocumentHandler.element.removeEventListener(
-      this.events.mouseUpOnDocumentHandler.event,
-      this.events.mouseUpOnDocumentHandler.handler)
+    if (this.events.mouseUpOnDocumentHandler) {
+      this.events.mouseUpOnDocumentHandler.element.removeEventListener(
+        this.events.mouseUpOnDocumentHandler.event,
+        this.events.mouseUpOnDocumentHandler.handler)
+    }
     if (_.isFunction(callback)) {
       callback()
     }
@@ -356,7 +365,7 @@ class TextAnnotator extends ContentAnnotator {
         this.currentAnnotations = this.retrieveCurrentAnnotations()
         LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
         // Highlight annotations in the DOM
-        this.highlightAnnotations(this.currentAnnotations)
+        this.redrawAnnotations()
         if (_.isFunction(callback)) {
           callback()
         }
@@ -377,8 +386,9 @@ class TextAnnotator extends ContentAnnotator {
           callback(err)
         }
       } else {
+        // TODO Check if received annotations are annotated with codes in the classification scheme or motivation codebook
         // Search tagged annotations
-        let tagList = window.abwa.tagManager.getTagsList()
+        /* let tagList = window.abwa.tagManager.getTagsList()
         let taggedAnnotations = []
         for (let i = 0; i < annotations.length; i++) {
           // Check if annotation contains a tag of current group
@@ -388,6 +398,8 @@ class TextAnnotator extends ContentAnnotator {
           }
         }
         this.allAnnotations = taggedAnnotations || []
+        */
+        this.allAnnotations = annotations
         LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
         if (_.isFunction(callback)) {
           callback(null, this.allAnnotations)
@@ -427,12 +439,35 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   retrieveCurrentAnnotations () {
-    // Depending on the mode of the tool, we must need only
-    if (window.abwa.modeManager.mode === ModeManager.modes.index) {
+    // TODO Retrieve current annotations depending on the mode
+    if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
+      if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.mapping) {
+        // Get annotations for mapping mode in data extraction
+        return _.filter(this.allAnnotations, (annotation) => {
+          // TODO use this: return annotation.motivation === 'classifying'
+          return _.find(annotation.tags, (tag) => {
+            return tag === 'motivation:classifying'
+          }) && annotation.user === this.currentUserProfile.userid // TODO Change annotation.user by annotation.creator
+        })
+      } else if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.checking) {
+        // Get annotations for checking mode in data extraction
+        return _.filter(this.allAnnotations, (annotation) => {
+          // TODO use this: return annotation.motivation === 'classifying'
+          return _.find(annotation.tags, (tag) => {
+            return tag === 'motivation:classifying'
+          })
+        })
+      }
+    } else if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.codebook) {
+      // Get annotations for codebook mode
+      return _.filter(this.allAnnotations, (annotation) => {
+        return _.find(annotation.tags, (tag) => {
+          return tag === 'motivation:slr:codebookDevelopment'
+        })
+        // TODO use this: return annotation.motivation === 'slr:codebookDevelopment'
+      })
+    } else {
       return this.allAnnotations
-    } else if (window.abwa.modeManager.mode === ModeManager.modes.highlight) {
-      // Filter annotations which user is different to current one
-      return _.filter(this.allAnnotations, (annotation) => { return annotation.user === this.currentUserProfile.userid })
     }
   }
 
@@ -452,35 +487,23 @@ class TextAnnotator extends ContentAnnotator {
 
   highlightAnnotation (annotation, callback) {
     let classNameToHighlight = this.retrieveHighlightClassName(annotation)
-    let tagList = window.abwa.tagManager.getTagsList()
-    let tagForAnnotation = TagManager.retrieveTagForAnnotation(annotation, tagList)
+    // Get code for current annotation
+    // TODO Change the way the code is get (from body id of code)
+    let code = window.abwa.mappingStudyManager.classificationScheme.codes[0]
+    let err
     try {
-      let highlightedElements = []
       // TODO Remove this case for google drive
-      if (window.location.href.includes('drive.google.com')) {
-        // Ensure popup exists
-        if (document.querySelector('.a-b-r-x')) {
-          highlightedElements = DOMTextUtils.highlightContent(
-            annotation.target[0].selector, classNameToHighlight, annotation.id)
-        }
-      } else {
-        highlightedElements = DOMTextUtils.highlightContent(
-          annotation.target[0].selector, classNameToHighlight, annotation.id)
-      }
+      let highlightedElements = DOMTextUtils.highlightContent(
+        annotation.target[0].selector, classNameToHighlight, annotation.id)
       // Highlight in same color as button
       highlightedElements.forEach(highlightedElement => {
         // If need to highlight, set the color corresponding to, in other case, maintain its original color
-        $(highlightedElement).css('background-color', tagForAnnotation.color)
+        $(highlightedElement).css('background-color', code.color)
         // Set purpose color
-        highlightedElement.dataset.color = tagForAnnotation.color
-        highlightedElement.dataset.tags = tagForAnnotation.tags
+        highlightedElement.dataset.color = code.color
         let user = annotation.user.replace('acct:', '').replace('@hypothes.is', '')
-        if (this.config.namespace === Config.exams.namespace) {
-          let tagGroup = _.find(window.abwa.tagManager.currentTags, (tagGroup) => { return _.find(tagGroup.tags, tagForAnnotation) })
-          let highestMark = _.last(tagGroup.tags).name
-          highlightedElement.title = 'Rubric: ' + tagGroup.config.name + '\nMark: ' + tagForAnnotation.name + ' of ' + highestMark
-        } else if (this.config.namespace === Config.slrDataExtraction.namespace) {
-          highlightedElement.title = 'Author: ' + user + '\n' + 'Category: ' + tagForAnnotation.name
+        if (this.config.namespace === Config.slrDataExtraction.namespace) {
+          highlightedElement.title = 'Author: ' + user + '\n' + 'Code: ' + code.name
         } else {
           highlightedElement.title = 'Author: ' + user + '\n'
         }
@@ -490,11 +513,10 @@ class TextAnnotator extends ContentAnnotator {
       // Create click event to move to next annotation
       this.createNextAnnotationHandler(annotation)
     } catch (e) {
-      // TODO Handle error (maybe send in callback the error ¿?
-      callback(new Error('Element not found'))
+      err = new Error('Element not found')
     } finally {
       if (_.isFunction(callback)) {
-        callback()
+        callback(err)
       }
     }
   }
@@ -656,7 +678,7 @@ class TextAnnotator extends ContentAnnotator {
     super.openSidebar()
   }
 
-  destroy () {
+  destroy (callback) {
     // Remove observer interval
     clearInterval(this.observerInterval)
     // Clean interval
@@ -674,6 +696,9 @@ class TextAnnotator extends ContentAnnotator {
     }
     // Unhighlight all annotations
     this.unHighlightAllAnnotations()
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
   unHighlightAllAnnotations () {

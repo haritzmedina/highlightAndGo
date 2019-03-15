@@ -145,7 +145,7 @@ class HypothesisGroupInitializer {
   }
 
   generateFacetAnnotationCorpus (facet) {
-    let tags = [Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.group + ':' + facet.name]
+    let tags = ['motivation:slr:codebookDevelopment', Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.group + ':' + facet.name]
     if (facet.multivalued) {
       tags.push(Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.statics.multivalued)
     }
@@ -158,7 +158,7 @@ class HypothesisGroupInitializer {
   generateCodeAnnotationCorpus (code) {
     let codeTag = Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.subgroup + ':' + code.name
     let isCodeOfTag = Config.slrDataExtraction.namespace + ':' + Config.slrDataExtraction.tags.grouped.relation + ':' + code.facet
-    let tags = [codeTag, isCodeOfTag]
+    let tags = ['motivation:slr:codebookDevelopment', codeTag, isCodeOfTag]
     return this.generateAnnotationCorpus(tags)
   }
 

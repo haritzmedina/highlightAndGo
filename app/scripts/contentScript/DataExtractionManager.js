@@ -2,21 +2,26 @@ const _ = require('lodash')
 const Config = require('../Config')
 const TagManager = require('./TagManager')
 const UserFilter = require('./UserFilter')
-const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
 class DataExtractionManager {
   constructor () {
-    console.log('Data Extraction manager created')
+    this.mode = DataExtractionManager.modes.mapping
   }
 
-  init () {
-    this.reloadTagsManager(Config.slrDataExtraction, () => {
+  init (callback) {
+    console.debug('Initializing data extraction manager')
+    // Get classification scheme
+    /* this.reloadTagsManager(Config.slrDataExtraction, () => {
       this.reloadContentAnnotator(Config.slrDataExtraction, () => {
         this.reloadUserFilter(Config.slrDataExtraction, () => {
           this.reloadSpecificContentManager(Config.slrDataExtraction)
         })
       })
-    })
+    }) */
+    if (_.isFunction(callback)) {
+      callback()
+    }
+    console.debug('Initialized data extraction manager')
   }
 
   reloadUserFilter (config, callback) {
@@ -26,31 +31,12 @@ class DataExtractionManager {
     window.abwa.userFilter.init(callback)
   }
 
-  reloadContentAnnotator (config, callback) {
-    // Destroy current content annotator
-    this.destroyContentAnnotator()
-    // Create a new content annotator for the current group
-    if (config.contentAnnotator === 'text') {
-      window.abwa.contentAnnotator = new TextAnnotator(Config.slrDataExtraction)
-    } else {
-      window.abwa.contentAnnotator = new TextAnnotator(Config.slrDataExtraction) // TODO Depending on the type of annotator
-    }
-    window.abwa.contentAnnotator.init(callback)
-  }
-
   reloadTagsManager (config, callback) {
     // Destroy current tag manager
     this.destroyTagsManager()
     // Create a new tag manager for the current group
     window.abwa.tagManager = new TagManager(Config.slrDataExtraction.namespace, Config.slrDataExtraction.tags) // TODO Depending on the type of annotator
     window.abwa.tagManager.init(callback)
-  }
-
-  destroyContentAnnotator () {
-    // Destroy current content annotator
-    if (!_.isEmpty(window.abwa.contentAnnotator)) {
-      window.abwa.contentAnnotator.destroy()
-    }
   }
 
   destroyTagsManager () {
@@ -84,7 +70,13 @@ class DataExtractionManager {
 
   destroy () {
     console.log('Data extraction manager destroyed')
+    this.destroyContentAnnotator()
   }
+}
+
+DataExtractionManager.modes = {
+  mapping: 'mapping',
+  checking: 'checking'
 }
 
 module.exports = DataExtractionManager

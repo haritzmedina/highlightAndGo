@@ -2,6 +2,8 @@ const $ = require('jquery')
 const _ = require('lodash')
 const LanguageUtils = require('../utils/LanguageUtils')
 const Events = require('./Events')
+const DataExtractionManager = require('./DataExtractionManager')
+const CodeBookDevelopmentManager = require('./CodeBookDevelopmentManager')
 
 class ModeManager {
   constructor (mode) {
@@ -14,6 +16,18 @@ class ModeManager {
 
   init (callback) {
     this.loadHtml(() => {
+      // Load the modes
+      // Init data extraction mode
+      window.abwa.dataExtractionManager = new DataExtractionManager()
+      window.abwa.dataExtractionManager.init()
+      window.abwa.codeBookDevelopmentManager = new CodeBookDevelopmentManager()
+      window.abwa.codeBookDevelopmentManager.init()
+      // Set mode
+      if (this.mode === ModeManager.modes.codebook) {
+        this.setCodebookMode()
+      } else {
+        this.setDataExtractionMode()
+      }
       this.initEventHandlers(() => {
         if (_.isFunction(callback)) {
           callback()
@@ -83,6 +97,10 @@ class ModeManager {
     if (_.isFunction(callback)) {
       callback()
     }
+  }
+
+  destroy () {
+
   }
 }
 

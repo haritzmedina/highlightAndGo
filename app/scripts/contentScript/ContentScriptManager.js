@@ -5,10 +5,9 @@ const ModeManager = require('./ModeManager')
 const Sidebar = require('./Sidebar')
 const GroupSelector = require('./GroupSelector')
 const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
-const DataExtractionManager = require('./DataExtractionManager')
-const CodeBookDevelopmentManager = require('./CodeBookDevelopmentManager')
-const Events = require('./Events')
+const MappingStudyManager = require('./MappingStudyManager')
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
+const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
 class ContentScriptManager {
   constructor () {
@@ -37,16 +36,13 @@ class ContentScriptManager {
             window.abwa.annotationBasedInitializer.init(() => {
               window.abwa.groupSelector = new GroupSelector()
               window.abwa.groupSelector.init(() => {
-                window.abwa.modeManager = new ModeManager()
-                window.abwa.modeManager.init(() => {
-                  // Reload for first time the content by group
-                  this.reloadContentByGroup()
+                // Reload for first time the content by group
+                this.reloadContentByGroup(() => {
                   // Initialize listener for group change to reload the content
                   this.initListenerForGroupChange()
-                  // Initialize listener for mode change
-                  this.initListenerForModeChange()
+                  // Set status as initialized
                   this.status = ContentScriptManager.status.initialized
-                  console.log('Initialized content script manager')
+                  console.debug('Initialized content script manager')
                 })
               })
             })
@@ -61,14 +57,21 @@ class ContentScriptManager {
     document.addEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent, false)
   }
 
-  initListenerForModeChange () {
-    this.events.modeChangeEvent = this.modeChangedEventHandlerCreator()
-    document.addEventListener(Events.modeChanged, this.events.modeChangeEvent, false)
+  reloadMappingStudyManager (callback) {
+    this.destroyMappingStudyManager()
+    window.abwa.mappingStudyManager = new MappingStudyManager()
+    window.abwa.mappingStudyManager.init(() => {
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    })
   }
 
-  reloadModeChange () {
-    this.destroyCodeBookDevelopmentManager()
-    this.reloadDataExtractionManager()
+  destroyMappingStudyManager () {
+    if (window.abwa.mappingStudyManager) {
+      window.abwa.mappingStudyManager.destroy()
+      window.abwa.mappingStudyManager = null
+    }
   }
 
   groupChangedEventHandlerCreator () {
@@ -78,57 +81,65 @@ class ContentScriptManager {
   }
 
   reloadContentByGroup (callback) {
-    this.reloadModeChange()
+    this.reloadMappingStudyManager(() => {
+      this.reloadModeManager(() => {
+        this.reloadContentAnnotator(() => {
+          if (_.isFunction(callback)) {
+            callback()
+          }
+        })
+      })
+    })
+    // TODO Reload specific content
   }
 
-  reloadCodeBookDevelopmentManager () {
-    this.destroyDataExtractionManager()
-    this.destroyCodeBookDevelopmentManager()
-    window.abwa.codeBookDevelopmentManager = new CodeBookDevelopmentManager()
-    window.abwa.codeBookDevelopmentManager.init()
-  }
-
-  destroyCodeBookDevelopmentManager () {
-    if (_.isObject(window.abwa.codeBookDevelopmentManager)) {
-      window.abwa.codeBookDevelopmentManager.destroy()
+  reloadModeManager (callback) {
+    this.destroyModeManager()
+    window.abwa.modeManager = new ModeManager(ModeManager.modes.codebook) // TODO Set by default the data extraction mode
+    window.abwa.modeManager.init()
+    if (_.isFunction(callback)) {
+      callback()
     }
   }
 
-  modeChangedEventHandlerCreator () {
-    return (event) => {
-      if (window.abwa.modeManager.mode === ModeManager.modes.dataextraction) {
-        this.reloadDataExtractionManager()
-      } else if (window.abwa.modeManager.mode === ModeManager.modes.codebook) {
-        this.reloadCodeBookDevelopmentManager()
-      }
+  destroyModeManager (callback) {
+    if (window.abwa.modeManager) {
+      window.abwa.modeManager.destroy(callback)
     }
   }
 
-  reloadDataExtractionManager () {
-    this.destroyDataExtractionManager()
-    this.destroyCodeBookDevelopmentManager()
-    window.abwa.dataExtractionManager = new DataExtractionManager()
-    window.abwa.dataExtractionManager.init()
+  destroyContentAnnotator (callback) {
+    // Destroy current content annotator
+    if (!_.isEmpty(window.abwa.contentAnnotator)) {
+      window.abwa.contentAnnotator.destroy(callback)
+    }
   }
 
-  destroyDataExtractionManager () {
-    if (_.isObject(window.abwa.dataExtractionManager)) {
-      window.abwa.dataExtractionManager.destroy()
+  reloadContentAnnotator (callback) {
+    // Destroy current content annotator
+    this.destroyContentAnnotator()
+    // Create a new content annotator for the current group
+    window.abwa.contentAnnotator = new TextAnnotator()
+    window.abwa.contentAnnotator.init()
+    if (_.isFunction(callback)) {
+      callback()
     }
   }
 
   destroy (callback) {
     console.log('Destroying content script manager')
     this.destroyContentTypeManager(() => {
-      this.destroyCodeBookDevelopmentManager()
-      this.destroyDataExtractionManager()
-      window.abwa.groupSelector.destroy(() => {
-        window.abwa.sidebar.destroy(() => {
-          window.abwa.hypothesisClientManager.destroy(() => {
-            this.status = ContentScriptManager.status.notInitialized
-            if (_.isFunction(callback)) {
-              callback()
-            }
+      this.destroyContentAnnotator(() => {
+        this.destroyModeManager(() => {
+          window.abwa.groupSelector.destroy(() => {
+            window.abwa.sidebar.destroy(() => {
+              window.abwa.hypothesisClientManager.destroy(() => {
+                this.status = ContentScriptManager.status.notInitialized
+                if (_.isFunction(callback)) {
+                  callback()
+                }
+              })
+            })
           })
         })
       })

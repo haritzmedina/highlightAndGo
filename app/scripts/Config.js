@@ -17,6 +17,11 @@ const Config = {
         validated: 'validated',
         spreadsheet: 'spreadsheet'
       }
+    },
+    colors: {
+      type: 'random',
+      minAlpha: 0.3,
+      maxAlpha: 0.8
     }
   }
 }
