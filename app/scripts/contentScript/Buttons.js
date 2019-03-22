@@ -6,7 +6,7 @@ const ColorUtils = require('../utils/ColorUtils')
  * A class to collect functionality to create buttons and groups of buttons for the sidebar
  */
 class Buttons {
-  static createGroupedButtons ({id, name, color = 'white', childGuideElements, groupHandler, buttonHandler, groupTemplate}) {
+  static createGroupedButtons ({id, name, color = 'white', childGuideElements, groupHandler, buttonHandler, groupTemplate, groupRightClickHandler, buttonRightClickHandler}) {
     if (id) {
       let tagGroup
       // Create the container
@@ -47,6 +47,10 @@ class Buttons {
           groupNameSpan.style.backgroundColor = groupNameSpan.dataset.baseColor
         }
       })
+      // Set button right click handler
+      if (_.isFunction(groupRightClickHandler)) {
+        Buttons.createGroupRightClickHandler(id, groupRightClickHandler)
+      }
       // Create buttons and add to the container
       if (_.isArray(childGuideElements) && childGuideElements.length > 0) { // Only create group containers for groups which have elements
         for (let i = 0; i < childGuideElements.length; i++) {
@@ -58,14 +62,19 @@ class Buttons {
               childGuideElements: element.childElements,
               color: element.color,
               groupHandler: groupHandler,
-              buttonHandler: buttonHandler
+              buttonHandler: buttonHandler,
+              groupRightClickHandler: groupRightClickHandler,
+              buttonRightClickHandler: buttonRightClickHandler
             })
             tagButtonContainer.append(groupButton)
           } else {
             let button = Buttons.createButton({
               id: element.id,
               name: element.name,
-              color: element.color
+              description: element.description,
+              color: element.color,
+              handler: buttonHandler,
+              buttonRightClickHandler: buttonRightClickHandler
             })
             tagButtonContainer.append(button)
           }
@@ -77,7 +86,16 @@ class Buttons {
     }
   }
 
-  static createButton ({id, name, color = 'rgba(200, 200, 200, 1)', description, handler, buttonTemplate}) {
+  static createGroupRightClickHandler (id, handler) {
+    $.contextMenu({
+      selector: '.tagGroup[data-code-id="' + id + '"] > .groupName',
+      build: () => {
+        return handler(id)
+      }
+    })
+  }
+
+  static createButton ({id, name, color = 'rgba(200, 200, 200, 1)', description, handler, buttonTemplate, buttonRightClickHandler}) {
     if (id) {
       let tagButton
       // Create the container

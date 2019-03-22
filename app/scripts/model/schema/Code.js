@@ -4,20 +4,25 @@ const LanguageUtils = require('../../utils/LanguageUtils')
 const jsYaml = require('js-yaml')
 
 class Code extends GuideElement {
-  constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkId, classificationScheme = {}}) {
+  constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}}) {
     super({name: name, color: color, parentElement: parentCode || classificationScheme})
     this.description = description
     this.id = id || null
     this.codes = this.childElements
     this.parentCode = parentCode
-    this.parentLinkId = parentLinkId || null
+    this.parentLinkAnnotationId = parentLinkAnnotationId || null
     this.classificationScheme = classificationScheme
     this.annotation = annotation
     this.multivalued = false
     this.inductive = false
   }
 
-  toAnnotation () {
+  toAnnotation (target = []) {
+    if (_.isEmpty(target)) {
+      if (this.annotation) {
+        target = this.annotation.target
+      }
+    }
     let codeAnnotation = {
       '@context': [
         {'oa': 'http://www.w3.org/ns/anno.jsonld'},
@@ -28,7 +33,7 @@ class Code extends GuideElement {
       motivation: 'slr:codebookDevelopment',
       body: {
         '@type': 'SpecificResource',
-        value: name,
+        value: this.name,
         description: this.description || ''
       },
       group: window.abwa.groupSelector.currentGroup.id,
@@ -40,25 +45,60 @@ class Code extends GuideElement {
         'motivation:slr:codebookDevelopment',
         'slr:code:' + LanguageUtils.normalizeString(this.name)
       ],
-      target: [],
+      target: target,
       text: jsYaml.dump({description: this.description}),
       uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
     }
-    let linkAnnotation = null
+    let linkAnnotation = this.getParentLinkingAnnotation()
+    return {codeAnnotation: codeAnnotation, linkAnnotation: linkAnnotation}
+  }
+
+  getParentLinkingAnnotation () {
     if (this.parentCode) {
-      linkAnnotation = {
+      return {
         '@context': 'http://www.w3.org/ns/anno.jsonld',
-        '@id': this.parentLinkId,
+        '@id': this.parentLinkAnnotationId,
         '@type': 'Annotation',
         motivation: 'linking',
-        body: 'https://hypothes.is/api/annotation/' + this.parentCode.id,
-        target: [ {
-          source: 'https://hypothes.is/api/annotation/' + this.id
-        }],
-        uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+        body: 'https://hypothes.is/api/annotations/' + this.parentCode.id,
+        group: window.abwa.groupSelector.currentGroup.id,
+        permissions: {
+          read: ['group:' + window.abwa.groupSelector.currentGroup.id]
+        },
+        tags: ['motivation:linking'],
+        target: [],
+        'oa:target': 'https://hypothes.is/api/annotations/' + this.id,
+        text: jsYaml.dump({body: 'https://hypothes.is/api/annotations/' + this.parentCode.id, target: 'https://hypothes.is/api/annotations/' + this.id}),
+        uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis() // TODO Think and check if this is ok
+      }
+    } else {
+      return null
+    }
+  }
+
+  getChildrenLinkingAnnotations () {
+    let childrenLinkingAnnotations = []
+    if (_.isArray(this.codes)) {
+      for (let i = 0; i < this.codes.length; i++) {
+        childrenLinkingAnnotations.push({
+
+        })
       }
     }
-    return {codeAnnotation: codeAnnotation, linkAnnotation: linkAnnotation}
+  }
+
+  /**
+   * Get the ancestor code
+   * @return {Code}
+   */
+  getAncestorCode () {
+    let parent = this
+    while (LanguageUtils.isInstanceOf(parent.parentElement, GuideElement)) {
+      parent = parent.parentElement
+    }
+    if (LanguageUtils.isInstanceOf(parent, GuideElement)) {
+      return parent
+    }
   }
 
   static fromAnnotation (codeAnnotation, classificationScheme = {}) {
@@ -67,7 +107,7 @@ class Code extends GuideElement {
     })
     if (_.isString(codeNameTag)) {
       let name = codeNameTag.replace('slr:code:', '')
-      let description = codeAnnotation.text
+      let description = codeAnnotation.body.description // TODO, it must be retrieved from codeAnnotation.body.description
       return new Code({id: codeAnnotation.id, name: name, description: description, classificationScheme})
     }
   }
@@ -78,7 +118,7 @@ class Code extends GuideElement {
   }
 
   getColor () {
-    return 'rgba(150,150,150,1)' // TODO Change
+    return this.color || 'rgba(150,150,150,0.6)'
   }
 
   getAllChildCodes () {

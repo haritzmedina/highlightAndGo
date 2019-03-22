@@ -43,7 +43,7 @@ class ColorUtils {
     return color.valpha !== 1
   }
 
-  static getDifferentColors (number) {
+  static getDifferentColors (number = 92) {
     return UniqueColors.unique_colors(number)
   }
 }

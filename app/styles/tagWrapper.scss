@@ -46,8 +46,8 @@
   color: black;
   overflow: hidden;
   white-space: nowrap;
-  max-width: calc( #{$sideBarWidth} - 0.6rem - 10px);
-  min-width: calc( #{$sideBarWidth} - 0.6rem - 10px);
+  max-width: 98%;
+  min-width: 98%;
   text-overflow: ellipsis;
 }
 
@@ -63,7 +63,6 @@
 .tagButton[role="marking"] {
   padding: 5px;
 }
-
 
 #newCodeButton {
   margin-top: 5px;

@@ -5,7 +5,6 @@ const TagManager = require('../TagManager')
 const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
 const LanguageUtils = require('../../utils/LanguageUtils')
-const Config = require('../../Config')
 const $ = require('jquery')
 require('jquery-contextmenu/dist/jquery.contextMenu')
 const _ = require('lodash')
@@ -487,9 +486,38 @@ class TextAnnotator extends ContentAnnotator {
 
   highlightAnnotation (annotation, callback) {
     let classNameToHighlight = this.retrieveHighlightClassName(annotation)
-    // Get code for current annotation
+    // Get code for annotation
+    let code
+    if (annotation.motivation === 'linking') {
+      // No need to highlight
+      if (_.isFunction(callback)) {
+        callback()
+      }
+      return
+    } else if (annotation.motivation === 'slr:codebookDevelopment') {
+      code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+        return code.id === annotation.id
+      })
+    } else if (annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying') {
+      let codeAnnotationURL = annotation.body
+      let annotationCodeId = codeAnnotationURL.replace('https://hypothes.is/api/annotations/', '')
+      code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+        return code.id === annotationCodeId
+      })
+    } else if (annotation.motivation === 'assessing' || annotation.motivation === 'oa:assessing') {
+      // No need to highlight
+      if (_.isFunction(callback)) {
+        callback()
+      }
+      return
+    } else {
+      // Unexpected type of annotation, it will not shown
+      if (_.isFunction(callback)) {
+        callback(new Error('Unexpected type of annotation'))
+      }
+      return
+    }
     // TODO Change the way the code is get (from body id of code)
-    let code = window.abwa.mappingStudyManager.classificationScheme.codes[0]
     let err
     try {
       // TODO Remove this case for google drive
@@ -498,14 +526,23 @@ class TextAnnotator extends ContentAnnotator {
       // Highlight in same color as button
       highlightedElements.forEach(highlightedElement => {
         // If need to highlight, set the color corresponding to, in other case, maintain its original color
-        $(highlightedElement).css('background-color', code.color)
-        // Set purpose color
-        highlightedElement.dataset.color = code.color
-        let user = annotation.user.replace('acct:', '').replace('@hypothes.is', '')
-        if (this.config.namespace === Config.slrDataExtraction.namespace) {
-          highlightedElement.title = 'Author: ' + user + '\n' + 'Code: ' + code.name
+        if (code) {
+          $(highlightedElement).css('background-color', code.color)
+          // Set purpose color
+          highlightedElement.dataset.color = code.color
         } else {
-          highlightedElement.title = 'Author: ' + user + '\n'
+          $(highlightedElement).css('background-color', 'rgba(150,150,150,0.6)')
+        }
+        let user = annotation.user.replace('acct:', '').replace('@hypothes.is', '')
+        // Set highlighted element title
+        if (annotation.motivation === 'slr:codebookDevelopment') {
+          highlightedElement.title = 'Annotation to define the code' + code.name + '. Definition set by: ' + user
+        } else if (annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying') {
+          if (code) {
+            highlightedElement.title = 'Author: ' + user + '\n' + 'Code: ' + code.name
+          } else {
+            highlightedElement.title = ''
+          }
         }
       })
       // Create context menu event for highlighted elements
@@ -556,22 +593,41 @@ class TextAnnotator extends ContentAnnotator {
       build: () => {
         // Create items for context menu
         let items = {}
-        // If current user is the same as author, allow to remove annotation
-        if (this.currentUserProfile.userid === annotation.user) {
-          items['delete'] = {name: 'Delete annotation'}
-        }
-        // Add validate item for SLR
-        if (this.config.namespace === Config.slrDataExtraction.namespace) {
-          if (window.abwa.modeManager.mode === ModeManager.modes.index) {
-            if (_.isObject(items['delete'])) {
-              items['sep1'] = '---------'
+        // Depending on the mode
+        if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.codebook) {
+          // If codebook manager is in creating mode
+          if (window.abwa.codeBookDevelopmentManager.mode === window.abwa.codeBookDevelopmentManager.constructor.modes.creating) {
+            if (this.currentUserProfile.userid === annotation.user) {
+              items['deleteCodebookCode'] = {name: 'Remove this code from codebook'}
+            } else {
+              // TODO Mark annotation to delete ¿?
             }
-            items['validate'] = {name: 'Validate classification'}
+          } else {
+            items['validateCode'] = {name: 'Validate this code from codebook'}
+          }
+        } else {
+          // Ask to data extraction for current mode
+          items['deleteAnnotation'] = {name: 'Delete annotation'}
+          if (this.currentUserProfile.userid !== annotation.user) { // TODO Only in validation mode of data extraction
+            items['sep1'] = '---------'
+            items['validateAnnotation'] = {name: 'Validate classification'}
           }
         }
         return {
           callback: (key) => {
-            if (key === 'validate') {
+            if (key === 'deleteCodebookCode') {
+              // Get the code for this annotation
+              let codeToDelete = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+                return code.id === annotation.id
+              })
+              // Remove code from classification scheme
+              let removeCodeResult = window.abwa.codeBookDevelopmentManager.removeCodeFromCodebook(codeToDelete)
+              // Remove annotation from all and current annotations
+              this.removeAnnotationsFromModel(removeCodeResult.annotationIdsToRemove)
+              // Redraw annotations
+              this.redrawAnnotations()
+            }
+            /* if (key === 'validate') {
               // Validate annotation category
               LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation})
             } else if (key === 'delete') {
@@ -603,7 +659,7 @@ class TextAnnotator extends ContentAnnotator {
                   }
                 }
               })
-            }
+            } */
           },
           items: items
         }
@@ -705,7 +761,7 @@ class TextAnnotator extends ContentAnnotator {
     // Remove created annotations
     let highlightedElements = _.flatten(_.map(
       this.allAnnotations,
-      (annotation) => { return [...document.querySelectorAll('[data-annotation-id="' + annotation.id + '"]')] })
+      (annotation) => { return [...document.querySelectorAll('.highlightedAnnotation')] })
     )
     DOMTextUtils.unHighlightElements(highlightedElements)
   }
@@ -776,6 +832,32 @@ class TextAnnotator extends ContentAnnotator {
     this.unHighlightAllAnnotations()
     // Highlight current annotations
     this.highlightAnnotations(this.currentAnnotations)
+  }
+
+  removeAnnotationFromModel (annotation) {
+    _.remove(this.currentAnnotations, (currentAnnotation) => {
+      return currentAnnotation.id === annotation.id
+    })
+    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+    _.remove(this.allAnnotations, (currentAnnotation) => {
+      return currentAnnotation.id === annotation.id
+    })
+    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+  }
+
+  removeAnnotationsFromModel (annotationIds) {
+    _.remove(this.currentAnnotations, (currentAnnotation) => {
+      return _.find(annotationIds, (annotationId) => {
+        return annotationId === currentAnnotation.id
+      })
+    })
+    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+    _.remove(this.allAnnotations, (currentAnnotation) => {
+      return _.find(annotationIds, (annotationId) => {
+        return annotationId === currentAnnotation.id
+      })
+    })
+    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
   }
 }
 

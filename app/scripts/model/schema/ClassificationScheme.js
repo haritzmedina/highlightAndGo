@@ -1,8 +1,8 @@
 const AnnotationGuide = require('./AnnotationGuide')
 const Code = require('./Code')
-const jsYaml = require('js-yaml')
 const _ = require('lodash')
 const ColorUtils = require('../../utils/ColorUtils')
+const LanguageUtils = require('../../utils/LanguageUtils')
 const Config = require('../../Config')
 
 class ClassificationScheme extends AnnotationGuide {
@@ -48,12 +48,12 @@ class ClassificationScheme extends AnnotationGuide {
     // Create relationships between codes
     for (let i = 0; i < linkingAnnotations.length; i++) {
       let linkingAnnotation = linkingAnnotations[i]
+      // Get body and target from body and target attributes of annotations
+      let parentAnnotationUrl = linkingAnnotation.body
+      let childrenAnnotationUrl = linkingAnnotation['oa:target']
       // Get body and target
-      let linking = jsYaml.load(linkingAnnotation.text)
-      let parentAnnotationUrl = linking.body
-      let childrenAnnotationUrl = linking.target
-      let parentId = parentAnnotationUrl.replace('https://hypothes.is/api/annotation/', '')
-      let childrenId = childrenAnnotationUrl.replace('https://hypothes.is/api/annotation/', '')
+      let parentId = parentAnnotationUrl.replace('https://hypothes.is/api/annotations/', '')
+      let childrenId = childrenAnnotationUrl.replace('https://hypothes.is/api/annotations/', '')
       // Find parent code
       let parentCode = _.find(codes, (code) => {
         return code.id === parentId
@@ -62,9 +62,13 @@ class ClassificationScheme extends AnnotationGuide {
       let childrenCode = _.find(codes, (code) => {
         return code.id === childrenId
       })
-      // Relate children and parent
-      parentCode.codes.push(childrenCode)
-      childrenCode.setParentCode(parentCode)
+      if (parentCode && childrenCode) {
+        // Relate children and parent
+        parentCode.codes.push(childrenCode)
+        childrenCode.setParentCode(parentCode)
+        // Add link id to the children element
+        childrenCode.parentLinkAnnotationId = linkingAnnotation.id
+      }
     }
     classificationScheme.codes = codes
     // Parent codes
@@ -72,14 +76,14 @@ class ClassificationScheme extends AnnotationGuide {
       return code.parentCode === null
     })
     // Set colors for each parent
-    let colors = []
+    this.colors = []
     if (_.isArray(parentCodes)) {
-      colors = ColorUtils.getDifferentColors(parentCodes.length)
+      classificationScheme.colors = ColorUtils.getDifferentColors()
     }
     // Set colors for each parent and its children
     for (let i = 0; i < parentCodes.length; i++) {
       let parentCode = parentCodes[i]
-      let color = colors.pop()
+      let color = classificationScheme.colors.shift()
       if (color) {
         parentCode.color = ColorUtils.setAlphaToColor(color, Config.slrDataExtraction.colors.minAlpha)
         // Retrieve child codes for parent
@@ -93,6 +97,32 @@ class ClassificationScheme extends AnnotationGuide {
       }
     }
     return classificationScheme
+  }
+
+  addNewCode (code) {
+    // Add code to code list
+    this.codes.push(code)
+    // Update the color for the new code and codes in the same group
+    if (code.parentCode === null) {
+      let color = this.colors.shift()
+      code.color = ColorUtils.setAlphaToColor(color, Config.slrDataExtraction.colors.minAlpha)
+    } else if (LanguageUtils.isInstanceOf(code.parentCode, Code)) {
+      // Add to its parent as a child code
+      code.parentCode.codes.push(code)
+      // Need to recompute the colors for all the codes inside the ancestor code
+      // Get the ancestor code
+      let ancestorCode = code.getAncestorCode()
+      // Get ancestor code color
+      let color = ancestorCode.color
+      //  Get all child codes
+      let childCodes = ancestorCode.getAllChildCodes()
+      // Set colors for each child element
+      for (let j = 0; j < childCodes.length; j++) {
+        let childCode = childCodes[j]
+        let alphaForChild = (Config.slrDataExtraction.colors.maxAlpha - Config.slrDataExtraction.colors.minAlpha) / childCodes.length * (j + 1) + Config.slrDataExtraction.colors.minAlpha
+        childCode.color = ColorUtils.setAlphaToColor(color, alphaForChild)
+      }
+    }
   }
 }
 

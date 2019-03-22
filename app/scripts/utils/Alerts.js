@@ -248,9 +248,13 @@ class Alerts {
           onOpen: onOpen,
           onBeforeOpen: onBeforeOpen,
           showCancelButton: showCancelButton
-        }).then(() => {
+        }).then((result) => {
           if (_.isFunction(callback)) {
-            callback(null)
+            if (result.dismiss === 'cancel') {
+              callback(null, Alerts.results.cancel)
+            } else {
+              callback(null)
+            }
           }
         })
       }
@@ -326,6 +330,10 @@ Alerts.position = {
   bottom: 'bottom',
   bottomStart: 'bottom-start',
   bottomEnd: 'bottom-end'
+}
+
+Alerts.results = {
+  cancel: 'cancel'
 }
 
 module.exports = Alerts

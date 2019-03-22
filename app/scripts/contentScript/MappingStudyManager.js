@@ -4,6 +4,7 @@ const _ = require('lodash')
 class MappingStudyManager {
   constructor () {
     this.classificationScheme = null
+    this.classificationSchemeAnnotations = null
   }
 
   init (callback) {
@@ -12,6 +13,7 @@ class MappingStudyManager {
       if (err) {
         callback(err)
       } else {
+        this.classificationSchemeAnnotations = classificationSchemeAnnotations
         this.classificationScheme = ClassificationScheme.fromAnnotations(classificationSchemeAnnotations)
         if (_.isFunction(callback)) {
           callback()
@@ -23,7 +25,9 @@ class MappingStudyManager {
   retrieveAnnotationsForClassificationScheme (callback) {
     window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
       tag: 'motivation:slr:codebookDevelopment',
-      group: window.abwa.groupSelector.currentGroup.id
+      group: window.abwa.groupSelector.currentGroup.id,
+      sort: 'created',
+      order: 'asc'
     }, (err, codebookAnnotations) => {
       if (err) {
         callback(err)
