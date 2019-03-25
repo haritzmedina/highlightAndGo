@@ -6,7 +6,7 @@ const ColorUtils = require('../utils/ColorUtils')
  * A class to collect functionality to create buttons and groups of buttons for the sidebar
  */
 class Buttons {
-  static createGroupedButtons ({id, name, color = 'white', childGuideElements, groupHandler, buttonHandler, groupTemplate, groupRightClickHandler, buttonRightClickHandler}) {
+  static createGroupedButtons ({id, name, description, color = 'white', childGuideElements, groupHandler, buttonHandler, groupTemplate, groupRightClickHandler, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
     if (id) {
       let tagGroup
       // Create the container
@@ -30,7 +30,11 @@ class Buttons {
       let tagButtonContainer = $(tagGroup).find('.tagButtonContainer')
       let groupNameSpan = tagGroup.querySelector('.groupName')
       groupNameSpan.innerText = name
-      groupNameSpan.title = name
+      if (description) {
+        groupNameSpan.title = name + ': ' + description
+      } else {
+        groupNameSpan.title = name
+      }
       groupNameSpan.style.backgroundColor = color
       groupNameSpan.dataset.baseColor = color
       // Create event handler for tag group
@@ -51,6 +55,30 @@ class Buttons {
       if (_.isFunction(groupRightClickHandler)) {
         Buttons.createGroupRightClickHandler(id, groupRightClickHandler)
       }
+      // Drag and drop functions
+      if (_.isFunction(ondragstart)) {
+        groupNameSpan.draggable = true
+        // TODO On drag start function
+        groupNameSpan.addEventListener('dragstart', Buttons.createDragStartHandler(id, ondragstart))
+      }
+      if (_.isFunction(ondragover)) {
+        // TODO On dragover function
+        groupNameSpan.addEventListener('dragover', (event) => {
+          event.stopPropagation()
+          tagGroup.style.backgroundColor = 'rgba(150,150,150,0.5)'
+        })
+        groupNameSpan.addEventListener('dragleave', (event) => {
+          event.stopPropagation()
+          tagGroup.style.backgroundColor = ''
+        })
+      }
+      if (_.isFunction(ondrop)) {
+        groupNameSpan.addEventListener('dragover', (e) => {
+          e.preventDefault()
+        })
+        // TODO On drop function
+        groupNameSpan.addEventListener('drop', Buttons.createDropHandler(id, ondrop))
+      }
       // Create buttons and add to the container
       if (_.isArray(childGuideElements) && childGuideElements.length > 0) { // Only create group containers for groups which have elements
         for (let i = 0; i < childGuideElements.length; i++) {
@@ -64,7 +92,10 @@ class Buttons {
               groupHandler: groupHandler,
               buttonHandler: buttonHandler,
               groupRightClickHandler: groupRightClickHandler,
-              buttonRightClickHandler: buttonRightClickHandler
+              buttonRightClickHandler: buttonRightClickHandler,
+              ondragstart,
+              ondragover,
+              ondrop
             })
             tagButtonContainer.append(groupButton)
           } else {
@@ -74,7 +105,10 @@ class Buttons {
               description: element.description,
               color: element.color,
               handler: buttonHandler,
-              buttonRightClickHandler: buttonRightClickHandler
+              buttonRightClickHandler: buttonRightClickHandler,
+              ondragstart,
+              ondragover,
+              ondrop
             })
             tagButtonContainer.append(button)
           }
@@ -95,7 +129,34 @@ class Buttons {
     })
   }
 
-  static createButton ({id, name, color = 'rgba(200, 200, 200, 1)', description, handler, buttonTemplate, buttonRightClickHandler}) {
+  static createButtonRightClickHandler (id, handler) {
+    $.contextMenu({
+      selector: '.tagButton[data-code-id="' + id + '"]',
+      build: () => {
+        return handler(id)
+      }
+    })
+  }
+
+  static createDragStartHandler (id, handler) {
+    return (event) => {
+      if (_.isFunction(handler)) {
+        handler(event, id)
+      }
+    }
+  }
+
+  static createDropHandler (id, handler) {
+    return (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (_.isFunction(handler)) {
+        handler(event, id)
+      }
+    }
+  }
+
+  static createButton ({id, name, color = 'rgba(200, 200, 200, 1)', description, handler, buttonTemplate, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
     if (id) {
       let tagButton
       // Create the container
@@ -123,6 +184,39 @@ class Buttons {
       }
       // Set handler for button
       tagButton.addEventListener('click', handler)
+      // Set button right click handler
+      if (_.isFunction(buttonRightClickHandler)) {
+        Buttons.createButtonRightClickHandler(id, buttonRightClickHandler)
+      }
+      // Drag and drop functions
+      if (_.isFunction(ondragstart)) {
+        tagButton.draggable = true
+        // TODO On drag start function
+        tagButton.addEventListener('dragstart', Buttons.createDragStartHandler(id, ondragstart))
+      }
+      if (_.isFunction(ondragover)) {
+        // TODO On dragover function
+        tagButton.addEventListener('dragenter', (event) => {
+          event.stopPropagation()
+          tagButton.style.backgroundColor = 'rgba(150,150,150,0.5)'
+        })
+        tagButton.addEventListener('dragleave', (event) => {
+          event.stopPropagation()
+          if (tagButton.dataset.chosen === 'true') {
+            tagButton.style.backgroundColor = ColorUtils.setAlphaToColor(ColorUtils.colorFromString(tagButton.dataset.baseColor), 0.6)
+          } else {
+            tagButton.style.backgroundColor = tagButton.dataset.baseColor
+          }
+        })
+      }
+      if (_.isFunction(ondrop)) {
+        // Prevent dragover
+        tagButton.addEventListener('dragover', (e) => {
+          e.preventDefault()
+        })
+        // TODO On drop function
+        tagButton.addEventListener('drop', Buttons.createDropHandler(id, ondrop))
+      }
       // Tag button background color change
       // TODO It should be better to set it as a CSS property, but currently there is not an option for that
       tagButton.addEventListener('mouseenter', () => {

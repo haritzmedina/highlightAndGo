@@ -25,6 +25,29 @@ class CodeBookDevelopmentManager {
       this.codebookCreationContainer = document.querySelector('#codebookCreationContainer')
       this.codebookButtonsContainer = document.querySelector('#codebookButtonsContainer')
       this.codebookValidationContainer = document.querySelector('#codebookValidationContainer')
+      // Drop event for codebook buttons container
+      this.codebookButtonsContainer.addEventListener('dragenter', (event) => {
+        event.stopPropagation()
+        this.codebookButtonsContainer.style.backgroundColor = 'rgba(150,150,150,0.5)'
+      })
+      this.codebookButtonsContainer.addEventListener('dragleave', (event) => {
+        event.stopPropagation()
+        this.codebookButtonsContainer.style.backgroundColor = ''
+      })
+      this.codebookButtonsContainer.addEventListener('dragover', (event) => {
+        event.preventDefault()
+      })
+      this.codebookButtonsContainer.addEventListener('drop', (event) => {
+        event.preventDefault()
+        let draggedCodeId = event.dataTransfer.getData('codeId')
+        let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+          return code.id === draggedCodeId
+        })
+        let results = this.changeParentCodeToCode(code)
+        // TODO Update linked annotation in annotation list on: results.hypothesisUpdatePromise
+        // Redraw annotations
+        window.abwa.contentAnnotator.redrawAnnotations()
+      })
       // Populate codebook creation container with classification scheme elements
       this.populateCodebookCreationSidebar()
       // TODO Populate validation container with classification scheme elements
@@ -98,11 +121,18 @@ class CodeBookDevelopmentManager {
       let groupButton = Buttons.createGroupedButtons({
         id: parentCode.id,
         name: parentCode.name,
+        description: parentCode.description || '',
         color: parentCode.color,
         childGuideElements: parentCode.codes,
         groupHandler: this.createNewCodeEventHandler(),
         buttonHandler: this.createNewCodeEventHandler(),
-        groupRightClickHandler: this.createRightClickHandler()
+        groupRightClickHandler: this.createRightClickHandler(),
+        buttonRightClickHandler: this.createRightClickHandler(),
+        ondragstart: (event, codeId) => {
+          event.dataTransfer.setData('codeId', codeId)
+        },
+        ondragover: () => {},
+        ondrop: this.createOnDropHandler()
       })
       this.codebookButtonsContainer.append(groupButton)
     }
@@ -112,16 +142,45 @@ class CodeBookDevelopmentManager {
       let groupButton = Buttons.createButton({
         id: parentCode.id,
         name: parentCode.name,
+        description: parentCode.description || '',
         color: parentCode.color,
-        handler: this.createNewCodeEventHandler()
+        handler: this.createNewCodeEventHandler(),
+        buttonRightClickHandler: this.createRightClickHandler(),
+        ondragstart: (event, codeId) => {
+          event.dataTransfer.setData('codeId', codeId)
+          console.log('Drag start ' + event.dataTransfer.getData('codeId'))
+        },
+        ondragover: () => {},
+        ondrop: this.createOnDropHandler()
       })
       this.codebookButtonsContainer.append(groupButton)
+    }
+  }
+
+  createOnDropHandler () {
+    return (event, codeId) => {
+      event.stopPropagation()
+      // Retrieve dragged code
+      let draggedCodeId = event.dataTransfer.getData('codeId')
+      // Retrieve code from codeid
+      let parentCode = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+        return code.id === codeId
+      })
+      let childCode = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+        return code.id === draggedCodeId
+      })
+      // Dragged code is child of parentCode
+      this.changeParentCodeToCode(childCode, parentCode)
+      // TODO Update linked annotation in annotation list on: results.hypothesisUpdatePromise
+      // Redraw annotations
+      window.abwa.contentAnnotator.redrawAnnotations()
     }
   }
 
   createRightClickHandler () {
     return (codeId) => {
       let items = {}
+      items['modifyCodebookCode'] = {name: 'Modify code properties'}
       items['deleteCodebookCode'] = {name: 'Remove this code from codebook'}
       return {
         callback: (key) => {
@@ -136,6 +195,40 @@ class CodeBookDevelopmentManager {
             window.abwa.contentAnnotator.removeAnnotationsFromModel(removeCodeResult.annotationIdsToRemove)
             // Redraw annotations
             window.abwa.contentAnnotator.redrawAnnotations()
+          } else if (key === 'modifyCodebookCode') {
+            let codeToModify = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+              return code.id === codeId
+            })
+            Alerts.multipleInputAlert({
+              title: 'You are modifying the code ' + codeToModify.name,
+              html: '<input id="codeName" type="text" placeholder="New code name" value="' + codeToModify.name + '"/>' +
+                '<textarea id="codeDescription" placeholder="Please type a description that describes this code...">' + codeToModify.description + '</textarea>',
+              preConfirm: () => {
+                // Check if code name is empty
+                codeToModify.name = document.querySelector('#codeName').value
+                codeToModify.description = document.querySelector('#codeDescription').value
+              },
+              callback: (err, result) => {
+                if (err) {
+                  window.alert('Unable to load alert. Is this an annotable document?')
+                } else {
+                  if (result === Alerts.results.cancel) {
+
+                  } else {
+                    // TODO Update annotation in hypothes.is
+                    let codeAnnotations = codeToModify.toAnnotation()
+                    let codeAnnotation = codeAnnotations.codeAnnotation
+                    window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(codeToModify.id, codeAnnotation, (err) => {
+                      if (err) {
+                        Alerts.errorAlert({text: 'An unexpected error occurred in hypothes.is, please try again', title: 'Unable to update'})
+                      } else {
+                        this.updateSidebarButtons()
+                      }
+                    })
+                  }
+                }
+              }
+            })
           }
         },
         items: items
@@ -429,11 +522,19 @@ class CodeBookDevelopmentManager {
     })
     // Remove relation of its child codes with the code to be removed if it is not recursive
     if (!recursive) {
-      allChildrenCodes.forEach((childCode) => {
+      code.codes.forEach((childCode) => {
         childCode.parentCode = null
         childCode.parentElement = window.abwa.mappingStudyManager.classificationScheme
         childCode.parentLinkAnnotationId = null
         childCode.color = ColorUtils.setAlphaToColor(window.abwa.mappingStudyManager.classificationScheme.colors.shift(), Config.slrDataExtraction.colors.minAlpha)
+        // Update color for all its child nodes
+        let childCodesOfChild = childCode.getAllChildCodes()
+        // Set colors for each child element
+        for (let j = 0; j < childCodesOfChild.length; j++) {
+          let childCodeOfChild = childCodesOfChild[j]
+          let alphaForChild = (Config.slrDataExtraction.colors.maxAlpha - Config.slrDataExtraction.colors.minAlpha) / childCodesOfChild.length * (j + 1) + Config.slrDataExtraction.colors.minAlpha
+          childCodeOfChild.color = ColorUtils.setAlphaToColor(childCode.color, alphaForChild)
+        }
       })
     }
     // Remove code from its parent
@@ -456,6 +557,102 @@ class CodeBookDevelopmentManager {
       deleteAnnotationsPromise: deleteAnnotationsPromise,
       classificationScheme: window.abwa.mappingStudyManager.classificationScheme
     }
+  }
+
+  /**
+   * Changes code's parent to a new parent
+   * @param code
+   * @param newParentCode
+   */
+  changeParentCodeToCode (code, newParentCode = null) {
+    // Retrieve old ancestor and new ancestor, it will be useful to know if the code needs to change its color or not
+    let ancestorCode = code.getAncestorCode()
+    let newAncestorCode
+    if (newParentCode) {
+      newAncestorCode = newParentCode.getAncestorCode()
+    }
+    // Retrieve link annotation id
+    let linkAnnotationId = code.parentLinkAnnotationId
+    let hypothesisUpdatePromise
+    // Remove code from old parent
+    if (code.parentCode) {
+      _.remove(code.parentCode.codes, code)
+    }
+    // Set new parent
+    code.parentCode = newParentCode
+    // Add code to new parent's codes
+    if (code.parentCode) {
+      code.parentCode.codes.push(code)
+    }
+    // Change color of code and its child if necessary
+    if (ancestorCode !== newAncestorCode) {
+      // If new ancestor already exists
+      if (newAncestorCode !== undefined) {
+        // Update color for all its child nodes
+        let childCodesOfChild = newAncestorCode.getAllChildCodes()
+        // Set colors for each child element
+        for (let j = 0; j < childCodesOfChild.length; j++) {
+          let childCodeOfChild = childCodesOfChild[j]
+          let alphaForChild = (Config.slrDataExtraction.colors.maxAlpha - Config.slrDataExtraction.colors.minAlpha) / childCodesOfChild.length * (j + 1) + Config.slrDataExtraction.colors.minAlpha
+          childCodeOfChild.color = ColorUtils.setAlphaToColor(newAncestorCode.color, alphaForChild)
+        }
+      } else { // If there is not a new ancestor, a new color must be designed for the element
+        code.color = ColorUtils.setAlphaToColor(window.abwa.mappingStudyManager.classificationScheme.colors.shift(), Config.slrDataExtraction.colors.minAlpha)
+      }
+    }
+    if (newParentCode === null) {
+      code.parentElement = window.abwa.mappingStudyManager.classificationScheme
+      code.parentLinkAnnotationId = null
+      // Remove parent link annotation
+      hypothesisUpdatePromise = new Promise((resolve, reject) => {
+        window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(linkAnnotationId, (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
+      })
+    } else {
+      // Update annotation if parent has change
+      if (linkAnnotationId) {
+        hypothesisUpdatePromise = new Promise((resolve, reject) => {
+          // Get new link annotation corpus
+          let codeAnnotations = code.toAnnotation()
+          if (codeAnnotations.linkAnnotation) {
+            // Update annotation in hypothes.is
+            window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(linkAnnotationId, codeAnnotations.linkAnnotation, (err) => {
+              if (err) {
+                reject(err)
+              } else {
+                resolve()
+              }
+            })
+          }
+        })
+      } else { // Create new link annotation if parent does not exist
+        hypothesisUpdatePromise = new Promise((resolve, reject) => {
+          // Get new link annotation corpus
+          let codeAnnotations = code.toAnnotation()
+          if (codeAnnotations.linkAnnotation) {
+            // Update annotation in hypothes.is
+            window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(codeAnnotations.linkAnnotation, (err, annotation) => {
+              if (err) {
+                reject(err)
+              } else {
+                resolve()
+                // Update code parentLinkAnnotationId
+                code.parentLinkAnnotationId = annotation.id
+              }
+            })
+          }
+        })
+      }
+    }
+    // Update link annotation in hypothes.is
+    this.updateSidebarButtons()
+    // Update
+    return {code: code, classificationScheme: window.abwa.mappingStudyManager.classificationScheme, hypothesisUpdatePromise}
   }
 
   destroy () {

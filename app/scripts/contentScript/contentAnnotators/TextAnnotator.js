@@ -759,10 +759,7 @@ class TextAnnotator extends ContentAnnotator {
 
   unHighlightAllAnnotations () {
     // Remove created annotations
-    let highlightedElements = _.flatten(_.map(
-      this.allAnnotations,
-      (annotation) => { return [...document.querySelectorAll('.highlightedAnnotation')] })
-    )
+    let highlightedElements = [...document.querySelectorAll('.highlightedAnnotation')]
     DOMTextUtils.unHighlightElements(highlightedElements)
   }
 
