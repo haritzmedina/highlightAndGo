@@ -28,7 +28,6 @@ class CodeBookDevelopmentManager {
       // Drop event for codebook buttons container
       this.codebookButtonsContainer.addEventListener('dragenter', (event) => {
         event.stopPropagation()
-        this.codebookButtonsContainer.style.backgroundColor = 'rgba(150,150,150,0.5)'
       })
       this.codebookButtonsContainer.addEventListener('dragleave', (event) => {
         event.stopPropagation()
@@ -36,15 +35,18 @@ class CodeBookDevelopmentManager {
       })
       this.codebookButtonsContainer.addEventListener('dragover', (event) => {
         event.preventDefault()
+        event.stopPropagation()
+        this.codebookButtonsContainer.style.backgroundColor = 'rgba(150,150,150,0.5)'
       })
       this.codebookButtonsContainer.addEventListener('drop', (event) => {
         event.preventDefault()
+        event.stopPropagation()
+        this.codebookButtonsContainer.style.backgroundColor = ''
         let draggedCodeId = event.dataTransfer.getData('codeId')
         let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
           return code.id === draggedCodeId
         })
-        let results = this.changeParentCodeToCode(code)
-        // TODO Update linked annotation in annotation list on: results.hypothesisUpdatePromise
+        this.changeParentCodeToCode(code, null)
         // Redraw annotations
         window.abwa.contentAnnotator.redrawAnnotations()
       })
@@ -148,7 +150,6 @@ class CodeBookDevelopmentManager {
         buttonRightClickHandler: this.createRightClickHandler(),
         ondragstart: (event, codeId) => {
           event.dataTransfer.setData('codeId', codeId)
-          console.log('Drag start ' + event.dataTransfer.getData('codeId'))
         },
         ondragover: () => {},
         ondrop: this.createOnDropHandler()
@@ -171,7 +172,6 @@ class CodeBookDevelopmentManager {
       })
       // Dragged code is child of parentCode
       this.changeParentCodeToCode(childCode, parentCode)
-      // TODO Update linked annotation in annotation list on: results.hypothesisUpdatePromise
       // Redraw annotations
       window.abwa.contentAnnotator.redrawAnnotations()
     }
@@ -371,7 +371,7 @@ class CodeBookDevelopmentManager {
                       if (err) {
                         Alerts.errorAlert({title: 'Unable to create new code.', text: 'Unable to create the new code. Please check your connection to Hypothes.is.'})
                       } else {
-                        // Add code annotation to textannotator
+                        // Add code annotation to text annotator
                         window.abwa.contentAnnotator.allAnnotations.push(codeAnnotations.codeAnnotation)
                         window.abwa.contentAnnotator.currentAnnotations.push(codeAnnotations.codeAnnotation)
                         window.abwa.contentAnnotator.redrawAnnotations()
@@ -565,6 +565,20 @@ class CodeBookDevelopmentManager {
    * @param newParentCode
    */
   changeParentCodeToCode (code, newParentCode = null) {
+    // Check if code and new parent code are not the same
+    if (code === newParentCode) {
+      return
+    }
+    // Check code is already child of newParent
+    if (code.parentCode === newParentCode) {
+      console.debug('%s code is already child or parent of the new code', code.name)
+      return
+    }
+    // Check newParent code is not child of code
+    if (newParentCode !== null && newParentCode.isChildOf(code)) {
+      console.debug('%s code is child of %s code', code.name, newParentCode.name)
+      return
+    }
     // Retrieve old ancestor and new ancestor, it will be useful to know if the code needs to change its color or not
     let ancestorCode = code.getAncestorCode()
     let newAncestorCode
@@ -580,6 +594,7 @@ class CodeBookDevelopmentManager {
     }
     // Set new parent
     code.parentCode = newParentCode
+    code.parentElement = newParentCode
     // Add code to new parent's codes
     if (code.parentCode) {
       code.parentCode.codes.push(code)
@@ -589,15 +604,22 @@ class CodeBookDevelopmentManager {
       // If new ancestor already exists
       if (newAncestorCode !== undefined) {
         // Update color for all its child nodes
-        let childCodesOfChild = newAncestorCode.getAllChildCodes()
+        let childCodesOfAncestor = newAncestorCode.getAllChildCodes()
         // Set colors for each child element
-        for (let j = 0; j < childCodesOfChild.length; j++) {
-          let childCodeOfChild = childCodesOfChild[j]
-          let alphaForChild = (Config.slrDataExtraction.colors.maxAlpha - Config.slrDataExtraction.colors.minAlpha) / childCodesOfChild.length * (j + 1) + Config.slrDataExtraction.colors.minAlpha
+        for (let j = 0; j < childCodesOfAncestor.length; j++) {
+          let childCodeOfChild = childCodesOfAncestor[j]
+          let alphaForChild = (Config.slrDataExtraction.colors.maxAlpha - Config.slrDataExtraction.colors.minAlpha) / childCodesOfAncestor.length * (j + 1) + Config.slrDataExtraction.colors.minAlpha
           childCodeOfChild.color = ColorUtils.setAlphaToColor(newAncestorCode.color, alphaForChild)
         }
-      } else { // If there is not a new ancestor, a new color must be designed for the element
+      } else { // If there is not a new ancestor, a new color must be designed for the code and its children
         code.color = ColorUtils.setAlphaToColor(window.abwa.mappingStudyManager.classificationScheme.colors.shift(), Config.slrDataExtraction.colors.minAlpha)
+        let childCodesOfCode = code.getAllChildCodes()
+        // Set colors for each child element
+        for (let j = 0; j < childCodesOfCode.length; j++) {
+          let childCodeOfChild = childCodesOfCode[j]
+          let alphaForChild = (Config.slrDataExtraction.colors.maxAlpha - Config.slrDataExtraction.colors.minAlpha) / childCodesOfCode.length * (j + 1) + Config.slrDataExtraction.colors.minAlpha
+          childCodeOfChild.color = ColorUtils.setAlphaToColor(code.color, alphaForChild)
+        }
       }
     }
     if (newParentCode === null) {
@@ -609,7 +631,8 @@ class CodeBookDevelopmentManager {
           if (err) {
             reject(err)
           } else {
-            resolve()
+            resolve({annotation: null})
+            code.parentLinkAnnotationId = null
           }
         })
       })
@@ -621,7 +644,7 @@ class CodeBookDevelopmentManager {
           let codeAnnotations = code.toAnnotation()
           if (codeAnnotations.linkAnnotation) {
             // Update annotation in hypothes.is
-            window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(linkAnnotationId, codeAnnotations.linkAnnotation, (err) => {
+            window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(linkAnnotationId, codeAnnotations.linkAnnotation, (err, annotation) => {
               if (err) {
                 reject(err)
               } else {

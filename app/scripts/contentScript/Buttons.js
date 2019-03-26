@@ -57,27 +57,34 @@ class Buttons {
       }
       // Drag and drop functions
       if (_.isFunction(ondragstart)) {
-        groupNameSpan.draggable = true
+        tagGroup.draggable = true
         // TODO On drag start function
-        groupNameSpan.addEventListener('dragstart', Buttons.createDragStartHandler(id, ondragstart))
+        tagGroup.addEventListener('dragstart', Buttons.createDragStartHandler(id, ondragstart))
       }
       if (_.isFunction(ondragover)) {
         // TODO On dragover function
-        groupNameSpan.addEventListener('dragover', (event) => {
+        tagGroup.addEventListener('dragover', (event) => {
           event.stopPropagation()
           tagGroup.style.backgroundColor = 'rgba(150,150,150,0.5)'
         })
-        groupNameSpan.addEventListener('dragleave', (event) => {
+        tagGroup.addEventListener('dragleave', (event) => {
           event.stopPropagation()
           tagGroup.style.backgroundColor = ''
         })
       }
       if (_.isFunction(ondrop)) {
-        groupNameSpan.addEventListener('dragover', (e) => {
+        tagGroup.addEventListener('dragover', (e) => {
+          event.stopPropagation()
           e.preventDefault()
         })
         // TODO On drop function
-        groupNameSpan.addEventListener('drop', Buttons.createDropHandler(id, ondrop))
+        groupNameSpan.addEventListener('drop', Buttons.createDropHandler({
+          id,
+          handler: ondrop,
+          beforeDrop: () => {
+            tagGroup.style.backgroundColor = ''
+          }
+        }))
       }
       // Create buttons and add to the container
       if (_.isArray(childGuideElements) && childGuideElements.length > 0) { // Only create group containers for groups which have elements
@@ -140,14 +147,18 @@ class Buttons {
 
   static createDragStartHandler (id, handler) {
     return (event) => {
+      event.stopPropagation()
       if (_.isFunction(handler)) {
         handler(event, id)
       }
     }
   }
 
-  static createDropHandler (id, handler) {
+  static createDropHandler ({id, handler, beforeDrop}) {
     return (event) => {
+      if (_.isFunction(beforeDrop)) {
+        beforeDrop()
+      }
       event.preventDefault()
       event.stopPropagation()
       if (_.isFunction(handler)) {
@@ -213,9 +224,20 @@ class Buttons {
         // Prevent dragover
         tagButton.addEventListener('dragover', (e) => {
           e.preventDefault()
+          e.stopPropagation()
         })
         // TODO On drop function
-        tagButton.addEventListener('drop', Buttons.createDropHandler(id, ondrop))
+        tagButton.addEventListener('drop', Buttons.createDropHandler({
+          id,
+          handler: ondrop,
+          beforeDrop: () => {
+            if (tagButton.dataset.chosen === 'true') {
+              tagButton.style.backgroundColor = ColorUtils.setAlphaToColor(ColorUtils.colorFromString(tagButton.dataset.baseColor), 0.6)
+            } else {
+              tagButton.style.backgroundColor = tagButton.dataset.baseColor
+            }
+          }
+        }))
       }
       // Tag button background color change
       // TODO It should be better to set it as a CSS property, but currently there is not an option for that

@@ -121,6 +121,26 @@ class Code extends GuideElement {
     return this.color || 'rgba(150,150,150,0.6)'
   }
 
+  /**
+   * Returns if this is parent code of code
+   * @param code
+   * @return {boolean}
+   */
+  isParentOf (code) {
+    let children = this.getAllChildCodes()
+    return _.includes(children, code)
+  }
+
+  /**
+   * Returns if this is child code of code
+   * @param code
+   * @return {boolean}
+   */
+  isChildOf (code) {
+    let children = code.getAllChildCodes()
+    return _.includes(children, this)
+  }
+
   getAllChildCodes () {
     let childCodes = this.codes
     for (let i = 0; i < this.codes.length; i++) {
