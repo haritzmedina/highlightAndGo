@@ -201,12 +201,7 @@ class DOMTextUtils {
 
   static findAllMatches (str) {
     // Get current selection range for set again after the algorithm
-    let userSelection
-    try {
-      userSelection = window.getSelection().getRangeAt(0)
-    } catch (e) {
-      console.debug('Unable to retrieve user selection')
-    }
+    let userSelection = window.getSelection().getRangeAt(0)
     // Find matches using window.find
     let matches = []
     let findResult = document.execCommand('FindString', true, str)

@@ -42,8 +42,6 @@ class ContentTypeManager {
             if (window.PDFViewerApplication.url.startsWith('file:///')) {
               this.localFile = true
             } else { // Is an online resource
-              // Support in ajax websites web url change, web url can change dynamically, but locals never do
-              this.initSupportWebURLChange()
               this.documentURL = window.PDFViewerApplication.url
               if (_.isFunction(callback)) {
                 callback()
@@ -179,7 +177,7 @@ ContentTypeManager.documentTypes = {
   },
   pdf: {
     name: 'pdf',
-    selectors: ['TextPositionSelector', 'TextQuoteSelector']
+    selectors: ['FragmentSelector', 'TextPositionSelector', 'TextQuoteSelector']
   }
 }
 

@@ -5,6 +5,7 @@ const TagManager = require('../TagManager')
 const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
 const LanguageUtils = require('../../utils/LanguageUtils')
+const Alerts = require('../../utils/Alerts')
 const $ = require('jquery')
 require('jquery-contextmenu/dist/jquery.contextMenu')
 const _ = require('lodash')
@@ -173,18 +174,18 @@ class TextAnnotator extends ContentAnnotator {
     return (event) => {
       // If selection is empty, return null
       if (document.getSelection().toString().length === 0) {
-        window.alert('Nothing to highlight, current selection is empty') // TODO change by swal
+        Alerts.infoAlert({title: 'No evidence selected to code', text: 'You should consider to highlight evidences in the text to code the primary study.'}) // TODO i18n
         return
       }
       // If selection is child of sidebar, return null
       if ($(document.getSelection().anchorNode).parents('#annotatorSidebarWrapper').toArray().length !== 0) {
-        window.alert('The selected content cannot be highlighted, is not part of the document') // TODO change by swal
+        Alerts.infoAlert({title: 'Unable to code', text: 'The selected text content is not part of the primary study.'}) // TODO i18n
         return
       }
       let range = document.getSelection().getRangeAt(0)
       let selectors = TextAnnotator.getSelectors(range)
       // Construct the annotation to send to hypothesis
-      let annotation = TextAnnotator.constructAnnotation(selectors, event.detail.tags)
+      let annotation = TextAnnotator.constructAnnotation(selectors, event.detail.code)
       window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(annotation, (err, annotation) => {
         if (err) {
           window.alert('Unexpected error, unable to create annotation')
@@ -239,16 +240,17 @@ class TextAnnotator extends ContentAnnotator {
     return selectors
   }
 
-  static constructAnnotation (selectors, tags) {
+  static constructAnnotation (selectors, code) {
     let data = {
       '@context': 'http://www.w3.org/ns/anno.jsonld',
-      'motivation': 'oa:classifying',
+      'motivation': 'classifying',
       group: window.abwa.groupSelector.currentGroup.id,
+      body: 'https://hypothes.is/api/annotations/' + code.id,
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
       },
       references: [],
-      tags: tags,
+      tags: ['slr:code:' + code.name, 'motivation:classifying'],
       target: [{
         selector: selectors
       }],
@@ -440,30 +442,21 @@ class TextAnnotator extends ContentAnnotator {
   retrieveCurrentAnnotations () {
     // TODO Retrieve current annotations depending on the mode
     if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
-      if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.mapping) {
+      if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.coding) {
         // Get annotations for mapping mode in data extraction
         return _.filter(this.allAnnotations, (annotation) => {
-          // TODO use this: return annotation.motivation === 'classifying'
-          return _.find(annotation.tags, (tag) => {
-            return tag === 'motivation:classifying'
-          }) && annotation.user === this.currentUserProfile.userid // TODO Change annotation.user by annotation.creator
+          return annotation.motivation === 'classifying' && annotation.user === window.abwa.groupSelector.user.userid // TODO Change annotation.user by annotation.creator
         })
       } else if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.checking) {
         // Get annotations for checking mode in data extraction
         return _.filter(this.allAnnotations, (annotation) => {
-          // TODO use this: return annotation.motivation === 'classifying'
-          return _.find(annotation.tags, (tag) => {
-            return tag === 'motivation:classifying'
-          })
+          return annotation.motivation === 'classifying'
         })
       }
     } else if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.codebook) {
       // Get annotations for codebook mode
       return _.filter(this.allAnnotations, (annotation) => {
-        return _.find(annotation.tags, (tag) => {
-          return tag === 'motivation:slr:codebookDevelopment'
-        })
-        // TODO use this: return annotation.motivation === 'slr:codebookDevelopment'
+        return annotation.motivation === 'slr:codebookDevelopment'
       })
     } else {
       return this.allAnnotations
@@ -488,7 +481,7 @@ class TextAnnotator extends ContentAnnotator {
     let classNameToHighlight = this.retrieveHighlightClassName(annotation)
     // Get code for annotation
     let code
-    if (annotation.motivation === 'linking') {
+    if (annotation.motivation === 'linking' || annotation.motivation === 'oa:linking') {
       // No need to highlight
       if (_.isFunction(callback)) {
         callback()
@@ -520,7 +513,6 @@ class TextAnnotator extends ContentAnnotator {
     // TODO Change the way the code is get (from body id of code)
     let err
     try {
-      // TODO Remove this case for google drive
       let highlightedElements = DOMTextUtils.highlightContent(
         annotation.target[0].selector, classNameToHighlight, annotation.id)
       // Highlight in same color as button
@@ -605,10 +597,17 @@ class TextAnnotator extends ContentAnnotator {
           } else {
             items['validateCode'] = {name: 'Validate this code from codebook'}
           }
-        } else {
-          // Ask to data extraction for current mode
-          items['deleteAnnotation'] = {name: 'Delete annotation'}
-          if (this.currentUserProfile.userid !== annotation.user) { // TODO Only in validation mode of data extraction
+        } else if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
+          // Delete annotation is allowed always if the creator is current user
+          if (this.currentUserProfile.userid === annotation.user) {
+            items['comment'] = {name: 'Comment'}
+            items['deleteAnnotation'] = {name: 'Delete annotation'}
+          }
+          // Validation is only shown if current user is not the same as creator and it is in mode checking
+          if (
+            this.currentUserProfile.userid !== annotation.user &&
+            window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.checking // Only if other user and checking mode of data extraction
+          ) {
             items['sep1'] = '---------'
             items['validateAnnotation'] = {name: 'Validate classification'}
           }
@@ -626,6 +625,20 @@ class TextAnnotator extends ContentAnnotator {
               this.removeAnnotationsFromModel(removeCodeResult.annotationIdsToRemove)
               // Redraw annotations
               this.redrawAnnotations()
+            } else if (key === 'deleteAnnotation') {
+              window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (err, result) => {
+                if (err) {
+                  Alerts.errorAlert({title: 'Unable to delete annotation', text: 'Check if you are logged in Hypothes.is, reload the page and try again.'})
+                } else {
+                  _.remove(this.allAnnotations, annotation)
+                  LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+                  // Update current annotations
+                  this.currentAnnotations = this.retrieveCurrentAnnotations()
+                  LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
+                  // Redraw
+                  this.redrawAnnotations()
+                }
+              })
             }
             /* if (key === 'validate') {
               // Validate annotation category

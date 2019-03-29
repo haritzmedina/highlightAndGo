@@ -20,6 +20,7 @@ class ModeManager {
       // Init data extraction mode
       window.abwa.dataExtractionManager = new DataExtractionManager()
       window.abwa.dataExtractionManager.init()
+      // Init codebook mode
       window.abwa.codeBookDevelopmentManager = new CodeBookDevelopmentManager()
       window.abwa.codeBookDevelopmentManager.init()
       // Set mode

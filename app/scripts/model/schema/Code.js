@@ -108,7 +108,7 @@ class Code extends GuideElement {
     if (_.isString(codeNameTag)) {
       let name = codeNameTag.replace('slr:code:', '')
       let description = codeAnnotation.body.description // TODO, it must be retrieved from codeAnnotation.body.description
-      return new Code({id: codeAnnotation.id, name: name, description: description, classificationScheme})
+      return new Code({id: codeAnnotation.id, name: name, description: description, classificationScheme, annotation: codeAnnotation})
     }
   }
 

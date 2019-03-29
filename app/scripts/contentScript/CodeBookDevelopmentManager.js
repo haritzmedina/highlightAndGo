@@ -6,14 +6,15 @@ const Alerts = require('../utils/Alerts')
 const Code = require('../model/schema/Code')
 const $ = require('jquery')
 const ColorUtils = require('../utils/ColorUtils')
+const URLUtils = require('../utils/URLUtils')
 const Config = require('../Config')
 
 class CodeBookDevelopmentManager {
-  constructor () {
+  constructor (mode) {
     this.codebookCreationContainer = null
-    this.mode = CodeBookDevelopmentManager.modes.creating // The default mode is creating
+    this.mode = mode || CodeBookDevelopmentManager.modes.creating // The default mode is creating
     this.codebookCreationContainer = null
-    this.codebookButtonsContainer = null
+    this.codebookCreationButtonsContainer = null
     this.codebookValidationContainer = null
   }
 
@@ -23,25 +24,25 @@ class CodeBookDevelopmentManager {
     this.classificationScheme = window.abwa.mappingStudyManager.classificationScheme
     this.insertCodebookDevelopmentContainer(() => {
       this.codebookCreationContainer = document.querySelector('#codebookCreationContainer')
-      this.codebookButtonsContainer = document.querySelector('#codebookButtonsContainer')
+      this.codebookCreationButtonsContainer = document.querySelector('#codebookCreationButtonsContainer')
       this.codebookValidationContainer = document.querySelector('#codebookValidationContainer')
       // Drop event for codebook buttons container
-      this.codebookButtonsContainer.addEventListener('dragenter', (event) => {
+      this.codebookCreationButtonsContainer.addEventListener('dragenter', (event) => {
         event.stopPropagation()
       })
-      this.codebookButtonsContainer.addEventListener('dragleave', (event) => {
+      this.codebookCreationButtonsContainer.addEventListener('dragleave', (event) => {
         event.stopPropagation()
-        this.codebookButtonsContainer.style.backgroundColor = ''
+        this.codebookCreationButtonsContainer.style.backgroundColor = ''
       })
-      this.codebookButtonsContainer.addEventListener('dragover', (event) => {
+      this.codebookCreationButtonsContainer.addEventListener('dragover', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        this.codebookButtonsContainer.style.backgroundColor = 'rgba(150,150,150,0.5)'
+        this.codebookCreationButtonsContainer.style.backgroundColor = 'rgba(150,150,150,0.5)'
       })
-      this.codebookButtonsContainer.addEventListener('drop', (event) => {
+      this.codebookCreationButtonsContainer.addEventListener('drop', (event) => {
         event.preventDefault()
         event.stopPropagation()
-        this.codebookButtonsContainer.style.backgroundColor = ''
+        this.codebookCreationButtonsContainer.style.backgroundColor = ''
         let draggedCodeId = event.dataTransfer.getData('codeId')
         let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
           return code.id === draggedCodeId
@@ -53,9 +54,13 @@ class CodeBookDevelopmentManager {
       // Populate codebook creation container with classification scheme elements
       this.populateCodebookCreationSidebar()
       // TODO Populate validation container with classification scheme elements
-
+      this.populateCodebookValidationSidebar()
       // Add event listener for new code button
       this.addEventListenerNewCodeButton()
+      // Init mode toggle
+      this.modeToggleElement = document.querySelector('#codebookAnnotatorToggle')
+      this.modeToggleElement.checked = this.mode === CodeBookDevelopmentManager.modes.creating
+      this.switchMode()
       // Add event listener for codebook mode change
       this.addEventListenerModeToggle()
       // Callback
@@ -68,7 +73,6 @@ class CodeBookDevelopmentManager {
   }
 
   addEventListenerModeToggle () {
-    this.modeToggleElement = document.querySelector('#codebookAnnotatorToggle')
     this.modeToggleElement.addEventListener('click', () => {
       this.switchMode()
     })
@@ -123,20 +127,21 @@ class CodeBookDevelopmentManager {
       let groupButton = Buttons.createGroupedButtons({
         id: parentCode.id,
         name: parentCode.name,
+        className: 'codebookCreatingElement',
         description: parentCode.description || '',
         color: parentCode.color,
         childGuideElements: parentCode.codes,
         groupHandler: this.createNewCodeEventHandler(),
         buttonHandler: this.createNewCodeEventHandler(),
-        groupRightClickHandler: this.createRightClickHandler(),
-        buttonRightClickHandler: this.createRightClickHandler(),
+        groupRightClickHandler: this.createCodebookRightClickHandler(),
+        buttonRightClickHandler: this.createCodebookRightClickHandler(),
         ondragstart: (event, codeId) => {
           event.dataTransfer.setData('codeId', codeId)
         },
         ondragover: () => {},
         ondrop: this.createOnDropHandler()
       })
-      this.codebookButtonsContainer.append(groupButton)
+      this.codebookCreationButtonsContainer.append(groupButton)
     }
     // Create buttons for each parent code which has not child elements
     for (let i = 0; i < parentCodesWithoutChild.length; i++) {
@@ -144,17 +149,102 @@ class CodeBookDevelopmentManager {
       let groupButton = Buttons.createButton({
         id: parentCode.id,
         name: parentCode.name,
+        className: 'codebookCreatingElement',
         description: parentCode.description || '',
         color: parentCode.color,
         handler: this.createNewCodeEventHandler(),
-        buttonRightClickHandler: this.createRightClickHandler(),
+        buttonRightClickHandler: this.createCodebookRightClickHandler(),
         ondragstart: (event, codeId) => {
           event.dataTransfer.setData('codeId', codeId)
         },
         ondragover: () => {},
         ondrop: this.createOnDropHandler()
       })
-      this.codebookButtonsContainer.append(groupButton)
+      this.codebookCreationButtonsContainer.append(groupButton)
+    }
+  }
+
+  populateCodebookValidationSidebar () {
+    let codes = this.classificationScheme.codes
+    let parentCodesWithChild = _.filter(codes, (code) => {
+      return code.parentCode === null && code.codes.length > 0
+    })
+    let parentCodesWithoutChild = _.filter(codes, (code) => {
+      return code.parentCode === null && code.codes.length === 0
+    })
+    // Create container for each parent code which has child elements
+    for (let i = 0; i < parentCodesWithChild.length; i++) {
+      let parentCode = parentCodesWithChild[i]
+      let groupButton = Buttons.createGroupedButtons({
+        id: parentCode.id,
+        name: parentCode.name,
+        className: 'codebookValidatingElement',
+        description: parentCode.description || '',
+        color: parentCode.color,
+        childGuideElements: parentCode.codes,
+        groupHandler: this.createGoToAnnotationHandler(),
+        buttonHandler: this.createGoToAnnotationHandler(),
+        groupRightClickHandler: this.createValidationRightClickHandler(),
+        buttonRightClickHandler: this.createValidationRightClickHandler()
+      })
+      this.codebookValidationContainer.append(groupButton)
+    }
+    // Create buttons for each parent code which has not child elements
+    for (let i = 0; i < parentCodesWithoutChild.length; i++) {
+      let parentCode = parentCodesWithoutChild[i]
+      let groupButton = Buttons.createButton({
+        id: parentCode.id,
+        name: parentCode.name,
+        className: 'codebookValidatingElement',
+        description: parentCode.description || '',
+        color: parentCode.color,
+        handler: this.createGoToAnnotationHandler(),
+        buttonRightClickHandler: this.createValidationRightClickHandler()
+      })
+      this.codebookValidationContainer.append(groupButton)
+    }
+  }
+
+  createGoToAnnotationHandler () {
+    return (event) => {
+      // Get if it is created with a parent code or not
+      let codeId
+      if (event.target.classList.contains('groupName')) {
+        codeId = event.target.parentElement.dataset.codeId
+      } else if (event.target.classList.contains('tagButton')) {
+        codeId = event.target.dataset.codeId
+      }
+      // Get code for clicked button
+      let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+        return code.id === codeId
+      })
+      // Retrieve URL to go to
+      let annotation = code.annotation
+      let url = annotation.uri
+      if (URLUtils.areSameURI(url, window.abwa.contentTypeManager.documentURL)) {
+        // If webpage is the same, just go to annotation
+        window.abwa.contentAnnotator.goToAnnotation(annotation)
+      } else {
+        // If webpage is different, open in new tab and go to annotation
+        // TODO Check if url is valid
+        url += '#hag:' + code.id
+        window.open(url)
+      }
+    }
+  }
+
+  createValidationRightClickHandler () {
+    return (codeId) => {
+      let items = {}
+      items['validateCode'] = {name: 'Validate this code from codebook'}
+      return {
+        callback: (key) => {
+          if (key === 'validateCode') {
+
+          }
+        },
+        items: items
+      }
     }
   }
 
@@ -177,7 +267,7 @@ class CodeBookDevelopmentManager {
     }
   }
 
-  createRightClickHandler () {
+  createCodebookRightClickHandler () {
     return (codeId) => {
       let items = {}
       items['modifyCodebookCode'] = {name: 'Modify code properties'}
@@ -371,6 +461,8 @@ class CodeBookDevelopmentManager {
                       if (err) {
                         Alerts.errorAlert({title: 'Unable to create new code.', text: 'Unable to create the new code. Please check your connection to Hypothes.is.'})
                       } else {
+                        // Add annotation to code
+                        code.annotation = codeAnnotations.codeAnnotation
                         // Add code annotation to text annotator
                         window.abwa.contentAnnotator.allAnnotations.push(codeAnnotations.codeAnnotation)
                         window.abwa.contentAnnotator.currentAnnotations.push(codeAnnotations.codeAnnotation)
@@ -388,8 +480,10 @@ class CodeBookDevelopmentManager {
   }
 
   updateSidebarButtons () {
-    this.codebookButtonsContainer.innerText = ''
+    this.codebookCreationButtonsContainer.innerText = ''
     this.populateCodebookCreationSidebar()
+    this.codebookValidationContainer.innerText = ''
+    this.populateCodebookValidationSidebar()
   }
 
   addNewCodeToCodebook (code) {

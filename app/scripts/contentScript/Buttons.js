@@ -6,7 +6,7 @@ const ColorUtils = require('../utils/ColorUtils')
  * A class to collect functionality to create buttons and groups of buttons for the sidebar
  */
 class Buttons {
-  static createGroupedButtons ({id, name, description, color = 'white', childGuideElements, groupHandler, buttonHandler, groupTemplate, groupRightClickHandler, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
+  static createGroupedButtons ({id, name, className, description, color = 'white', childGuideElements, groupHandler, buttonHandler, groupTemplate, groupRightClickHandler, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
     if (id) {
       let tagGroup
       // Create the container
@@ -15,6 +15,9 @@ class Buttons {
         if (!_.isElement(groupTemplate)) {
           tagGroup = document.createElement('div')
           tagGroup.className = 'tagGroup'
+          if (className) {
+            tagGroup.className += ' ' + className
+          }
           let groupName = document.createElement('h4')
           groupName.className = 'groupName'
           tagGroup.appendChild(groupName)
@@ -53,7 +56,7 @@ class Buttons {
       })
       // Set button right click handler
       if (_.isFunction(groupRightClickHandler)) {
-        Buttons.createGroupRightClickHandler(id, groupRightClickHandler)
+        Buttons.createGroupRightClickHandler({id, className, handler: groupRightClickHandler})
       }
       // Drag and drop functions
       if (_.isFunction(ondragstart)) {
@@ -94,6 +97,7 @@ class Buttons {
             let groupButton = Buttons.createGroupedButtons({
               id: element.id,
               name: element.name,
+              className: className,
               childGuideElements: element.childElements,
               color: element.color,
               groupHandler: groupHandler,
@@ -109,6 +113,7 @@ class Buttons {
             let button = Buttons.createButton({
               id: element.id,
               name: element.name,
+              className: className,
               description: element.description,
               color: element.color,
               handler: buttonHandler,
@@ -127,18 +132,18 @@ class Buttons {
     }
   }
 
-  static createGroupRightClickHandler (id, handler) {
+  static createGroupRightClickHandler ({id, className = 'tagGroup', handler}) {
     $.contextMenu({
-      selector: '.tagGroup[data-code-id="' + id + '"] > .groupName',
+      selector: '.' + className + '[data-code-id="' + id + '"] > .groupName',
       build: () => {
         return handler(id)
       }
     })
   }
 
-  static createButtonRightClickHandler (id, handler) {
+  static createButtonRightClickHandler ({id, className = 'tagButton', handler}) {
     $.contextMenu({
-      selector: '.tagButton[data-code-id="' + id + '"]',
+      selector: '.' + className + '[data-code-id="' + id + '"]',
       build: () => {
         return handler(id)
       }
@@ -167,7 +172,7 @@ class Buttons {
     }
   }
 
-  static createButton ({id, name, color = 'rgba(200, 200, 200, 1)', description, handler, buttonTemplate, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
+  static createButton ({id, name, className, color = 'rgba(200, 200, 200, 1)', description, handler, buttonTemplate, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
     if (id) {
       let tagButton
       // Create the container
@@ -176,6 +181,9 @@ class Buttons {
         if (!_.isElement(buttonTemplate)) {
           tagButton = document.createElement('button')
           tagButton.className = 'tagButton'
+          if (className) {
+            tagButton.className += ' ' + className
+          }
         }
       } else {
         $(buttonTemplate.content.firstElementChild).clone().get(0)
@@ -197,7 +205,7 @@ class Buttons {
       tagButton.addEventListener('click', handler)
       // Set button right click handler
       if (_.isFunction(buttonRightClickHandler)) {
-        Buttons.createButtonRightClickHandler(id, buttonRightClickHandler)
+        Buttons.createButtonRightClickHandler({id, className, handler: buttonRightClickHandler})
       }
       // Drag and drop functions
       if (_.isFunction(ondragstart)) {

@@ -6,6 +6,7 @@ const Sidebar = require('./Sidebar')
 const GroupSelector = require('./GroupSelector')
 const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
 const MappingStudyManager = require('./MappingStudyManager')
+const CodingManager = require('./CodingManager')
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
@@ -74,6 +75,23 @@ class ContentScriptManager {
     }
   }
 
+  reloadCodingManager (callback) {
+    this.destroyCodingManager()
+    window.abwa.codingManager = new CodingManager()
+    window.abwa.codingManager.init(() => {
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    })
+  }
+
+  destroyCodingManager () {
+    if (window.abwa.codingManager) {
+      window.abwa.codingManager.destroy()
+      window.abwa.codingManager = null
+    }
+  }
+
   groupChangedEventHandlerCreator () {
     return (event) => {
       this.reloadContentByGroup()
@@ -84,9 +102,11 @@ class ContentScriptManager {
     this.reloadMappingStudyManager(() => {
       this.reloadModeManager(() => {
         this.reloadContentAnnotator(() => {
-          if (_.isFunction(callback)) {
-            callback()
-          }
+          this.reloadCodingManager(() => {
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          })
         })
       })
     })
@@ -95,7 +115,7 @@ class ContentScriptManager {
 
   reloadModeManager (callback) {
     this.destroyModeManager()
-    window.abwa.modeManager = new ModeManager(ModeManager.modes.codebook) // TODO Set by default the data extraction mode
+    window.abwa.modeManager = new ModeManager(ModeManager.modes.dataextraction) // TODO Set by default the data extraction mode
     window.abwa.modeManager.init()
     if (_.isFunction(callback)) {
       callback()
@@ -120,10 +140,11 @@ class ContentScriptManager {
     this.destroyContentAnnotator()
     // Create a new content annotator for the current group
     window.abwa.contentAnnotator = new TextAnnotator()
-    window.abwa.contentAnnotator.init()
-    if (_.isFunction(callback)) {
-      callback()
-    }
+    window.abwa.contentAnnotator.init(() => {
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    })
   }
 
   destroy (callback) {

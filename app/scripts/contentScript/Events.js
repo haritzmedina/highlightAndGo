@@ -7,7 +7,8 @@ const Events = {
   userFilterChange: 'userFilterChange',
   updatedAllAnnotations: 'updatedAllAnnotations',
   updatedCurrentAnnotations: 'updatedCurrentAnnotations',
-  updatedDocumentURL: 'updatedDocumentURL'
+  updatedDocumentURL: 'updatedDocumentURL',
+  codebookUpdated: 'codebookUpdated'
 }
 
 module.exports = Events
