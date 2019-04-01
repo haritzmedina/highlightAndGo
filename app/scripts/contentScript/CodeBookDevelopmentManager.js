@@ -7,7 +7,9 @@ const Code = require('../model/schema/Code')
 const $ = require('jquery')
 const ColorUtils = require('../utils/ColorUtils')
 const URLUtils = require('../utils/URLUtils')
+const LanguageUtils = require('../utils/LanguageUtils')
 const Config = require('../Config')
+const Events = require('./Events')
 
 class CodeBookDevelopmentManager {
   constructor (mode) {
@@ -96,6 +98,7 @@ class CodeBookDevelopmentManager {
       this.codebookCreationContainer.setAttribute('aria-hidden', 'true')
       this.codebookValidationContainer.setAttribute('aria-hidden', 'false')
     }
+    LanguageUtils.dispatchCustomEvent(Events.modeChanged, {mode: this.mode})
   }
 
   insertCodebookDevelopmentContainer (callback) {
@@ -124,6 +127,20 @@ class CodeBookDevelopmentManager {
     // Create container for each parent code which has child elements
     for (let i = 0; i < parentCodesWithChild.length; i++) {
       let parentCode = parentCodesWithChild[i]
+      // Check if you are the user who can modify this code and create its events
+      let codeIsModifiable = this.isCodeModifiable(parentCode)
+      let events = {
+        groupHandler: codeIsModifiable ? this.createNewCodeEventHandler() : null,
+        buttonHandler: codeIsModifiable ? this.createNewCodeEventHandler() : null,
+        groupRightClickHandler: codeIsModifiable ? this.createCodebookRightClickHandler() : null,
+        buttonRightClickHandler: codeIsModifiable ? this.createCodebookRightClickHandler() : null,
+        onDragStart: codeIsModifiable ? (event, codeId) => {
+          event.dataTransfer.setData('codeId', codeId)
+        } : null,
+        onDragOver: codeIsModifiable ? () => {} : null,
+        onDrop: codeIsModifiable ? this.createOnDropHandler() : null
+      }
+      // Create group buttons
       let groupButton = Buttons.createGroupedButtons({
         id: parentCode.id,
         name: parentCode.name,
@@ -131,36 +148,62 @@ class CodeBookDevelopmentManager {
         description: parentCode.description || '',
         color: parentCode.color,
         childGuideElements: parentCode.codes,
-        groupHandler: this.createNewCodeEventHandler(),
-        buttonHandler: this.createNewCodeEventHandler(),
-        groupRightClickHandler: this.createCodebookRightClickHandler(),
-        buttonRightClickHandler: this.createCodebookRightClickHandler(),
-        ondragstart: (event, codeId) => {
-          event.dataTransfer.setData('codeId', codeId)
-        },
-        ondragover: () => {},
-        ondrop: this.createOnDropHandler()
+        groupHandler: events.groupHandler || null,
+        buttonHandler: events.buttonHandler || null,
+        groupRightClickHandler: events.groupRightClickHandler || null,
+        buttonRightClickHandler: events.buttonRightClickHandler || null,
+        ondragstart: events.onDragStart || null,
+        ondragover: events.onDragOver || null,
+        ondrop: events.onDrop
       })
       this.codebookCreationButtonsContainer.append(groupButton)
     }
     // Create buttons for each parent code which has not child elements
     for (let i = 0; i < parentCodesWithoutChild.length; i++) {
       let parentCode = parentCodesWithoutChild[i]
+      // Check if you are the user who can modify this code and create its events
+      let codeIsModifiable = this.isCodeModifiable(parentCode)
+      let events = {
+        handler: codeIsModifiable ? this.createNewCodeEventHandler() : null,
+        buttonRightClickHandler: codeIsModifiable ? this.createCodebookRightClickHandler() : null,
+        onDragStart: codeIsModifiable ? (event, codeId) => {
+          event.dataTransfer.setData('codeId', codeId)
+        } : null,
+        onDragOver: codeIsModifiable ? () => {} : null,
+        onDrop: codeIsModifiable ? this.createOnDropHandler() : null
+      }
       let groupButton = Buttons.createButton({
         id: parentCode.id,
         name: parentCode.name,
         className: 'codebookCreatingElement',
         description: parentCode.description || '',
         color: parentCode.color,
-        handler: this.createNewCodeEventHandler(),
-        buttonRightClickHandler: this.createCodebookRightClickHandler(),
-        ondragstart: (event, codeId) => {
-          event.dataTransfer.setData('codeId', codeId)
-        },
-        ondragover: () => {},
-        ondrop: this.createOnDropHandler()
+        handler: events.handler || null,
+        buttonRightClickHandler: events.buttonRightClickHandler || null,
+        ondragstart: events.onDragStart,
+        ondragover: events.onDragOver,
+        ondrop: events.onDrop
       })
       this.codebookCreationButtonsContainer.append(groupButton)
+    }
+  }
+
+  isCodeModifiable (code) {
+    let codeIsOwned = code.annotation.user === window.abwa.groupSelector.user.userid
+    if (codeIsOwned) {
+      if (code.codes.length > 0) {
+        // Verify all elements
+        for (let i = 0; i < code.codes.length; i++) {
+          let codeIsOwned = this.isCodeModifiable(code.codes[i])
+          if (!codeIsOwned) {
+            return false
+          }
+        }
+        // If nobody is false, then is true
+        return true
+      } else {
+        return true
+      }
     }
   }
 
@@ -467,6 +510,8 @@ class CodeBookDevelopmentManager {
                         window.abwa.contentAnnotator.allAnnotations.push(codeAnnotations.codeAnnotation)
                         window.abwa.contentAnnotator.currentAnnotations.push(codeAnnotations.codeAnnotation)
                         window.abwa.contentAnnotator.redrawAnnotations()
+                        //
+                        LanguageUtils.dispatchCustomEvent(Events.codebookUpdated, {codebook: window.abwa.mappingStudyManager.classificationScheme})
                       }
                     }
                   })
