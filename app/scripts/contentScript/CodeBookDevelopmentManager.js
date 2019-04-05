@@ -55,7 +55,7 @@ class CodeBookDevelopmentManager {
       })
       // Populate codebook creation container with classification scheme elements
       this.populateCodebookCreationSidebar()
-      // TODO Populate validation container with classification scheme elements
+      // Populate validation container with classification scheme elements
       this.populateCodebookValidationSidebar()
       // Add event listener for new code button
       this.addEventListenerNewCodeButton()
@@ -348,9 +348,9 @@ class CodeBookDevelopmentManager {
                   if (result === Alerts.results.cancel) {
 
                   } else {
-                    // TODO Update annotation in hypothes.is
                     let codeAnnotations = codeToModify.toAnnotation()
                     let codeAnnotation = codeAnnotations.codeAnnotation
+                    // Update annotation in hypothes.is
                     window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(codeToModify.id, codeAnnotation, (err) => {
                       if (err) {
                         Alerts.errorAlert({text: 'An unexpected error occurred in hypothes.is, please try again', title: 'Unable to update'})
@@ -387,7 +387,7 @@ class CodeBookDevelopmentManager {
       let selection = document.getSelection()
       // If selection is child of sidebar, return null
       if ($(selection.anchorNode).parents('#annotatorSidebarWrapper').toArray().length !== 0) {
-        window.alert('The selected content cannot be a new code, is not part of the document') // TODO change by swal
+        Alerts.warningAlert({title: 'Unable to create a new code', text: 'The selected text is not part of the primary study, so you cannot use as an evidence for a new code.'})
         return
       }
       // Retrieve code name from highlighted

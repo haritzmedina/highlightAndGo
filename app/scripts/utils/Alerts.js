@@ -75,7 +75,7 @@ class Alerts {
     }
   }
 
-  static errorAlert ({text = chrome.i18n.getMessage('unexpectedError'), title = 'Oops...', callback, onClose}) {
+  static errorAlert ({text = chrome.i18n.getMessage('unexpectedError'), title = 'Oops...', footer = null, callback, onClose}) {
     Alerts.tryToLoadSwal()
     if (_.isNull(swal)) {
       if (_.isFunction(callback)) {
@@ -87,6 +87,7 @@ class Alerts {
           type: Alerts.alertType.error,
           title: title,
           html: text,
+          footer: footer,
           onClose: onClose
         }).then(() => {
           if (_.isFunction(callback)) {
@@ -197,7 +198,7 @@ class Alerts {
     }
   }
 
-  static inputTextAlert ({input = 'text', inputPlaceholder = '', inputValue = '', inputAttributes = {}, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, html = '', callback}) {
+  static inputTextAlert ({input = 'text', inputPlaceholder = '', inputValue = '', inputAttributes = {}, confirmButtonColor, confirmButtonText, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, html = '', callback}) {
     Alerts.tryToLoadSwal()
     if (_.isNull(swal)) {
       if (_.isFunction(callback)) {
@@ -211,6 +212,8 @@ class Alerts {
           inputValue: inputValue,
           inputAttributes: inputAttributes,
           html: html,
+          confirmButtonColor: confirmButtonColor,
+          confirmButtonText: confirmButtonText || 'OK',
           onOpen: onOpen,
           onBeforeOpen: onBeforeOpen,
           showCancelButton: showCancelButton

@@ -10,6 +10,8 @@ const CodingManager = require('./CodingManager')
 const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
 
+const HighlightAndGoToolset = require('../specific/slrDataExtraction/HighlightAndGoToolset')
+
 class ContentScriptManager {
   constructor () {
     this.events = {}
@@ -103,9 +105,11 @@ class ContentScriptManager {
       this.reloadModeManager(() => {
         this.reloadContentAnnotator(() => {
           this.reloadCodingManager(() => {
-            if (_.isFunction(callback)) {
-              callback()
-            }
+            this.reloadToolset(() => {
+              if (_.isFunction(callback)) {
+                callback()
+              }
+            })
           })
         })
       })
@@ -119,6 +123,21 @@ class ContentScriptManager {
     window.abwa.modeManager.init()
     if (_.isFunction(callback)) {
       callback()
+    }
+  }
+
+  reloadToolset (callback) {
+    this.destroyToolset()
+    window.abwa.toolset = new HighlightAndGoToolset()
+    window.abwa.toolset.init()
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
+
+  destroyToolset () {
+    if (window.abwa.toolset) {
+      window.abwa.toolset.destroy()
     }
   }
 

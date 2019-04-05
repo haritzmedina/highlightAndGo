@@ -12,15 +12,35 @@ class GoogleSheetClient {
     if (token) {
       this.token = token
     }
-    this.baseURI = 'https://sheets.googleapis.com/v4/spreadsheets/'
+    this.baseURI = 'https://sheets.googleapis.com/v4/spreadsheets'
+  }
+
+  createSpreadsheet (data, callback) {
+    $.ajax({
+      method: 'POST',
+      url: this.baseURI,
+      headers: {
+        'Authorization': 'Bearer ' + this.token,
+        'Content-Type': '*/*',
+        'Access-Control-Allow-Origin': '*'
+      },
+      data: JSON.stringify(data)
+    }).done((result) => {
+      callback(null, result)
+    }).fail(() => {
+      callback(new Error('Unable to create a spreadsheet'))
+    })
   }
 
   getSpreadsheet (spreadsheetId, callback) {
     $.ajax({
+      async: true,
+      crossDomain: true,
       method: 'GET',
-      url: this.baseURI + spreadsheetId,
+      url: this.baseURI + '/' + spreadsheetId,
       headers: {
-        'Authorization': 'Bearer ' + this.token
+        'Authorization': 'Bearer ' + this.token,
+        'Content-Type': 'application/json'
       },
       data: {
         includeGridData: true

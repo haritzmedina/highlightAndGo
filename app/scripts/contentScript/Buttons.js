@@ -6,7 +6,7 @@ const ColorUtils = require('../utils/ColorUtils')
  * A class to collect functionality to create buttons and groups of buttons for the sidebar
  */
 class Buttons {
-  static createGroupedButtons ({id, name, className, description, color = 'white', childGuideElements, groupHandler, buttonHandler, groupTemplate, groupRightClickHandler, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
+  static createGroupedButtons ({id, name, label, data, className, description, color = 'white', childGuideElements, groupHandler, buttonHandler, groupTemplate, groupRightClickHandler, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
     if (id) {
       let tagGroup
       // Create the container
@@ -28,11 +28,19 @@ class Buttons {
       } else {
         $(groupTemplate.content.firstElementChild).clone().get(0)
       }
+      if (_.isFunction(data)) {
+        let dataResult = data({codeId: id})
+        _.forEach(_.toPairs(dataResult), (pair) => { tagGroup.dataset[pair[0]] = pair[1] })
+      }
       tagGroup.dataset.codeName = name
       tagGroup.dataset.codeId = id
       let tagButtonContainer = $(tagGroup).find('.tagButtonContainer')
       let groupNameSpan = tagGroup.querySelector('.groupName')
-      groupNameSpan.innerText = name
+      if (_.isFunction(label)) {
+        groupNameSpan.innerText = label({codeId: id, codeName: name})
+      } else {
+        groupNameSpan.innerText = name
+      }
       if (description) {
         groupNameSpan.title = name + ': ' + description
       } else {
@@ -113,6 +121,7 @@ class Buttons {
             let button = Buttons.createButton({
               id: element.id,
               name: element.name,
+              label: label,
               className: className,
               description: element.description,
               color: element.color,
@@ -172,7 +181,7 @@ class Buttons {
     }
   }
 
-  static createButton ({id, name, className, color = 'rgba(200, 200, 200, 1)', description, handler, buttonTemplate, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
+  static createButton ({id, name, label, data, className, color = 'rgba(200, 200, 200, 1)', description, handler, buttonTemplate, buttonRightClickHandler, ondragstart, ondragover, ondrop}) {
     if (id) {
       let tagButton
       // Create the container
@@ -188,9 +197,17 @@ class Buttons {
       } else {
         $(buttonTemplate.content.firstElementChild).clone().get(0)
       }
+      if (_.isFunction(data)) {
+        let dataResult = data({codeId: id})
+        _.forEach(_.toPairs(dataResult), (pair) => { tagButton.dataset[pair[0]] = pair[1] })
+      }
       tagButton.dataset.codeName = name
       tagButton.dataset.codeId = id
-      tagButton.innerText = name
+      if (_.isFunction(label)) {
+        tagButton.innerText = label({codeId: id, codeName: name})
+      } else {
+        tagButton.innerText = name
+      }
       if (description) {
         tagButton.title = name + ': ' + description
       } else {
@@ -250,9 +267,18 @@ class Buttons {
       // Tag button background color change
       // TODO It should be better to set it as a CSS property, but currently there is not an option for that
       tagButton.addEventListener('mouseenter', () => {
-        tagButton.style.backgroundColor = ColorUtils.setAlphaToColor(ColorUtils.colorFromString(tagButton.dataset.baseColor), 0.7)
+        let currentColor = ColorUtils.colorFromString(tagButton.style.backgroundColor)
+        if (currentColor.valpha) {
+          if (currentColor.opaquer(0.2).isDark()) {
+            tagButton.style.color = 'white'
+          }
+          tagButton.style.backgroundColor = ColorUtils.setAlphaToColor(ColorUtils.colorFromString(tagButton.dataset.baseColor), currentColor.valpha + 0.2)
+        } else {
+          tagButton.style.backgroundColor = ColorUtils.setAlphaToColor(ColorUtils.colorFromString(tagButton.dataset.baseColor), 0.7)
+        }
       })
       tagButton.addEventListener('mouseleave', () => {
+        tagButton.style.color = ''
         if (tagButton.dataset.chosen === 'true') {
           tagButton.style.backgroundColor = ColorUtils.setAlphaToColor(ColorUtils.colorFromString(tagButton.dataset.baseColor), 0.6)
         } else {

@@ -1,6 +1,6 @@
 const GoogleSheetClientManager = require('../../googleSheets/GoogleSheetsClientManager')
 const _ = require('lodash')
-const swal = require('sweetalert2')
+const Alerts = require('../../utils/Alerts')
 const DOI = require('doi-regex')
 const URLUtils = require('../../utils/URLUtils')
 
@@ -16,11 +16,7 @@ class PrimaryStudySheetManager {
     this.googleSheetClientManager.init(() => {
       this.googleSheetClientManager.logInGoogleSheets((err) => {
         if (err) {
-          swal({
-            type: 'warning',
-            title: 'Oops...',
-            text: 'It is recommended to give permissions to google sheets. Part of the functionality of the extension will not work correctly.'
-          })
+          Alerts.warningAlert({text: 'It is recommended to give permissions to google sheets. Part of the functionality of the extension will not work correctly.'})
           if (_.isFunction(callback)) {
             callback(err)
           }

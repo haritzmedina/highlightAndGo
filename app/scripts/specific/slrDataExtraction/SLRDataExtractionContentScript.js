@@ -19,7 +19,7 @@ class SLRDataExtractionContentScript {
   }
 
   init (callback) {
-    window.abwa.specific = window.abwa.specific || {}
+    /* window.abwa.specific = window.abwa.specific || {}
     // Retrieve mapping study manager
     window.abwa.specific.mappingStudyManager = new MappingStudyManager()
     window.abwa.specific.mappingStudyManager.init(() => {
@@ -42,17 +42,17 @@ class SLRDataExtractionContentScript {
           callback()
         }
       })
-    })
+    }) */
   }
 
   destroy () {
     // TODO Destroy managers
-    window.abwa.specific.mappingStudyManager.destroy()
+    /* window.abwa.specific.mappingStudyManager.destroy()
     window.abwa.specific.primaryStudySheetManager.destroy()
     window.abwa.specific.backToSpreadsheetLink.destroy()
     window.abwa.specific.createAnnotationManager.destroy()
     window.abwa.specific.deleteAnnotationManager.destroy()
-    window.abwa.specific.validateAnnotationManager.destroy()
+    window.abwa.specific.validateAnnotationManager.destroy() */
   }
 }
 

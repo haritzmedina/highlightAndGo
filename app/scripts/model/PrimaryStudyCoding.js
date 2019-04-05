@@ -1,6 +1,6 @@
 class PrimaryStudyCoding {
-  constructor () {
-
+  constructor ({code = {}}) {
+    this.code = code
   }
 }
 

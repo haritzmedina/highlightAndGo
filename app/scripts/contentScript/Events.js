@@ -1,6 +1,7 @@
 const Events = {
   annotate: 'annotate',
   annotationCreated: 'annotationCreated',
+  comment: 'annotationComment',
   annotationDeleted: 'annotationDeleted',
   annotationValidated: 'annotationValidated',
   modeChanged: 'modeChanged',
@@ -8,7 +9,8 @@ const Events = {
   updatedAllAnnotations: 'updatedAllAnnotations',
   updatedCurrentAnnotations: 'updatedCurrentAnnotations',
   updatedDocumentURL: 'updatedDocumentURL',
-  codebookUpdated: 'codebookUpdated'
+  codebookUpdated: 'codebookUpdated',
+  codingModelUpdated: 'codingModelUpdated'
 }
 
 module.exports = Events
