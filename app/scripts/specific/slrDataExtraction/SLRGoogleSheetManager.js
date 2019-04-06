@@ -62,15 +62,52 @@ class SLRGoogleSheetManager {
       let spreadsheetResolve = _.find(resolves, (resolve) => { return _.has(resolve, 'spreadsheet') })
       let spreadsheetId = spreadsheetResolve.spreadsheet.spreadsheetId
       // Get annotations for coding and assessing
-      let primaryStudies = this.parseAnnotations(annotationsResolve.annotations)
+      let primaryStudies = this.getPrimaryStudiesFromAnnotations(annotationsResolve.annotations)
       let sheetId = 0
       // TODO Update spreadsheet with primary studies data
-
-      callback(null, 'https://docs.google.com/spreadsheets/d/' + spreadsheetId)
+      let rows = []
+      // TODO Calculate for each code which one is the number of columns (multivalued use case)
+      // First row is for codebook facets
+      rows.push(this.createHeaderSpreadsheetRow())
+      // Retrieve rows for primary studies
+      for (let i = 0; i < primaryStudies.length; i++) {
+        rows.push(primaryStudies[i].toSpreadsheetRow())
+      }
+      chrome.runtime.sendMessage({
+        scope: 'googleSheets',
+        cmd: 'updateSpreadsheet',
+        data: {
+          spreadsheetId: spreadsheetId,
+          sheetId: sheetId,
+          rows: rows,
+          rowIndex: 0,
+          columnIndex: 0
+        }
+      }, (result) => {
+        if (_.has(result, 'error')) {
+          callback(result.error)
+        } else {
+          callback(null, 'https://docs.google.com/spreadsheets/d/' + spreadsheetId)
+        }
+      })
     })
   }
 
-  parseAnnotations (annotations) {
+  createHeaderSpreadsheetRow (parentCodes, codesColumnCalc) {
+    let cells = []
+    // Title cell
+    cells.push({
+      userEnteredValue: {
+        formulaValue: '=HYPERLINK("' + window.abwa.groupSelector.currentGroup.url + '", "Primary Study")'
+      }
+    })
+    // TODO Fill columns headers and take into account for each parent code which one is the number of columns (multivalued use case)
+    return {
+      values: cells
+    }
+  }
+
+  getPrimaryStudiesFromAnnotations (annotations) {
     let codingAnnotation = _.filter(annotations, (annotation) => {
       return annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying'
     })
@@ -90,7 +127,7 @@ class SLRGoogleSheetManager {
     let primaryStudies = []
     for (let i = 0; i < primaryStudiesUrl.length; i++) {
       let primaryStudyUrl = primaryStudiesUrl[i]
-      let primaryStudy = new PrimaryStudy({url: primaryStudyUrl})
+      let primaryStudy = new PrimaryStudy({metadata: {url: primaryStudyUrl, title: 'PS' + i}}) // TODO Retrieve title
       primaryStudies.push(primaryStudy)
     }
     return primaryStudies
@@ -105,8 +142,16 @@ class PrimaryStudy {
   }
 
   toSpreadsheetRow () {
+    let cells = []
+    // Title column
+    cells.push({
+      userEnteredValue: {
+        formulaValue: '=HYPERLINK("' + this.url + '", "' + this.title + '")'
+      }
+    })
+    // TODO Calculate the rest of the columns
     return {
-
+      values: cells
     }
   }
 }
