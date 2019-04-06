@@ -38,6 +38,18 @@ class GoogleSheetsManager {
             })
           })
           return true
+        } else if (request.cmd === 'updateSpreadsheet') {
+          chrome.identity.getAuthToken({ 'interactive': true }, function (token) {
+            this.googleSheetClient = new GoogleSheetClient(token)
+            this.googleSheetClient.updateSheetCells(request.data, (err, result) => {
+              if (err) {
+                sendResponse({error: err})
+              } else {
+                sendResponse(result)
+              }
+            })
+          })
+          return true
         }
       }
     })
