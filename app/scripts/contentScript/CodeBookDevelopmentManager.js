@@ -332,14 +332,18 @@ class CodeBookDevelopmentManager {
             let codeToModify = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
               return code.id === codeId
             })
+            let checkedMultivalued = !!codeToModify.multivalued
             Alerts.multipleInputAlert({
               title: 'You are modifying the code ' + codeToModify.name,
-              html: '<input id="codeName" type="text" placeholder="New code name" value="' + codeToModify.name + '"/>' +
-                '<textarea id="codeDescription" placeholder="Please type a description that describes this code...">' + codeToModify.description + '</textarea>',
+              html: '<input id="codeName" class="formCodeName" type="text" placeholder="New code name" value="' + codeToModify.name + '"/>' +
+                '<textarea id="codeDescription" class="formCodeDescription" placeholder="Please type a description that describes this code...">' + codeToModify.description + '</textarea>' +
+                '<label for="codeMultivalued" class="formCodeMultivaluedLabel">Multivalued?</label>' +
+                '<input id="codeMultivalued" class="formCodeMultivaluedInput" type="checkbox" title="" ' + (checkedMultivalued ? 'checked' : '') + '/>',
               preConfirm: () => {
                 // Check if code name is empty
                 codeToModify.name = document.querySelector('#codeName').value
                 codeToModify.description = document.querySelector('#codeDescription').value
+                codeToModify.multivalued = !!document.querySelector('#codeMultivalued').checked
               },
               callback: (err, result) => {
                 if (err) {
@@ -456,12 +460,14 @@ class CodeBookDevelopmentManager {
         })
         Alerts.multipleInputAlert({
           title: 'You are creating a new code',
-          html: '<input id="newCodeName" type="text" placeholder="New code name" value="' + codeName + '"/>' +
-            '<textarea id="newCodeDescription" placeholder="Please type a description that describes this code..."></textarea>',
+          html: '<input id="newCodeName" class="formCodeName" type="text" placeholder="New code name" value="' + codeName + '"/>' +
+            '<textarea id="newCodeDescription" class="formCodeDescription" placeholder="Please type a description that describes this code..."></textarea>' +
+            '<label for="newCodeMultivalued" class="formCodeMultivaluedLabel">Multivalued?</label><input id="newCodeMultivalued" class="formCodeMultivaluedInput" type="checkbox" title=""/>',
           preConfirm: () => {
             // Check if code name is empty
             code.name = document.querySelector('#newCodeName').value
             code.description = document.querySelector('#newCodeDescription').value
+            code.multivalued = !!document.querySelector('#newCodeMultivalued').checked
           },
           callback: (err, result) => {
             if (err) {

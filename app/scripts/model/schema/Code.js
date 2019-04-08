@@ -4,7 +4,7 @@ const LanguageUtils = require('../../utils/LanguageUtils')
 const jsYaml = require('js-yaml')
 
 class Code extends GuideElement {
-  constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}, multivalued = false}) {
+  constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}, multivalued = false, uri}) {
     super({name: name, color: color, parentElement: parentCode || classificationScheme})
     this.description = description
     this.id = id || null
@@ -14,6 +14,7 @@ class Code extends GuideElement {
     this.classificationScheme = classificationScheme
     this.annotation = annotation
     this.multivalued = multivalued
+    this.uri = uri
   }
 
   toAnnotation (target = []) {
@@ -33,7 +34,8 @@ class Code extends GuideElement {
       body: {
         '@type': 'SpecificResource',
         value: this.name,
-        description: this.description || ''
+        description: this.description || '',
+        multivalued: this.multivalued
       },
       group: window.abwa.groupSelector.currentGroup.id,
       permissions: {
@@ -45,8 +47,8 @@ class Code extends GuideElement {
         'slr:code:' + LanguageUtils.normalizeString(this.name)
       ],
       target: target,
-      text: jsYaml.dump({description: this.description}),
-      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+      text: jsYaml.dump({description: this.description, multivalued: this.multivalued}),
+      uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
     }
     let linkAnnotation = this.getParentLinkingAnnotation()
     return {codeAnnotation: codeAnnotation, linkAnnotation: linkAnnotation}
@@ -68,7 +70,7 @@ class Code extends GuideElement {
         target: [],
         'oa:target': 'https://hypothes.is/api/annotations/' + this.id,
         text: jsYaml.dump({body: 'https://hypothes.is/api/annotations/' + this.parentCode.id, target: 'https://hypothes.is/api/annotations/' + this.id}),
-        uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis() // TODO Think and check if this is ok
+        uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
       }
     } else {
       return null
@@ -106,8 +108,8 @@ class Code extends GuideElement {
     })
     if (_.isString(codeNameTag)) {
       let name = codeNameTag.replace('slr:code:', '')
-      let description = codeAnnotation.body.description // TODO, it must be retrieved from codeAnnotation.body.description
-      return new Code({id: codeAnnotation.id, name: name, description: description, classificationScheme, annotation: codeAnnotation})
+      let description = codeAnnotation.body.description
+      return new Code({id: codeAnnotation.id, name: name, description: description, classificationScheme, annotation: codeAnnotation, uri: codeAnnotation.uri})
     }
   }
 
