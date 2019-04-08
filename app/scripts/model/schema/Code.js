@@ -4,7 +4,7 @@ const LanguageUtils = require('../../utils/LanguageUtils')
 const jsYaml = require('js-yaml')
 
 class Code extends GuideElement {
-  constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}}) {
+  constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}, multivalued = false}) {
     super({name: name, color: color, parentElement: parentCode || classificationScheme})
     this.description = description
     this.id = id || null
@@ -13,8 +13,7 @@ class Code extends GuideElement {
     this.parentLinkAnnotationId = parentLinkAnnotationId || null
     this.classificationScheme = classificationScheme
     this.annotation = annotation
-    this.multivalued = false
-    this.inductive = false
+    this.multivalued = multivalued
   }
 
   toAnnotation (target = []) {

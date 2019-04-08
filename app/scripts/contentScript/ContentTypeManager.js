@@ -29,6 +29,8 @@ class ContentTypeManager {
         this.waitUntilPDFViewerLoad(() => {
           // Save document type as pdf
           this.documentType = ContentTypeManager.documentTypes.pdf
+          // Try to load title
+          this.tryToLoadTitle()
           // Save pdf fingerprint
           this.pdfFingerprint = window.PDFViewerApplication.pdfDocument.pdfInfo.fingerprint
           // Get document URL
@@ -51,6 +53,7 @@ class ContentTypeManager {
         })
       } else {
         this.documentType = ContentTypeManager.documentTypes.html
+        this.tryToLoadTitle()
         if (this.urlParam) {
           this.documentURL = this.urlParam
         } else {
@@ -106,6 +109,9 @@ class ContentTypeManager {
     if (_.isEmpty(this.doi)) {
       try {
         this.doi = document.querySelector('meta[name="citation_doi"]').content
+        if (!this.doi) {
+          this.doi = document.querySelector('meta[name="dc.identifier"]').content
+        }
       } catch (e) {
         console.log('Doi not found for this document')
       }
@@ -166,6 +172,38 @@ class ContentTypeManager {
     if (fileTextContentElement) {
       let fileTextContent = fileTextContentElement.innerText
       this.documentFingerprint = CryptoUtils.hash(fileTextContent.innerText)
+    }
+  }
+
+  tryToLoadTitle () {
+    // Try to load title from page metadata
+    if (_.isEmpty(this.documentTitle)) {
+      try {
+        let documentTitleElement = document.querySelector('meta[name="citation_title"]')
+        if (!_.isNull(documentTitleElement)) {
+          this.documentTitle = documentTitleElement.content
+        }
+        if (!this.documentTitle) {
+          let documentTitleElement = document.querySelector('meta[property="og:title"]')
+          if (!_.isNull(documentTitleElement)) {
+            this.documentTitle = documentTitleElement.content
+          }
+          if (!this.documentTitle) {
+            // Try to load title from pdf metadata
+            if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+              this.waitUntilPDFViewerLoad(() => {
+                this.documentTitle = window.PDFViewerApplication.documentInfo.Title || document.title || 'Unknown document'
+              })
+            }
+            // Try to load title from document title
+            if (!this.documentTitle) {
+              this.documentTitle = document.title || 'Unknown document'
+            }
+          }
+        }
+      } catch (e) {
+        console.debug('Title not found for this document')
+      }
     }
   }
 }

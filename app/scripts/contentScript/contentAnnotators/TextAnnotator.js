@@ -284,6 +284,10 @@ class TextAnnotator extends ContentAnnotator {
       data.document.link = data.document.link || []
       data.document.link.push({href: pdfUrl, type: 'application/pdf'})
     }
+    // If document title is retrieved
+    if (_.isString(window.abwa.contentTypeManager.documentTitle)) {
+      data.document.title = window.abwa.contentTypeManager.documentTitle
+    }
     return data
   }
 
