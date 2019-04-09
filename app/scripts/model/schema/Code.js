@@ -107,9 +107,10 @@ class Code extends GuideElement {
       return tag.includes('slr:code:')
     })
     if (_.isString(codeNameTag)) {
-      let name = codeNameTag.replace('slr:code:', '')
+      let name = codeAnnotation.body.value || codeNameTag.replace('slr:code:', '')
       let description = codeAnnotation.body.description
-      return new Code({id: codeAnnotation.id, name: name, description: description, classificationScheme, annotation: codeAnnotation, uri: codeAnnotation.uri})
+      let multivalued = codeAnnotation.body.multivalued || false
+      return new Code({id: codeAnnotation.id, name: name, description: description, classificationScheme, annotation: codeAnnotation, uri: codeAnnotation.uri, multivalued: multivalued})
     }
   }
 
