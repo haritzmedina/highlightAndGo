@@ -17,6 +17,11 @@ class DataExtractionManager {
 
   init (callback) {
     console.debug('Initializing data extraction manager')
+    // Choose mode depending on annotation based initializer
+    if (_.isObject(window.abwa.annotationBasedInitializer.initAnnotation)) {
+      this.mode = DataExtractionManager.modes.checking
+      window.abwa.sidebar.openSidebar()
+    }
     this.classificationScheme = window.abwa.mappingStudyManager.classificationScheme
     this.insertDataExtractionContainer(() => {
       this.dataExtractionCodingContainer = document.querySelector('#codingContainer')
@@ -203,19 +208,28 @@ class DataExtractionManager {
       let code = _.find(this.classificationScheme.codes, (code) => {
         return code.id === codeId
       })
+      // Send annotation event coding
       LanguageUtils.dispatchCustomEvent(Events.annotate, {code: code})
-      // TODO coding
     }
   }
 
   codingRightClickHandler () {
     return (codeId) => {
       let items = {}
-      items['something'] = {name: 'Not implemented options...'}
+      items['goToAnnotation'] = {name: 'Go to next evidence'}
       return {
         callback: (key) => {
-          if (key === 'something') {
-
+          if (key === 'goToAnnotation') {
+            if (_.has(window.abwa.codingManager.primaryStudyCoding, codeId)) {
+              let annotations = window.abwa.codingManager.primaryStudyCoding[codeId].annotations
+              let index = _.indexOf(annotations, this.lastAnnotation)
+              if (index === -1 || index === annotations.length - 1) {
+                this.lastAnnotation = annotations[0]
+              } else {
+                this.lastAnnotation = annotations[index + 1]
+              }
+              window.abwa.contentAnnotator.goToAnnotation(this.lastAnnotation)
+            }
           }
         },
         items: items
@@ -279,22 +293,6 @@ class DataExtractionManager {
     // Destroy current augmentation operations
     if (!_.isEmpty(window.abwa.userFilter)) {
       window.abwa.userFilter.destroy()
-    }
-  }
-
-  reloadSpecificContentManager (config, callback) {
-    // Destroy current specific content manager
-    this.destroySpecificContentManager()
-    if (config.namespace === 'slr') {
-      const SLRDataExtractionContentScript = require('../specific/slrDataExtraction/SLRDataExtractionContentScript')
-      window.abwa.specificContentManager = new SLRDataExtractionContentScript(config)
-      window.abwa.specificContentManager.init()
-    }
-  }
-
-  destroySpecificContentManager () {
-    if (window.abwa.specificContentManager) {
-      window.abwa.specificContentManager.destroy()
     }
   }
 

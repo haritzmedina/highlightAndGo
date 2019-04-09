@@ -19,7 +19,10 @@ class HighlightAndGoToolset extends Toolset {
       this.newSLRImage.title = 'Create a new Systematic Literature Review' // TODO i18n
       this.toolsetBody.appendChild(this.newSLRImage)
       this.newSLRImage.addEventListener('click', () => {
-        Alerts.infoAlert({title: 'Functionality not available yet'})
+        // TODO i18n
+        Alerts.infoAlert({
+          title: 'Functionality not available yet',
+          text: 'You can create a new SLR just creating a new Hypothes.is group <a href="https://hypothes.is/groups/new">here</a>.'})
         // TODO
       })
 

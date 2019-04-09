@@ -28,7 +28,7 @@ class CodingManager {
 
   updateDataModel () {
     // Get which codes are used in coding for all users
-    let codingAnnotationsAllUsers =  _.filter(window.abwa.contentAnnotator.allAnnotations, (annotation) => {
+    let codingAnnotationsAllUsers = _.filter(window.abwa.contentAnnotator.allAnnotations, (annotation) => {
       return annotation.motivation === 'classifying'
     })
     this.primaryStudyCoding = this.parseAnnotationToCodingModel(codingAnnotationsAllUsers)
@@ -37,7 +37,7 @@ class CodingManager {
       return annotation.motivation === 'classifying' && annotation.user === window.abwa.groupSelector.user.userid // TODO Change annotation.user by annotation.creator
     })
     this.userPrimaryStudyCoding = this.parseAnnotationToCodingModel(codingAnnotationsCurrentUser)
-    let validatingAnnotations =  _.filter(window.abwa.contentAnnotator.allAnnotations, (annotation) => {
+    let validatingAnnotations = _.filter(window.abwa.contentAnnotator.allAnnotations, (annotation) => {
       return annotation.motivation === 'assessing'
     })
     validatingAnnotations.forEach((validatingAnnotation) => {

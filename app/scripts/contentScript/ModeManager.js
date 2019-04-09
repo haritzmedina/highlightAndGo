@@ -23,16 +23,55 @@ class ModeManager {
       // Init codebook mode
       window.abwa.codeBookDevelopmentManager = new CodeBookDevelopmentManager()
       window.abwa.codeBookDevelopmentManager.init()
-      // Set mode
-      if (this.mode === ModeManager.modes.codebook) {
-        this.setCodebookMode()
-      } else {
-        this.setDataExtractionMode()
-      }
-      this.initEventHandlers(() => {
-        if (_.isFunction(callback)) {
-          callback()
+      // Check if annotation initializer contains any annotation
+      let promise = new Promise((resolve) => {
+        if (_.isObject(window.abwa.annotationBasedInitializer.initAnnotation)) {
+          let initAnnotation = window.abwa.annotationBasedInitializer.initAnnotation
+          // Choose mode depending on the annotation
+          if (initAnnotation.motivation) {
+            if (initAnnotation.motivation === 'slr:codebookDevelopment') {
+              this.mode = ModeManager.modes.codebook
+              resolve()
+            } else if (initAnnotation.motivation === 'classifying') {
+              this.mode = ModeManager.modes.dataextraction
+              resolve()
+            } else if (initAnnotation.motivation === 'assessing') {
+              if (initAnnotation['oa:target']) {
+                let validatedAnnotationId = initAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
+                window.abwa.hypothesisClientManager.hypothesisClient.fetchAnnotation(validatedAnnotationId, (err, annotation) => {
+                  if (err) {
+                    resolve() // Ignore error, default mode will be selected
+                  } else {
+                    if (annotation.motivation) {
+                      if (annotation.motivation === 'slr:codebookDevelopment') {
+                        this.mode = ModeManager.modes.codebook
+                      } else if (annotation.motivation === 'classifying') {
+                        this.mode = ModeManager.modes.dataextraction
+                      }
+                      window.abwa.annotationBasedInitializer.initAnnotation = annotation
+                    }
+                    resolve()
+                  }
+                })
+              } else {
+                resolve()
+              }
+            }
+          }
         }
+      })
+      promise.then(() => {
+        // Set mode
+        if (this.mode === ModeManager.modes.codebook) {
+          this.setCodebookMode()
+        } else {
+          this.setDataExtractionMode()
+        }
+        this.initEventHandlers(() => {
+          if (_.isFunction(callback)) {
+            callback()
+          }
+        })
       })
     })
   }

@@ -95,7 +95,6 @@ class GoogleSheetsClientManager {
         } else {
           if (result) {
             chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getToken'}, (result) => {
-              debugger
               if (result.error) {
                 if (_.isFunction(callback)) {
                   callback(result.error)

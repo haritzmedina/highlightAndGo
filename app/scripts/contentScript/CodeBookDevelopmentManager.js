@@ -22,6 +22,11 @@ class CodeBookDevelopmentManager {
 
   init (callback) {
     console.debug('Initializing codebook development manager')
+    // Choose mode depending on annotation based initializer
+    if (_.isObject(window.abwa.annotationBasedInitializer.initAnnotation)) {
+      this.mode = CodeBookDevelopmentManager.modes.validating
+      window.abwa.sidebar.openSidebar()
+    }
     // Get classification scheme
     this.classificationScheme = window.abwa.mappingStudyManager.classificationScheme
     this.insertCodebookDevelopmentContainer(() => {
