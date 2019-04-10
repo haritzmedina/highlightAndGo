@@ -48,6 +48,7 @@ class MappingStudyManager {
 
   destroy () {
     this.classificationScheme = null
+    this.classificationSchemeAnnotations = null
   }
 }
 

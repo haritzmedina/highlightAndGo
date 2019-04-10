@@ -137,7 +137,7 @@ class SLRGoogleSheetManager {
         formulaValue: '=HYPERLINK("' + window.abwa.groupSelector.currentGroup.url + '", "Title")'
       }
     })
-    // TODO Fill columns headers and take into account for each parent code which one is the number of columns (multivalued use case)
+    // Fill columns headers and take into account for each parent code which one is the number of columns (multivalued use case)
     for (let i = 0; i < codesColumnCalc.length; i++) {
       let lengthOfCurrentColumn = codesColumnCalc[i].columns
       let code = codesColumnCalc[i].parentCode
@@ -186,7 +186,7 @@ class SLRGoogleSheetManager {
       }
       // Retrieve users for current primary study
       let usersForPrimaryStudy = _.map(_.uniqBy(codingAnnotationsForPrimaryStudy, (anno) => { return anno['user'] }), 'user')
-      let primaryStudy = new PrimaryStudy({metadata: {url: primaryStudyUrl, title: title}, users: usersForPrimaryStudy}) // TODO Retrieve title
+      let primaryStudy = new PrimaryStudy({metadata: {url: primaryStudyUrl, title: title}, users: usersForPrimaryStudy}) // TODO Retrieve doi
       let parentCodes = {}
       for (let i = 0; i < codingAnnotationsForPrimaryStudy.length; i++) {
         let codingAnnotationForPrimaryStudy = codingAnnotationsForPrimaryStudy[i]

@@ -69,11 +69,11 @@ class Buttons {
       // Drag and drop functions
       if (_.isFunction(ondragstart)) {
         tagGroup.draggable = true
-        // TODO On drag start function
+        // On drag start function
         tagGroup.addEventListener('dragstart', Buttons.createDragStartHandler(id, ondragstart))
       }
       if (_.isFunction(ondragover)) {
-        // TODO On dragover function
+        // On dragover function
         tagGroup.addEventListener('dragover', (event) => {
           event.stopPropagation()
           tagGroup.style.backgroundColor = 'rgba(150,150,150,0.5)'
@@ -88,7 +88,7 @@ class Buttons {
           event.stopPropagation()
           e.preventDefault()
         })
-        // TODO On drop function
+        // On drop function
         groupNameSpan.addEventListener('drop', Buttons.createDropHandler({
           id,
           handler: ondrop,
@@ -227,11 +227,11 @@ class Buttons {
       // Drag and drop functions
       if (_.isFunction(ondragstart)) {
         tagButton.draggable = true
-        // TODO On drag start function
+        // On drag start function
         tagButton.addEventListener('dragstart', Buttons.createDragStartHandler(id, ondragstart))
       }
       if (_.isFunction(ondragover)) {
-        // TODO On dragover function
+        // On dragover function
         tagButton.addEventListener('dragenter', (event) => {
           event.stopPropagation()
           tagButton.style.backgroundColor = 'rgba(150,150,150,0.5)'
@@ -251,7 +251,7 @@ class Buttons {
           e.preventDefault()
           e.stopPropagation()
         })
-        // TODO On drop function
+        // On drop function
         tagButton.addEventListener('drop', Buttons.createDropHandler({
           id,
           handler: ondrop,

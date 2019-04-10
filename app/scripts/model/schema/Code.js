@@ -4,7 +4,7 @@ const LanguageUtils = require('../../utils/LanguageUtils')
 const jsYaml = require('js-yaml')
 
 class Code extends GuideElement {
-  constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}, multivalued = false, uri}) {
+  constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}, multivalued = false, uri, uris, creator}) {
     super({name: name, color: color, parentElement: parentCode || classificationScheme})
     this.description = description
     this.id = id || null
@@ -14,7 +14,9 @@ class Code extends GuideElement {
     this.classificationScheme = classificationScheme
     this.annotation = annotation
     this.multivalued = multivalued
-    this.uri = uri
+    this.uri = uri || window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+    this.uris = uris || window.abwa.contentTypeManager.getDocumentURIs() || [this.uri]
+    this.creator = creator
   }
 
   toAnnotation (target = []) {
@@ -30,6 +32,7 @@ class Code extends GuideElement {
       ],
       '@id': this.id || '',
       '@type': 'Annotation',
+      creator: this.creator || window.abwa.groupSelector.getCreatorData() || '',
       motivation: 'slr:codebookDevelopment',
       body: {
         '@type': 'SpecificResource',
@@ -46,8 +49,9 @@ class Code extends GuideElement {
         'motivation:slr:codebookDevelopment',
         'slr:code:' + LanguageUtils.normalizeString(this.name)
       ],
+      uris: this.uris || window.abwa.contentTypeManager.getDocumentURIs(),
       target: target,
-      text: jsYaml.dump({description: this.description, multivalued: this.multivalued}),
+      text: jsYaml.dump({description: this.description, value: this.name, multivalued: this.multivalued}),
       uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
     }
     let linkAnnotation = this.getParentLinkingAnnotation()
@@ -110,7 +114,17 @@ class Code extends GuideElement {
       let name = codeAnnotation.body.value || codeNameTag.replace('slr:code:', '')
       let description = codeAnnotation.body.description
       let multivalued = codeAnnotation.body.multivalued || false
-      return new Code({id: codeAnnotation.id, name: name, description: description, classificationScheme, annotation: codeAnnotation, uri: codeAnnotation.uri, multivalued: multivalued})
+      return new Code({
+        id: codeAnnotation.id,
+        name: name,
+        description: description,
+        classificationScheme,
+        annotation: codeAnnotation,
+        uri: codeAnnotation.uri,
+        uris: codeAnnotation.uris,
+        creator: codeAnnotation.creator,
+        multivalued: multivalued
+      })
     }
   }
 

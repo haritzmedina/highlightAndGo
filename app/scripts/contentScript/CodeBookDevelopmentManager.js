@@ -266,17 +266,15 @@ class CodeBookDevelopmentManager {
       let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
         return code.id === codeId
       })
-      // Retrieve URL to go to
       let annotation = code.annotation
-      let url = annotation.uri
-      if (URLUtils.areSameURI(url, window.abwa.contentTypeManager.documentURL)) {
+      // Compare with all the urls available
+      let coincidence = _.find(annotation.uris, (uri) => { return URLUtils.areSameURI(window.abwa.contentTypeManager.documentURL, uri) })
+      if (coincidence) {
         // If webpage is the same, just go to annotation
         window.abwa.contentAnnotator.goToAnnotation(annotation)
       } else {
         // If webpage is different, open in new tab and go to annotation
-        // TODO Check if url is valid
-        url += '#hag:' + code.id
-        window.open(url)
+        window.open(annotation.uri + '#hag:' + code.id)
       }
     }
   }
@@ -288,7 +286,8 @@ class CodeBookDevelopmentManager {
       return {
         callback: (key) => {
           if (key === 'validateCode') {
-
+            // TODO Validate codebook code
+            Alerts.infoAlert({text: 'Currently is not possible to validate codes from codebook. In future versions it will be available.'})
           }
         },
         items: items
@@ -813,9 +812,17 @@ class CodeBookDevelopmentManager {
               if (err) {
                 reject(err)
               } else {
-                resolve()
-                // Update code parentLinkAnnotationId
+                // We need to update linking annotation with the id retrieved from hypothes.is to update the @id attribute (used in semantic web), that's why we need to do the call twice
                 code.parentLinkAnnotationId = annotation.id
+                // Update in Hypothes.is code with its @id
+                let codeAnnotationUpdated = code.toAnnotation()
+                window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(annotation.id, codeAnnotationUpdated.linkAnnotation, () => {
+                  if (err) {
+                    reject(err)
+                  } else {
+                    resolve()
+                  }
+                })
               }
             })
           }

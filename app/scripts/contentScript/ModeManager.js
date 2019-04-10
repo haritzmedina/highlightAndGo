@@ -139,8 +139,15 @@ class ModeManager {
     }
   }
 
-  destroy () {
-
+  destroy (callback) {
+    // TODO
+    window.abwa.dataExtractionManager.destroy()
+    window.abwa.codeBookDevelopmentManager.destroy()
+    // Remove interface
+    $('#modeWrapper').remove() // TODO Don't use jquery
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 }
 

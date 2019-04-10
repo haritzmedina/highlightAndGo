@@ -19,7 +19,7 @@ class ContentScriptManager {
   }
 
   init () {
-    console.log('Initializing content script manager')
+    console.debug('Initializing content script manager')
     this.status = ContentScriptManager.status.initializing
     this.loadContentTypeManager(() => {
       window.abwa.hypothesisClientManager = new HypothesisClientManager()
@@ -114,12 +114,11 @@ class ContentScriptManager {
         })
       })
     })
-    // TODO Reload specific content
   }
 
   reloadModeManager (callback) {
     this.destroyModeManager()
-    window.abwa.modeManager = new ModeManager(ModeManager.modes.dataextraction) // TODO Set by default the data extraction mode
+    window.abwa.modeManager = new ModeManager(ModeManager.modes.dataextraction)
     window.abwa.modeManager.init()
     if (_.isFunction(callback)) {
       callback()
@@ -167,7 +166,7 @@ class ContentScriptManager {
   }
 
   destroy (callback) {
-    console.log('Destroying content script manager')
+    console.debug('Destroying content script manager')
     this.destroyContentTypeManager(() => {
       this.destroyContentAnnotator(() => {
         this.destroyModeManager(() => {
@@ -175,6 +174,7 @@ class ContentScriptManager {
             window.abwa.sidebar.destroy(() => {
               window.abwa.hypothesisClientManager.destroy(() => {
                 this.status = ContentScriptManager.status.notInitialized
+                console.debug('Destroyed content script manager')
                 if (_.isFunction(callback)) {
                   callback()
                 }

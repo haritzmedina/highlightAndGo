@@ -244,6 +244,7 @@ class TextAnnotator extends ContentAnnotator {
     let data = {
       '@context': 'http://www.w3.org/ns/anno.jsonld',
       'motivation': 'classifying',
+      creator: window.abwa.groupSelector.getCreatorData() || '',
       group: window.abwa.groupSelector.currentGroup.id,
       body: 'https://hypothes.is/api/annotations/' + code.id,
       permissions: {
@@ -288,6 +289,7 @@ class TextAnnotator extends ContentAnnotator {
     if (_.isString(window.abwa.contentTypeManager.documentTitle)) {
       data.document.title = window.abwa.contentTypeManager.documentTitle
     }
+    data.uris = window.abwa.contentTypeManager.getDocumentURIs()
     return data
   }
 
@@ -301,7 +303,7 @@ class TextAnnotator extends ContentAnnotator {
         type: 'TextualBody',
         value: text
       },
-      creator: '', // TODO Set creator
+      creator: window.abwa.groupSelector.getCreatorData() || '',
       'oa:target': 'https://hypothes.is/api/annotations/' + validatedAnnotation.id,
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
@@ -750,39 +752,6 @@ class TextAnnotator extends ContentAnnotator {
                 }
               })
             }
-            /* if (key === 'validate') {
-              // Validate annotation category
-              LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation})
-            } else if (key === 'delete') {
-              // Delete annotation
-              window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (err, result) => {
-                if (err) {
-                  // Unable to delete this annotation
-                  console.error('Error while trying to delete annotation %s', annotation.id)
-                } else {
-                  if (!result.deleted) {
-                    // Alert user error happened
-                    // TODO swal
-                    window.alert('Error deleting hypothesis annotation, please try it again')
-                  } else {
-                    // Remove annotation from data model
-                    _.remove(this.currentAnnotations, (currentAnnotation) => {
-                      return currentAnnotation.id === annotation.id
-                    })
-                    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
-                    _.remove(this.allAnnotations, (currentAnnotation) => {
-                      return currentAnnotation.id === annotation.id
-                    })
-                    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
-                    // Dispatch deleted annotation event
-                    LanguageUtils.dispatchCustomEvent(Events.annotationDeleted, {annotation: annotation})
-                    // Unhighlight annotation highlight elements
-                    DOMTextUtils.unHighlightElements([...document.querySelectorAll('[data-annotation-id="' + annotation.id + '"]')])
-                    console.debug('Deleted annotation ' + annotation.id)
-                  }
-                }
-              })
-            } */
           },
           items: items
         }

@@ -17,7 +17,6 @@ class DoiManager {
       console.log(responseDetails)
       // Retrieve doi from call
       let doi = DOI.groups(responseDetails.url)[1]
-      // TODO Substitute by URLUtils.extractHashParamsFromUrl(window.location.href)
       let annotationId = this.extractAnnotationId(responseDetails.url)
       let redirectUrl = responseDetails.responseHeaders[2].value
       redirectUrl += '#doi:' + doi

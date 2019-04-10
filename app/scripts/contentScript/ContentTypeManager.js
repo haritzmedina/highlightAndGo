@@ -241,6 +241,23 @@ class ContentTypeManager {
       }
     })
   }
+
+  getDocumentURIs () {
+    let uris = []
+    if (this.doi) {
+      uris.push('https://doi.org/' + this.doi)
+    }
+    if (this.documentURL) {
+      uris.push(this.documentURL)
+    }
+    if (this.pdfFingerprint) {
+      uris.push('urn:x-pdf:' + this.pdfFingerprint)
+    }
+    if (this.documentFingerprint) {
+      uris.push('urn:x-txt:' + this.documentFingerprint)
+    }
+    return uris
+  }
 }
 
 ContentTypeManager.documentTypes = {

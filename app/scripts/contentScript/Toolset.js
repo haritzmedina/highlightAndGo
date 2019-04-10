@@ -1,5 +1,6 @@
 const axios = require('axios')
 const _ = require('lodash')
+const $ = require('jquery')
 
 class Toolset {
   constructor () {
@@ -41,6 +42,7 @@ class Toolset {
 
   destroy () {
     // TODO Remove sidebar container
+    $('#toolset').remove() // TODO Don't use jquery
   }
 }
 

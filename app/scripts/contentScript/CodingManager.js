@@ -104,6 +104,19 @@ class CodingManager {
     })
     return coding
   }
+
+  destroy (callback) {
+    // Remove event listeners
+    let events = _.values(this.events)
+    for (let i = 0; i < events.length; i++) {
+      events[i].element.removeEventListener(events[i].event, events[i].handler)
+    }
+    this.primaryStudyCoding = {}
+    this.userPrimaryStudyCoding = {}
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
 }
 
 module.exports = CodingManager
