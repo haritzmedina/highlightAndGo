@@ -3,6 +3,7 @@ const Events = require('./Events')
 const URLUtils = require('../utils/URLUtils')
 const LanguageUtils = require('../utils/LanguageUtils')
 const CryptoUtils = require('../utils/CryptoUtils')
+const axios = require('axios')
 
 const URL_CHANGE_INTERVAL_IN_SECONDS = 1
 
@@ -78,7 +79,7 @@ class ContentTypeManager {
   destroy (callback) {
     if (this.documentType === ContentTypeManager.documentTypes.pdf) {
       // Reload to original pdf website
-      window.location.href = this.documentURL
+      window.location.href = this.documentURL || window.PDFViewerApplication.baseUrl
     } else {
       if (_.isFunction(callback)) {
         callback()
@@ -121,8 +122,11 @@ class ContentTypeManager {
 
   tryToLoadURLParam () {
     let decodedUri = decodeURIComponent(window.location.href)
+    console.log(decodedUri)
     let params = URLUtils.extractHashParamsFromUrl(decodedUri, '::')
+    console.log(params)
     if (!_.isEmpty(params) && !_.isEmpty(params.url)) {
+      console.log(params.url)
       this.urlParam = params.url
     }
   }
@@ -152,7 +156,11 @@ class ContentTypeManager {
   }
 
   getDocumentURIToSaveInHypothesis () {
-    return this.documentURL
+    if (this.doi) {
+      return 'https://doi.org/' + this.doi
+    } else {
+      return this.documentURL
+    }
   }
 
   initSupportWebURLChange () {
@@ -176,35 +184,62 @@ class ContentTypeManager {
   }
 
   tryToLoadTitle () {
-    // Try to load title from page metadata
-    if (_.isEmpty(this.documentTitle)) {
-      try {
-        let documentTitleElement = document.querySelector('meta[name="citation_title"]')
-        if (!_.isNull(documentTitleElement)) {
-          this.documentTitle = documentTitleElement.content
+    // Try to load by doi
+    let promise = new Promise((resolve, reject) => {
+      if (this.doi) {
+        let settings = {
+          'async': true,
+          'crossDomain': true,
+          'url': 'https://doi.org/' + this.doi,
+          'method': 'GET',
+          'headers': {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
         }
-        if (!this.documentTitle) {
-          let documentTitleElement = document.querySelector('meta[property="og:title"]')
+        // Call using axios
+        axios(settings).then((response) => {
+          if (response.data && response.data.title) {
+            this.documentTitle = response.data.title
+          }
+          resolve()
+        })
+      } else {
+        resolve()
+      }
+    })
+    promise.then(() => {
+      // Try to load title from page metadata
+      if (_.isEmpty(this.documentTitle)) {
+        try {
+          let documentTitleElement = document.querySelector('meta[name="citation_title"]')
           if (!_.isNull(documentTitleElement)) {
             this.documentTitle = documentTitleElement.content
           }
           if (!this.documentTitle) {
-            // Try to load title from pdf metadata
-            if (this.documentType === ContentTypeManager.documentTypes.pdf) {
-              this.waitUntilPDFViewerLoad(() => {
-                this.documentTitle = window.PDFViewerApplication.documentInfo.Title || document.title || 'Unknown document'
-              })
+            let documentTitleElement = document.querySelector('meta[property="og:title"]')
+            if (!_.isNull(documentTitleElement)) {
+              this.documentTitle = documentTitleElement.content
             }
-            // Try to load title from document title
             if (!this.documentTitle) {
-              this.documentTitle = document.title || 'Unknown document'
+              // Try to load title from pdf metadata
+              if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+                this.waitUntilPDFViewerLoad(() => {
+                  this.documentTitle = window.PDFViewerApplication.documentInfo.Title || document.title || 'Unknown document'
+                })
+              }
+              // Try to load title from document title
+              if (!this.documentTitle) {
+                this.documentTitle = document.title || 'Unknown document'
+              }
             }
           }
+        } catch (e) {
+          console.debug('Title not found for this document')
         }
-      } catch (e) {
-        console.debug('Title not found for this document')
       }
-    }
+    })
   }
 }
 

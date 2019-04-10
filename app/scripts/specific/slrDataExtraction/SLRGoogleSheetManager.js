@@ -200,13 +200,12 @@ class SLRGoogleSheetManager {
         if (code) {
           let parentCode = code.getAncestorCode()
           let firstLevelCode = _.find(parentCode.codes, (firstLevelChild) => { return code.isChildOf(firstLevelChild) || code === firstLevelChild })
-          if (_.has(parentCodes, parentCode.id)) {
+          if (_.has(parentCodes, parentCode.id) && firstLevelCode) {
             if (_.has(parentCodes[parentCode.id].chosenCodes, firstLevelCode.id)) {
               parentCodes[parentCode.id].chosenCodes[firstLevelCode.id].annotations.push(codingAnnotationForPrimaryStudy)
               if (validatingAnnotation) {
                 parentCodes[parentCode.id].chosenCodes[firstLevelCode.id].validatingAnnotation = validatingAnnotation
               }
-              // TODO Calculate status
             } else {
               // If chosen code is parent itself
               if (parentCode.id !== code.id && firstLevelCode) {
@@ -223,9 +222,13 @@ class SLRGoogleSheetManager {
             if (parentCode.id !== code.id && firstLevelCode) {
               let chosenCodes = {}
               chosenCodes[firstLevelCode.id] = new Code({codeId: firstLevelCode.id, codeName: firstLevelCode.name, annotations: [codingAnnotationForPrimaryStudy], validatingAnnotation})
-              parentCodes[parentCode.id] = new Codes({parentCode, chosenCodes, multivalued: parentCode.multivalued}) // TODO Check if multivalued or not
+              parentCodes[parentCode.id] = new Codes({parentCode, chosenCodes, multivalued: parentCode.multivalued})
             } else if (parentCode.id === code.id) {
-              parentCodes[parentCode.id] = new Codes({parentCode, multivalued: parentCode.multivalued, itself: codingAnnotationForPrimaryStudy, validatingAnnotation}) // TODO Check if multivalued or not
+              if (parentCodes[parentCode.id]) {
+                parentCodes[parentCode.id].itself = codingAnnotationForPrimaryStudy
+              } else {
+                parentCodes[parentCode.id] = new Codes({parentCode, multivalued: parentCode.multivalued, itself: codingAnnotationForPrimaryStudy, validatingAnnotation})
+              }
             }
           }
         }
@@ -289,7 +292,12 @@ class Code {
 
   toCell (users) {
     if (this.validatingAnnotation) {
-      let annotation = this.annotations[0] // Retrieve validated annotation
+      // Find validated annotation
+      let validatedAnnotationId = this.validatingAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
+      let annotation = _.find(this.annotations, (annotation) => { return annotation.id === validatedAnnotationId })
+      if (!_.isObject(annotation)) { // If not found, retrieve first annotation, but something is probably wrong
+        annotation = this.annotations[0]
+      }
       return {
         userEnteredValue: {
           formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + this.codeName + '")'
@@ -389,7 +397,12 @@ class Codes {
         // Check if someone is validated
         let validatedCode = _.find(chosenCodes, (chosenCode) => { return chosenCode.validatingAnnotation })
         if (validatedCode) {
-          let annotation = validatedCode.annotations[0] // TODO Retrieve validated annotation not any annotation
+          // Find validated annotation
+          let validatedAnnotationId = validatedCode.validatingAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
+          let annotation = _.find(validatedCode.annotations, (annotation) => { return annotation.id === validatedAnnotationId })
+          if (!_.isObject(annotation)) { // If not found, retrieve first annotation, but something is probably wrong
+            annotation = validatedCode.annotations[0]
+          }
           return [{
             userEnteredValue: {
               formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + validatedCode.codeName + '")'
@@ -444,8 +457,7 @@ class Codes {
       }
     } else {
       if (this.itself) {
-        // Quote of the annotation in itself
-        // TODO Get quote of annotation
+        // Get quote of annotation in itself
         let textQuoteSelector = _.find(this.itself.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
         let quote = 'Quote'
         if (textQuoteSelector && textQuoteSelector.exact) {

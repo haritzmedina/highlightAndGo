@@ -8,6 +8,7 @@ class DoiManager {
     this.scienceDirect = { 'urls': ['*://www.sciencedirect.com/science/article/pii/*'] }
     this.dropbox = {'urls': ['*://www.dropbox.com/s/*?raw=1*']}
     this.dropboxContent = {'urls': ['*://*.dropboxusercontent.com/*']}
+    this.tabs = {}
   }
 
   init () {
@@ -60,7 +61,11 @@ class DoiManager {
     }, this.scienceDirect, ['requestHeaders', 'blocking'])
     // Request to dropbox
     chrome.webRequest.onHeadersReceived.addListener((responseDetails) => {
-      let redirectUrl = _.find(responseDetails.responseHeaders, (header) => { return header.name.toLowerCase() === 'location' }).value
+      this.tabs[responseDetails.tabId] = {
+        url: responseDetails.url.split('#')[0],
+        annotationId: this.extractAnnotationId(responseDetails.url)
+      }
+      /* let redirectUrl = _.find(responseDetails.responseHeaders, (header) => { return header.name.toLowerCase() === 'location' }).value
       let index = _.findIndex(responseDetails.responseHeaders, (header) => { return header.name.toLowerCase() === 'location' })
       redirectUrl += '#url::' + responseDetails.url.split('#')[0] // Get only the url of the document
       let annotationId = this.extractAnnotationId(responseDetails.url)
@@ -68,7 +73,7 @@ class DoiManager {
         redirectUrl += '&hag:' + annotationId
       }
       responseDetails.responseHeaders[index].value = redirectUrl
-      return {responseHeaders: responseDetails.responseHeaders}
+      return {responseHeaders: responseDetails.responseHeaders} */
     }, this.dropbox, ['responseHeaders', 'blocking'])
     // Request dropbox pdf files
     chrome.webRequest.onBeforeSendHeaders.addListener((details) => {
@@ -76,6 +81,12 @@ class DoiManager {
       details.requestHeaders[index].value = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
       return {requestHeaders: details.requestHeaders}
     }, this.dropboxContent, ['blocking', 'requestHeaders'])
+
+    chrome.webRequest.onCompleted.addListener((details) => {
+      if (this.tabs[details.tabId]) {
+        chrome.tabs.sendMessage(details.tabId, this.tabs[details.tabId])
+      }
+    }, this.dropboxContent)
   }
 
   extractAnnotationId (url) {
