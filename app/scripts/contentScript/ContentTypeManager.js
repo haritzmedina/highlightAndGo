@@ -223,16 +223,25 @@ class ContentTypeManager {
               this.documentTitle = documentTitleElement.content
             }
             if (!this.documentTitle) {
-              // Try to load title from pdf metadata
-              if (this.documentType === ContentTypeManager.documentTypes.pdf) {
-                this.waitUntilPDFViewerLoad(() => {
-                  this.documentTitle = window.PDFViewerApplication.documentInfo.Title || document.title || 'Unknown document'
-                })
-              }
-              // Try to load title from document title
-              if (!this.documentTitle) {
-                this.documentTitle = document.title || 'Unknown document'
-              }
+              let promise = new Promise((resolve, reject) => {
+                // Try to load title from pdf metadata
+                if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+                  this.waitUntilPDFViewerLoad(() => {
+                    if (window.PDFViewerApplication.documentInfo.Title) {
+                      this.documentTitle = window.PDFViewerApplication.documentInfo.Title
+                    }
+                    resolve()
+                  })
+                } else {
+                  resolve()
+                }
+              })
+              promise.then(() => {
+                // Try to load title from document title
+                if (!this.documentTitle) {
+                  this.documentTitle = document.title || 'Unknown document'
+                }
+              })
             }
           }
         } catch (e) {

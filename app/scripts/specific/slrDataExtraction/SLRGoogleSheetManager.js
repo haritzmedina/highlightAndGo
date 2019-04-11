@@ -1,5 +1,6 @@
 const GoogleSheetClientManager = require('../../googleSheets/GoogleSheetsClientManager')
 const Alerts = require('../../utils/Alerts')
+const AnnotationUtils = require('../../utils/AnnotationUtils')
 const _ = require('lodash')
 const HyperSheetColors = require('./HyperSheetColors')
 
@@ -161,7 +162,9 @@ class SLRGoogleSheetManager {
     let validatingAnnotations = _.filter(annotations, (annotation) => {
       return annotation.motivation === 'assessing' || annotation.motivation === 'oa:assessing'
     })
-    let primaryStudiesUrl = _.map(_.uniqBy(codingAnnotations, (anno) => { return anno['uri'] }), 'uri') // TODO Change uri param if necessary
+    let anAnnotationForEachPrimaryStudy = _.uniqWith(codingAnnotations, (a, b) => {
+      return AnnotationUtils.areFromSameDocument(a, b)
+    })
     let users = _.map(_.uniqBy(codingAnnotations, (anno) => { return anno['user'] }), 'user')
     /* let codes = window.abwa.mappingStudyManager.classificationScheme.codes
     let parentCodesWithOnlyOneParent = _.filter(codes, (code) => {
@@ -172,21 +175,36 @@ class SLRGoogleSheetManager {
     }) */
     // Create primary studies
     let primaryStudies = []
-    for (let i = 0; i < primaryStudiesUrl.length; i++) {
-      let primaryStudyUrl = primaryStudiesUrl[i]
+    for (let i = 0; i < anAnnotationForEachPrimaryStudy.length; i++) {
+      let annotationForPrimaryStudy = anAnnotationForEachPrimaryStudy[i]
       let codingAnnotationsForPrimaryStudy = _.filter(codingAnnotations, (codingAnnotation) => {
-        return codingAnnotation.uri === primaryStudyUrl
+        return AnnotationUtils.areFromSameDocument(annotationForPrimaryStudy, codingAnnotation)
       })
       // Retrieve from any annotation the document title
       let title
       try {
-        title = _.find(codingAnnotationsForPrimaryStudy, (annotation) => { return _.isArray(annotation.document.title) }).document.title[0]
+        // Look for any annotation with document title
+        let annotationWithTitle = _.find(codingAnnotationsForPrimaryStudy, (annotation) => {
+          if (annotation.documentMetadata) {
+            return _.isString(annotation.documentMetadata.title)
+          }
+        })
+        if (annotationWithTitle) {
+          title = annotationWithTitle.documentMetadata.title
+        } else {
+          annotationWithTitle = _.find(codingAnnotationsForPrimaryStudy, (annotation) => {
+            return _.isArray(annotation.document.title)
+          })
+          if (annotationWithTitle) {
+            title = annotationWithTitle.document.title[0]
+          }
+        }
       } catch (e) {
         title = 'Primary Study ' + i
       }
       // Retrieve users for current primary study
       let usersForPrimaryStudy = _.map(_.uniqBy(codingAnnotationsForPrimaryStudy, (anno) => { return anno['user'] }), 'user')
-      let primaryStudy = new PrimaryStudy({metadata: {url: primaryStudyUrl, title: title}, users: usersForPrimaryStudy}) // TODO Retrieve doi
+      let primaryStudy = new PrimaryStudy({metadata: {url: annotationForPrimaryStudy.uri, title: title}, users: usersForPrimaryStudy}) // TODO Retrieve doi
       let parentCodes = {}
       for (let i = 0; i < codingAnnotationsForPrimaryStudy.length; i++) {
         let codingAnnotationForPrimaryStudy = codingAnnotationsForPrimaryStudy[i]

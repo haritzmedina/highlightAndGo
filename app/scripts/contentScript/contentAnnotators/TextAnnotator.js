@@ -251,7 +251,7 @@ class TextAnnotator extends ContentAnnotator {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
       },
       references: [],
-      tags: ['slr:code:' + code.name, 'motivation:classifying'],
+      tags: ['slr:code:' + code.name, 'motivation:classifying'], // TODO Should we add all the parent codes as tags?
       target: [{
         selector: selectors
       }],
@@ -289,6 +289,7 @@ class TextAnnotator extends ContentAnnotator {
     if (_.isString(window.abwa.contentTypeManager.documentTitle)) {
       data.document.title = window.abwa.contentTypeManager.documentTitle
     }
+    data.documentMetadata = data.document // Copy to metadata field because hypothes.is doesn't return from its API all the data that we place in document
     data.uris = window.abwa.contentTypeManager.getDocumentURIs()
     return data
   }
@@ -627,12 +628,12 @@ class TextAnnotator extends ContentAnnotator {
           // If codebook manager is in creating mode
           if (window.abwa.codeBookDevelopmentManager.mode === window.abwa.codeBookDevelopmentManager.constructor.modes.creating) {
             if (this.currentUserProfile.userid === annotation.user) {
-              items['deleteCodebookCode'] = {name: 'Remove ' + code.name + ' code from codebook'}
+              items['deleteCodebookCode'] = {name: 'Remove "' + code.name + '" code from codebook'}
             } else {
               // TODO Mark annotation to delete ¿?
             }
           } else {
-            items['validateCode'] = {name: 'Validate ' + code.name + ' code from codebook'}
+            items['validateCode'] = {name: 'Validate "' + code.name + '" code from codebook'}
           }
         } else if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
           // Delete annotation is allowed always if the creator is current user
@@ -672,7 +673,7 @@ class TextAnnotator extends ContentAnnotator {
               // Redraw annotations
               this.redrawAnnotations()
             } else if (key === 'validateCode') {
-              // TODO Validate code from codebook ¿?
+              // TODO Validate code from codebook
             } else if (key === 'deleteAnnotation') {
               window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (err, result) => {
                 if (err) {

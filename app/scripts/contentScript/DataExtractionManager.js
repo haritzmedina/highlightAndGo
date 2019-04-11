@@ -229,6 +229,7 @@ class DataExtractionManager {
                 this.lastAnnotation = annotations[index + 1]
               }
               window.abwa.contentAnnotator.goToAnnotation(this.lastAnnotation)
+              window.abwa.sidebar.openSidebar()
             }
           }
         },
