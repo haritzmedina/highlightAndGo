@@ -1,5 +1,4 @@
 const DOI = require('doi-regex')
-const URLUtils = require('../utils/URLUtils')
 const _ = require('lodash')
 
 class DoiManager {
@@ -8,13 +7,14 @@ class DoiManager {
     this.scienceDirect = { 'urls': ['*://www.sciencedirect.com/science/article/pii/*'] }
     this.dropbox = {'urls': ['*://www.dropbox.com/s/*?raw=1*']}
     this.dropboxContent = {'urls': ['*://*.dropboxusercontent.com/*']}
+    this.ieee = {'urls': ['*://ieeexplore.ieee.org/document/*']}
     this.tabs = {}
   }
 
   init () {
     // Requests to doi.org
     chrome.webRequest.onHeadersReceived.addListener((responseDetails) => {
-      console.log(responseDetails)
+      console.debug(responseDetails)
       // Retrieve doi from call
       let doi = DOI.groups(responseDetails.url)[1]
       let annotationId = this.extractAnnotationId(responseDetails.url)
@@ -24,27 +24,17 @@ class DoiManager {
         redirectUrl += '&hag:' + annotationId
       }
       responseDetails.responseHeaders[2].value = redirectUrl
+      this.tabs[responseDetails.tabId] = {doi: doi, annotationId: annotationId}
       return {responseHeaders: responseDetails.responseHeaders}
     }, this.doiUrlFilterObject, ['responseHeaders', 'blocking'])
+
     // Requests to sciencedirect, redirection from linkinghub.elsevier.com (parse doi and hag if present)
     chrome.webRequest.onBeforeSendHeaders.addListener((requestHeaders) => {
-      let referer = _.find(requestHeaders.requestHeaders, (requestHeader) => { return requestHeader.name === 'Referer' })
-      if (referer && referer.value.includes('linkinghub.elsevier.com')) {
+      if (this.tabs[requestHeaders.tabId]) {
+        let data = this.tabs[requestHeaders.tabId]
         chrome.tabs.get(requestHeaders.tabId, (tab) => {
-          let doi = null
-          let annotationId = null
-          let url = tab.url
-          // Retrieve doi
-          let doiGroups = DOI.groups(url)
-          if (doiGroups[1]) {
-            doi = doiGroups[1]
-            doi = doi.split('&hag')[0] // If doi-regex inserts also the hag parameter, remove it, is not part of the doi
-          }
-          let params = URLUtils.extractHashParamsFromUrl(url)
-          if (params && params.hag) {
-            annotationId = params.hag
-          }
-          console.log(requestHeaders)
+          let doi = data.doi
+          let annotationId = data.annotationId
           if (doi && annotationId) {
             let redirectUrl = requestHeaders.url + '#doi:' + doi + '&hag:' + annotationId
             chrome.tabs.update(requestHeaders.tabId, {url: redirectUrl})
@@ -56,8 +46,30 @@ class DoiManager {
             chrome.tabs.update(requestHeaders.tabId, {url: redirectUrl})
           }
         })
+        delete this.tabs[requestHeaders.tabId] // Delete metadata saved in tabs for current tab
       }
     }, this.scienceDirect, ['requestHeaders', 'blocking'])
+    // Request to IEEE
+    chrome.webRequest.onBeforeSendHeaders.addListener((requestHeaders) => {
+      if (this.tabs[requestHeaders.tabId]) {
+        let data = this.tabs[requestHeaders.tabId]
+        chrome.tabs.get(requestHeaders.tabId, (tab) => {
+          let doi = data.doi
+          let annotationId = data.annotationId
+          if (doi && annotationId) {
+            let redirectUrl = requestHeaders.url + '#doi:' + doi + '&hag:' + annotationId
+            chrome.tabs.update(requestHeaders.tabId, {url: redirectUrl})
+          } else if (doi) {
+            let redirectUrl = requestHeaders.url + '#doi:' + doi
+            chrome.tabs.update(requestHeaders.tabId, {url: redirectUrl})
+          } else if (annotationId) {
+            let redirectUrl = requestHeaders.url + '#hag:' + annotationId
+            chrome.tabs.update(requestHeaders.tabId, {url: redirectUrl})
+          }
+        })
+        delete this.tabs[requestHeaders.tabId] // Delete metadata saved in tabs for current tab
+      }
+    }, this.ieee, ['requestHeaders', 'blocking'])
     // Request to dropbox
     chrome.webRequest.onHeadersReceived.addListener((responseDetails) => {
       this.tabs[responseDetails.tabId] = {

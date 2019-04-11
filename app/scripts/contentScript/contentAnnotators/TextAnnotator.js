@@ -247,6 +247,7 @@ class TextAnnotator extends ContentAnnotator {
       creator: window.abwa.groupSelector.getCreatorData() || '',
       group: window.abwa.groupSelector.currentGroup.id,
       body: 'https://hypothes.is/api/annotations/' + code.id,
+      document: {},
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
       },
@@ -272,7 +273,6 @@ class TextAnnotator extends ContentAnnotator {
     }
     // If doi is available, add it to the annotation
     if (!_.isEmpty(window.abwa.contentTypeManager.doi)) {
-      data.document = data.document || {}
       let doi = window.abwa.contentTypeManager.doi
       data.document.dc = { identifier: [doi] }
       data.document.highwire = { doi: [doi] }
@@ -289,7 +289,7 @@ class TextAnnotator extends ContentAnnotator {
     if (_.isString(window.abwa.contentTypeManager.documentTitle)) {
       data.document.title = window.abwa.contentTypeManager.documentTitle
     }
-    data.documentMetadata = data.document // Copy to metadata field because hypothes.is doesn't return from its API all the data that we place in document
+    data.documentMetadata = data.document // Copy to metadata field because hypothes.is doesn't return from its API all the data that it is placed in document
     data.uris = window.abwa.contentTypeManager.getDocumentURIs()
     return data
   }
