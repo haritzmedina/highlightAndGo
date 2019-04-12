@@ -198,7 +198,7 @@ class Alerts {
     }
   }
 
-  static inputTextAlert ({input = 'text', inputPlaceholder = '', inputValue = '', inputAttributes = {}, confirmButtonColor, confirmButtonText, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, html = '', callback}) {
+  static inputTextAlert ({title = '', input = 'text', inputPlaceholder = '', inputValue = '', inputAttributes = {}, confirmButtonColor, confirmButtonText, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, html = '', callback}) {
     Alerts.tryToLoadSwal()
     if (_.isNull(swal)) {
       if (_.isFunction(callback)) {
@@ -207,6 +207,7 @@ class Alerts {
     } else {
       let fire = () => {
         swal.fire({
+          title: title,
           input: input,
           inputPlaceholder: inputPlaceholder,
           inputValue: inputValue,

@@ -471,7 +471,7 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   retrieveCurrentAnnotations () {
-    // TODO Retrieve current annotations depending on the mode
+    // Retrieve current annotations depending on the mode
     if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
       if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.coding) {
         // Get annotations for mapping mode in data extraction
@@ -570,6 +570,21 @@ class TextAnnotator extends ContentAnnotator {
           } else {
             highlightedElement.title = ''
           }
+          if (annotation.text) {
+            highlightedElement.title += '\nComment: ' + annotation.text
+          }
+          // Find people who validate this
+          let validatingAnnotations = _.filter(this.allAnnotations, (allAnnotation) => {
+            if (allAnnotation.motivation === 'assessing' && _.has(allAnnotation, 'oa:target')) {
+              if (allAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '') === annotation.id) {
+                return allAnnotation
+              }
+            }
+          })
+          validatingAnnotations.forEach((validatingAnnotation) => {
+            let userName = validatingAnnotation.user.replace('acct:', '').replace('@hypothes.is', '')
+            highlightedElement.title += '\nValidated by: ' + userName + ': ' + validatingAnnotation.text
+          })
         }
       })
       // Create context menu event for highlighted elements
@@ -689,8 +704,11 @@ class TextAnnotator extends ContentAnnotator {
                 }
               })
             } else if (key === 'comment') {
+              // Retrieve code for current annotation
+              let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => { return code.id === annotation.body.replace('https://hypothes.is/api/annotations/', '') })
+              let title = code ? 'Comment for code "' + code.name + '"' : 'Commenting'
               Alerts.inputTextAlert({
-                title: 'Commenting ',
+                title: title,
                 inputValue: annotation.text,
                 inputPlaceholder: 'Write your comment or memo.',
                 input: 'textarea',
@@ -714,12 +732,21 @@ class TextAnnotator extends ContentAnnotator {
                 }
               })
             } else if (key === 'validateCoding') {
-              // TODO Check if validated annotation already exists
-              let currentUserValidateAnnotation
+              // Check if validated annotation already exists
+              let currentUserValidateAnnotation = {}
+              // Get code validating
+              let validatingCode = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+                return code.id === annotation.body.replace('https://hypothes.is/api/annotations/', '')
+              })
+              if (_.has(window.abwa.codingManager.primaryStudyCoding, validatingCode.id)) {
+                currentUserValidateAnnotation = _.find(window.abwa.codingManager.primaryStudyCoding[validatingCode.id].validatingAnnotations, (validatingAnnotation) => {
+                  return validatingAnnotation.user === window.abwa.groupSelector.user.userid
+                })
+              }
               Alerts.inputTextAlert({
-                title: 'Validating coding',
+                title: 'Validating coding ' + validatingCode.name || '',
                 text: '',
-                inputValue: '',
+                inputValue: currentUserValidateAnnotation.text || '',
                 confirmButtonColor: 'rgba(100,200,100,1)',
                 confirmButtonText: 'Validate',
                 inputPlaceholder: 'Write any comment for validating this code.',
@@ -729,13 +756,33 @@ class TextAnnotator extends ContentAnnotator {
                     window.alert('Unable to load comment input form')
                   } else {
                     if (currentUserValidateAnnotation) {
-                      // TODO Update already created annotation for assessing
+                      // Update already created annotation for assessing
+                      currentUserValidateAnnotation.text = text
+                      window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(currentUserValidateAnnotation, currentUserValidateAnnotation, (err, assessmentAnnotationResult) => {
+                        if (err) {
+                          Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to update your validation for this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
+                        } else {
+                          let index = _.findIndex(this.allAnnotations, (annotation) => {
+                            return annotation.id === assessmentAnnotationResult.id
+                          })
+                          if (index !== -1) {
+                            this.allAnnotations[index] = assessmentAnnotationResult
+                          }
+                          LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+                          // Redraw current annotations
+                          this.currentAnnotations = this.retrieveCurrentAnnotations()
+                          LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
+                          this.redrawAnnotations()
+                          // Send event new assessment annotation is created
+                          LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation, assessmentAnnotation: assessmentAnnotationResult})
+                        }
+                      })
                     } else {
-                      // TODO Create a new annotation for assessing
+                      // Create a new annotation for assessing
                       let assessmentAnnotation = TextAnnotator.constructAssessmentAnnotation({text: text, validatedAnnotation: annotation})
                       window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(assessmentAnnotation, (err, assessmentAnnotationResult) => {
                         if (err) {
-                          // TODO Unexpected error when validating
+                          Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to validate this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
                         } else {
                           // Update data model
                           this.allAnnotations.push(assessmentAnnotationResult)
