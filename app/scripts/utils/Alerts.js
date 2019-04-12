@@ -254,8 +254,8 @@ class Alerts {
           showCancelButton: showCancelButton
         }).then((result) => {
           if (_.isFunction(callback)) {
-            if (result.dismiss === 'cancel') {
-              callback(null, Alerts.results.cancel)
+            if (_.has(result, 'dismiss')) {
+              callback(null, Alerts.results.dismiss)
             } else {
               callback(null)
             }
@@ -337,7 +337,7 @@ Alerts.position = {
 }
 
 Alerts.results = {
-  cancel: 'cancel'
+  dismiss: 'dismiss'
 }
 
 module.exports = Alerts

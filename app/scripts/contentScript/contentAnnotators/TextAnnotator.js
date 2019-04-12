@@ -563,7 +563,8 @@ class TextAnnotator extends ContentAnnotator {
         let user = annotation.user.replace('acct:', '').replace('@hypothes.is', '')
         // Set highlighted element title
         if (annotation.motivation === 'slr:codebookDevelopment') {
-          highlightedElement.title = 'Annotation to define the code' + code.name + '. Definition set by: ' + user
+          highlightedElement.title = 'Annotation to define the code "' + code.name + '". Defined by: ' + user
+          // TODO Find who has validated/approved this code
         } else if (annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying') {
           if (code) {
             highlightedElement.title = 'Author: ' + user + '\n' + 'Code: ' + code.name
@@ -681,12 +682,22 @@ class TextAnnotator extends ContentAnnotator {
               let codeToDelete = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
                 return code.id === annotation.id
               })
-              // Remove code from classification scheme
-              let removeCodeResult = window.abwa.codeBookDevelopmentManager.removeCodeFromCodebook(codeToDelete)
-              // Remove annotation from all and current annotations
-              this.removeAnnotationsFromModel(removeCodeResult.annotationIdsToRemove)
-              // Redraw annotations
-              this.redrawAnnotations()
+              if (codeToDelete) {
+                // Ask if want to delete
+                Alerts.confirmAlert({
+                  title: 'Are you sure to delete "' + codeToDelete.name + '" code?',
+                  text: 'This is a risky action and it cannot be undone. All the annotations in all the primary studies related to this code won\'t be deleted, but they won\'t be related to this code anymore, and currently it is not possible to re-code them.',
+                  alertType: Alerts.alertType.warning,
+                  callback: () => {
+                    // Remove code from classification scheme
+                    let removeCodeResult = window.abwa.codeBookDevelopmentManager.removeCodeFromCodebook(codeToDelete)
+                    // Remove annotation from all and current annotations
+                    this.removeAnnotationsFromModel(removeCodeResult.annotationIdsToRemove)
+                    // Redraw annotations
+                    this.redrawAnnotations()
+                  }
+                })
+              }
             } else if (key === 'validateCode') {
               // TODO Validate code from codebook
             } else if (key === 'deleteAnnotation') {
@@ -743,10 +754,14 @@ class TextAnnotator extends ContentAnnotator {
                   return validatingAnnotation.user === window.abwa.groupSelector.user.userid
                 })
               }
+              let inputValue = ''
+              if (currentUserValidateAnnotation) {
+                inputValue = currentUserValidateAnnotation.text
+              }
               Alerts.inputTextAlert({
                 title: 'Validating coding ' + validatingCode.name || '',
                 text: '',
-                inputValue: currentUserValidateAnnotation.text || '',
+                inputValue: inputValue,
                 confirmButtonColor: 'rgba(100,200,100,1)',
                 confirmButtonText: 'Validate',
                 inputPlaceholder: 'Write any comment for validating this code.',

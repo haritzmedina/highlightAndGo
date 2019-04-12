@@ -326,12 +326,22 @@ class CodeBookDevelopmentManager {
             let codeToDelete = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
               return code.id === codeId
             })
-            // Remove code from classification scheme
-            let removeCodeResult = this.removeCodeFromCodebook(codeToDelete)
-            // Remove annotation from all and current annotations
-            window.abwa.contentAnnotator.removeAnnotationsFromModel(removeCodeResult.annotationIdsToRemove)
-            // Redraw annotations
-            window.abwa.contentAnnotator.redrawAnnotations()
+            if (codeToDelete) {
+              // Ask if want to delete
+              Alerts.confirmAlert({
+                title: 'Are you sure to delete "' + codeToDelete.name + '" code?',
+                text: 'This is a risky action and it cannot be undone. All the annotations in all the primary studies related to this code won\'t be deleted, but they won\'t be related to this code anymore, and currently it is not possible to re-code them.',
+                alertType: Alerts.alertType.warning,
+                callback: () => {
+                  // Remove code from classification scheme
+                  let removeCodeResult = this.removeCodeFromCodebook(codeToDelete)
+                  // Remove annotation from all and current annotations
+                  window.abwa.contentAnnotator.removeAnnotationsFromModel(removeCodeResult.annotationIdsToRemove)
+                  // Redraw annotations
+                  window.abwa.contentAnnotator.redrawAnnotations()
+                }
+              })
+            }
           } else if (key === 'modifyCodebookCode') {
             let codeToModify = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
               return code.id === codeId
@@ -353,8 +363,8 @@ class CodeBookDevelopmentManager {
                 if (err) {
                   window.alert('Unable to load alert. Is this an annotable document?')
                 } else {
-                  if (result === Alerts.results.cancel) {
-
+                  if (result === Alerts.results.dismiss) {
+                    // Nothing to do if canceled
                   } else {
                     let codeAnnotations = codeToModify.toAnnotation()
                     let codeAnnotation = codeAnnotations.codeAnnotation
@@ -477,7 +487,7 @@ class CodeBookDevelopmentManager {
             if (err) {
               window.alert('Unable to load alert. Is this an annotable document?')
             } else {
-              if (result === Alerts.results.cancel) {
+              if (result === Alerts.results.dismiss) {
                 // If canceled, remove annotations
                 let annotationsToDelete = []
                 if (_.isObject(codeAnnotation)) {
@@ -486,7 +496,7 @@ class CodeBookDevelopmentManager {
                 if (_.isObject(linkAnnotation)) {
                   annotationsToDelete.push(linkAnnotation)
                 }
-                window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotations(annotationsToDelete)
+                window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotations(annotationsToDelete, () => {})
               } else {
                 // Complete the created annotation and update codebook
                 createAnnotationPromise.catch(() => {
