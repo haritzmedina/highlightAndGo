@@ -15,17 +15,36 @@ class DoiManager {
     // Requests to doi.org
     chrome.webRequest.onHeadersReceived.addListener((responseDetails) => {
       console.debug(responseDetails)
-      // Retrieve doi from call
-      let doi = DOI.groups(responseDetails.url)[1]
-      let annotationId = this.extractAnnotationId(responseDetails.url)
-      let redirectUrl = responseDetails.responseHeaders[2].value
-      redirectUrl += '#doi:' + doi
-      if (annotationId) {
-        redirectUrl += '&hag:' + annotationId
+      let locationIndex = _.findIndex(responseDetails.responseHeaders, (header) => header.name === 'location')
+      let locationUrl = responseDetails.responseHeaders[locationIndex].value
+      try {
+        let redirectUrl = new URL(locationUrl)
+        // Retrieve doi from call
+        let doi = ''
+        if (_.isArray(DOI.groups(responseDetails.url))) {
+          doi = DOI.groups(responseDetails.url)[1]
+        }
+        let annotationId = this.extractAnnotationId(responseDetails.url)
+        if (doi) {
+          if (_.isEmpty(redirectUrl.hash)) {
+            redirectUrl.hash += '#doi:' + doi
+          } else {
+            redirectUrl.hash += '&doi:' + doi
+          }
+        }
+        if (annotationId) {
+          if (_.isEmpty(redirectUrl.hash)) {
+            redirectUrl.hash += '#hag:' + annotationId
+          } else {
+            redirectUrl.hash += '&hag:' + annotationId
+          }
+        }
+        responseDetails.responseHeaders[locationIndex].value = redirectUrl.toString()
+        this.tabs[responseDetails.tabId] = {doi: doi, annotationId: annotationId}
+        return {responseHeaders: responseDetails.responseHeaders}
+      } catch (e) {
+        return {responseHeaders: responseDetails.responseHeaders}
       }
-      responseDetails.responseHeaders[2].value = redirectUrl
-      this.tabs[responseDetails.tabId] = {doi: doi, annotationId: annotationId}
-      return {responseHeaders: responseDetails.responseHeaders}
     }, this.doiUrlFilterObject, ['responseHeaders', 'blocking'])
 
     // Requests to sciencedirect, redirection from linkinghub.elsevier.com (parse doi and hag if present)

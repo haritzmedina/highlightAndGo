@@ -1,5 +1,6 @@
 const Events = require('./Events')
 const _ = require('lodash')
+const LanguageUtils = require('../utils/LanguageUtils')
 
 class CodingManager {
   constructor () {
@@ -21,6 +22,9 @@ class CodingManager {
     // Listener for annotation validated
     this.events.annotationValidated = {element: document, event: Events.annotationValidated, handler: () => { this.updateDataModel() }}
     this.events.annotationValidated.element.addEventListener(this.events.annotationValidated.event, this.events.annotationValidated.handler, false)
+    // Listener for all annotations updated
+    this.events.updatedAllAnnotations = {element: document, event: Events.updatedAllAnnotations, handler: () => { this.updateDataModel() }}
+    this.events.updatedAllAnnotations.element.addEventListener(this.events.updatedAllAnnotations.event, this.events.updatedAllAnnotations.handler, false)
     if (_.isFunction(callback)) {
       callback()
     }
@@ -76,6 +80,7 @@ class CodingManager {
         }
       })
     })
+    LanguageUtils.dispatchCustomEvent(Events.codingModelUpdated, {codingModel: this.primaryStudyCoding})
   }
 
   /**

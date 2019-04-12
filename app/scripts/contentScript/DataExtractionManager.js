@@ -45,6 +45,12 @@ class DataExtractionManager {
       this.addEventListenerCodebookUpdated()
       // Add event listener for current annotations updated
       this.addEventListenerUpdatedCurrentAnnotations()
+      // Add event listener for reviewers filter updated
+      // this.addEventListenerUserFilterUpdated()
+      // Add event listener for updated all annotations
+      // this.addEventListenerUpdatedAllAnnotations()
+      // Add event listener for coding model updated
+      this.addEventListenerCodingModelUpdated()
     })
     if (_.isFunction(callback)) {
       callback()
@@ -300,6 +306,11 @@ class DataExtractionManager {
   destroy () {
     console.log('Data extraction manager destroyed')
     // TODO Destroy events
+    // Remove event listeners
+    let events = _.values(this.events)
+    for (let i = 0; i < events.length; i++) {
+      events[i].element.removeEventListener(events[i].event, events[i].handler)
+    }
     // Destroy userfilter
     this.userFilter.destroy()
   }
@@ -337,6 +348,46 @@ class DataExtractionManager {
     this.populateDataExtractionCodingSidebar()
     this.dataExtractionValidationButtonsContainer.innerText = ''
     this.populateDataExtractionValidationSidebar()
+  }
+
+  addEventListenerUserFilterUpdated (callback) {
+    this.events.userFilterChange = {element: document, event: Events.userFilterChange, handler: this.createUserFilterChangeEventHandler()}
+    this.events.userFilterChange.element.addEventListener(this.events.userFilterChange.event, this.events.userFilterChange.handler, false)
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
+
+  createUserFilterChangeEventHandler () {
+    return (event) => {
+      // Update only validation buttons
+      this.dataExtractionValidationButtonsContainer.innerText = ''
+      this.populateDataExtractionValidationSidebar()
+    }
+  }
+
+  addEventListenerUpdatedAllAnnotations (callback) {
+    this.events.updatedAllAnnotations = {element: document, event: Events.updatedAllAnnotations, handler: this.createUpdatedAllAnnotationsEventHandler()}
+    this.events.updatedAllAnnotations.element.addEventListener(this.events.updatedAllAnnotations.event, this.events.updatedAllAnnotations.handler, false)
+    if (_.isFunction(callback)) {
+      callback()
+    }
+  }
+
+  createCodingModelUpdatedEventHandler () {
+    return (event) => {
+      // Update only validation buttons
+      this.dataExtractionValidationButtonsContainer.innerText = ''
+      this.populateDataExtractionValidationSidebar()
+    }
+  }
+
+  addEventListenerCodingModelUpdated (callback) {
+    this.events.codingModelUpdated = {element: document, event: Events.codingModelUpdated, handler: this.createCodingModelUpdatedEventHandler()}
+    this.events.codingModelUpdated.element.addEventListener(this.events.codingModelUpdated.event, this.events.codingModelUpdated.handler, false)
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 }
 

@@ -13,7 +13,7 @@ class IEEEContentScript {
     let params = URLUtils.extractHashParamsFromUrl(window.location.href)
     // Get document doi
     if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
-      this.doi = params.doi
+      this.doi = decodeURIComponent(params.doi)
     } else {
       // Scrap the doi from web
       this.doi = this.findDoi()
@@ -52,15 +52,7 @@ class IEEEContentScript {
    * @returns {*}
    */
   findDoi () {
-    let doiElement = document.querySelector('#divmain > table:nth-child(4) > tbody > tr > td > table > tbody > tr:nth-child(4) > td > span:nth-child(10) > a')
-    if (this.checkIfDoiElement(doiElement)) {
-      return doiElement.innerText
-    }
-    doiElement = document.querySelector('#divmain > table > tbody > tr > td:nth-child(1) > table:nth-child(3) > tbody > tr > td > table > tbody > tr:nth-child(5) > td > span:nth-child(10) > a')
-    if (this.checkIfDoiElement(doiElement)) {
-      return doiElement.innerText
-    }
-    doiElement = document.querySelector('#divmain > table > tbody > tr > td:nth-child(1) > table:nth-child(3) > tbody > tr > td > table > tbody > tr:nth-child(4) > td > span:nth-child(10) > a')
+    let doiElement = document.querySelector('[href*="doi.org"]')
     if (this.checkIfDoiElement(doiElement)) {
       return doiElement.innerText
     }
@@ -83,7 +75,7 @@ class IEEEContentScript {
     let params = URLUtils.extractHashParamsFromUrl(window.location.href)
     // Get document doi
     if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
-      this.doi = params.doi
+      this.doi = decodeURIComponent(params.doi)
     } else {
       // Scrap the doi from web
       this.doi = this.findDoi()
@@ -97,7 +89,7 @@ class IEEEContentScript {
         chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, (result) => {
           console.debug('Activated popup')
           // Retrieve pdf url
-          let pdfUrl = iframeElement.href
+          let pdfUrl = iframeElement.src
           // Create hash with required params to open extension
           let hash = '#hag:' + params.hag
           if (this.doi) {

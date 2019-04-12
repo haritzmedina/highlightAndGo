@@ -209,15 +209,13 @@ class UserFilter {
   }
 
   destroy () {
-    // Remove observer
-    // clearInterval(this.observerInterval)
     // Remove event listeners
     let events = _.values(this.events)
     for (let i = 0; i < events.length; i++) {
       events[i].element.removeEventListener(events[i].event, events[i].handler)
     }
     // Remove user filter container from sidebar
-    $(this.userFilterContainer).remove()
+    $(this.userFilterWrapper).remove()
   }
 }
 

@@ -104,7 +104,7 @@ class ContentTypeManager {
     let decodedUri = decodeURIComponent(window.location.href)
     let params = URLUtils.extractHashParamsFromUrl(decodedUri)
     if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
-      this.doi = params.doi
+      this.doi = decodeURIComponent(params.doi)
     }
     // Try to load doi from page metadata
     if (_.isEmpty(this.doi)) {
@@ -114,7 +114,7 @@ class ContentTypeManager {
           this.doi = document.querySelector('meta[name="dc.identifier"]').content
         }
       } catch (e) {
-        console.log('Doi not found for this document')
+        console.debug('Doi not found for this document')
       }
     }
     // TODO Try to load doi from chrome tab storage
@@ -126,7 +126,7 @@ class ContentTypeManager {
     let params = URLUtils.extractHashParamsFromUrl(decodedUri, '::')
     console.log(params)
     if (!_.isEmpty(params) && !_.isEmpty(params.url)) {
-      console.log(params.url)
+      console.debug(params.url)
       this.urlParam = params.url
     }
   }
