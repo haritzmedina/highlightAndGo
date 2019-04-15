@@ -31,7 +31,7 @@ class SLRGoogleSheetManager {
   createSpreadsheet (callback) {
     // TODO Check if slr:spreadsheet annotation exists
     // TODO If exists, ask user overwrite or create new
-    Alerts.loadingAlert({text: 'Creating spreadsheet, please be patient...'})
+    Alerts.loadingAlert({title: 'Creating spreadsheet', text: 'Please be patient...'})
     let promises = []
     // Promise to create spreadsheet
     promises.push(new Promise((resolve, reject) => {
@@ -446,12 +446,18 @@ class Codes {
             // Review all users
             let annotation = chosenCodes[0].annotations[0] // Retrieve one annotation
             let chosenCode = chosenCodes[0]
-            let every = _.every(chosenCode.annotations, (annotation) => {
-              let index = _.findIndex(allUsers, (user) => {
+            let every = _.every(allUsers, (user) => {
+              let index = _.findIndex(chosenCode.annotations, (annotation) => {
                 return user === annotation.user
               })
               return index !== -1
             })
+            /* let every = _.every(chosenCode.annotations, (annotation) => {
+              let index = _.findIndex(allUsers, (user) => {
+                return user === annotation.user
+              })
+              return index !== -1
+            }) */
             if (every && allUsers.length > 1) {
               // All reviewers has annotated with that code and more than one reviewer has codified the PS
               return [{
