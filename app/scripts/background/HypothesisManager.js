@@ -1,8 +1,8 @@
 const DOM = require('../utils/DOM')
 const $ = require('jquery')
 
-const checkHypothesisLoggedIntervalInSeconds = 20 // fetch token every X seconds
-const checkHypothesisLoggedInWhenPromptInSeconds = 0.5 // When user is prompted to login, the checking should be with higher period
+const checkHypothesisLoggedIntervalInSeconds = 3600 // fetch token every X seconds
+const checkHypothesisLoggedInWhenPromptInSeconds = 5 // When user is prompted to login, the checking should be with higher period
 const maxTries = 10 // max tries before deleting the token
 
 class HypothesisManager {
@@ -101,7 +101,7 @@ class HypothesisManager {
             let interval = setInterval(() => {
               this.retrieveHypothesisToken((err, token) => {
                 if (err) {
-                  console.log('Checking again in %s seconds', checkHypothesisLoggedInWhenPromptInSeconds)
+                  console.debug('Checking again in %s seconds', checkHypothesisLoggedInWhenPromptInSeconds)
                 } else {
                   // Once logged in, take the token and close the tab
                   this.token = token
