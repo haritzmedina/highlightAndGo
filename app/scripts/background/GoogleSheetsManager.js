@@ -21,6 +21,8 @@ class GoogleSheetsManager {
           })
           return true
         }
+      } else if (request.cmd === '') {
+        //
       }
     })
   }

@@ -5,6 +5,8 @@ const GoogleSheetsClientManager = require('../googleSheets/GoogleSheetsClientMan
 const GoogleSheetParser = require('./GoogleSheetParser')
 const HypothesisGroupInitializer = require('./HypothesisGroupInitializer')
 
+const Alerts = require('../utils/Alerts')
+
 const swal = require('sweetalert2')
 
 class GoogleSheetContentScriptManager {
@@ -72,9 +74,7 @@ class GoogleSheetContentScriptManager {
     window.hag.googleSheetParser.parse((err, parsedSheetMappingStudy) => {
       if (err) {
         console.error(err)
-        if (_.isFunction(callback)) {
-          callback()
-        }
+        Alerts.errorAlert({text: err.message})
       } else {
         console.debug('Parsed mapping study data from gSheet')
         console.debug(parsedSheetMappingStudy)

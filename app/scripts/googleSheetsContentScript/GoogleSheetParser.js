@@ -65,6 +65,11 @@ class GoogleSheetParser {
   }
 
   getSpreadsheet (token, callback) {
+    chrome.runtime.sendMessage({
+      scope: 'spreadsheet',
+      cmd: 'getSpreadsheet',
+      data: JSON.stringify({})
+    })
     $.ajax({
       method: 'GET',
       url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.mappingStudy.spreadsheetId,
@@ -74,13 +79,17 @@ class GoogleSheetParser {
       headers: {
         'Authorization': 'Bearer ' + token
       }
-    }).done((spreadsheet) => {
-      callback(null, spreadsheet)
     }).fail(() => {
       swal('Oops!', // TODO i18n
         'You don\'t have permission to access the spreadsheet! Are you using the same Google account for the spreadsheet and for Google Chrome?<br/>If you don\'t know how to solve this problem: Please create on top right: "Share -> Get shareable link", and give edit permission.',
         'error') // Notify error to user
       callback(new Error('Unable to retrieve spreadsheet data. Permission denied.'))
+    }).done((spreadsheet) => {
+      if (_.isEmpty(spreadsheet)) {
+        callback(new Error('Unable to retrieve spreadsheet data.'))
+      } else {
+        callback(null, spreadsheet)
+      }
     })
   }
 
