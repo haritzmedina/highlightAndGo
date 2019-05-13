@@ -1,5 +1,6 @@
 const _ = require('lodash')
 const swal = require('sweetalert2')
+const Alerts = require('../utils/Alerts')
 const ChromeStorage = require('../utils/ChromeStorage')
 const Config = require('../Config')
 
@@ -72,9 +73,11 @@ class HypothesisGroupInitializer {
                       // Save as current group the generated one
                       ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.mappingStudy.hypothesisGroup)}, ChromeStorage.local)
                       // When window.focus
-                      swal('Correctly configured', // TODO i18n
-                        chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + this.mappingStudy.hypothesisGroup.url || this.mappingStudy.hypothesisGroup.links.html + '" target="_blank">' + this.mappingStudy.hypothesisGroup.url + '</a>',
-                        'success')
+                      let groupUrl = this.mappingStudy.hypothesisGroup.links.html
+                      Alerts.successAlert({
+                        title: 'Correctly configured', // TODO i18n
+                        text: chrome.i18n.getMessage('ShareHypothesisGroup') + '<br/><a href="' + groupUrl + '" target="_blank">' + groupUrl + '</a>'
+                      })
                       if (_.isFunction(callback)) {
                         callback()
                       }
