@@ -1,6 +1,6 @@
 const _ = require('lodash')
-const $ = require('jquery')
 const swal = require('sweetalert2')
+const Alerts = require('../utils/Alerts')
 const URLUtils = require('../utils/URLUtils')
 
 const Facet = require('../model/Facet')
@@ -66,11 +66,27 @@ class GoogleSheetParser {
 
   getSpreadsheet (token, callback) {
     chrome.runtime.sendMessage({
-      scope: 'spreadsheet',
+      scope: 'googleSheets',
       cmd: 'getSpreadsheet',
-      data: JSON.stringify({})
+      data: JSON.stringify({
+        spreadsheetId: this.mappingStudy.spreadsheetId
+      })
+    }, (response) => {
+      if (response.error) {
+        Alerts.errorAlert({
+          text: 'You don\'t have permission to access the spreadsheet! Are you using the same Google account for the spreadsheet and for Google Chrome?<br/>If you don\'t know how to solve this problem: Please create on top right: "Share -> Get shareable link", and give edit permission.' // TODO i18n
+        })
+        callback(new Error('Unable to retrieve spreadsheet data. Permission denied.'))
+      } else {
+        try {
+          let spreadsheet = JSON.parse(response.spreadsheet)
+          callback(null, spreadsheet)
+        } catch (e) {
+          callback(e)
+        }
+      }
     })
-    $.ajax({
+    /* $.ajax({
       method: 'GET',
       url: 'https://sheets.googleapis.com/v4/spreadsheets/' + this.mappingStudy.spreadsheetId,
       data: {
@@ -90,7 +106,7 @@ class GoogleSheetParser {
       } else {
         callback(null, spreadsheet)
       }
-    })
+    }) */
   }
 
   getFacetsAndCodes (spreadsheet) {

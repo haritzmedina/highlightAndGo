@@ -25,10 +25,10 @@ class GoogleSheetClient {
       data: {
         includeGridData: true
       }
-    }).done((result) => {
-      callback(null, result)
     }).fail(() => {
       callback(new Error('Unable to retrieve gsheet'))
+    }).done((result) => {
+      callback(null, result)
     })
   }
 
