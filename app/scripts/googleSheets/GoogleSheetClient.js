@@ -16,20 +16,42 @@ class GoogleSheetClient {
   }
 
   getSpreadsheet (spreadsheetId, callback) {
-    $.ajax({
-      method: 'GET',
-      url: this.baseURI + spreadsheetId,
-      headers: {
-        'Authorization': 'Bearer ' + this.token
-      },
-      data: {
-        includeGridData: true
-      }
-    }).fail(() => {
-      callback(new Error('Unable to retrieve gsheet'))
-    }).done((result) => {
-      callback(null, result)
-    })
+    if (window.background) {
+      $.ajax({
+        method: 'GET',
+        url: this.baseURI + spreadsheetId,
+        headers: {
+          'Authorization': 'Bearer ' + this.token
+        },
+        data: {
+          includeGridData: true
+        }
+      }).fail(() => {
+        callback(new Error('Unable to retrieve gsheet'))
+      }).done((result) => {
+        callback(null, result)
+      })
+    } else {
+      // TODO Call background
+      chrome.runtime.sendMessage({
+        scope: 'googleSheets',
+        cmd: 'getSpreadsheet',
+        data: JSON.stringify({
+          spreadsheetId: spreadsheetId
+        })
+      }, (response) => {
+        if (response.error) {
+          callback(response.error)
+        } else {
+          try {
+            let spreadsheet = JSON.parse(response.spreadsheet)
+            callback(null, spreadsheet)
+          } catch (e) {
+            callback(e)
+          }
+        }
+      })
+    }
   }
 
   getSheet (sheetData, callback) {
@@ -62,28 +84,45 @@ class GoogleSheetClient {
   }
 
   batchUpdate (data, callback) {
-    $.ajax({
-      async: true,
-      crossDomain: true,
-      method: 'POST',
-      url: 'https://sheets.googleapis.com/v4/spreadsheets/' + data.spreadsheetId + ':batchUpdate',
-      headers: {
-        'Authorization': 'Bearer ' + this.token,
-        'Content-Type': 'application/json'
-      },
-      data: JSON.stringify({
-        requests: data.requests
+    if (window.background) {
+      $.ajax({
+        async: true,
+        crossDomain: true,
+        method: 'POST',
+        url: 'https://sheets.googleapis.com/v4/spreadsheets/' + data.spreadsheetId + ':batchUpdate',
+        headers: {
+          'Authorization': 'Bearer ' + this.token,
+          'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+          requests: data.requests
+        })
+      }).done(() => {
+        // TODO Manage responses
+        if (_.isFunction(callback)) {
+          callback(null)
+        }
+      }).fail((xhr, textStatus) => {
+        if (_.isFunction(callback)) {
+          callback(new Error('Error in batch update, error: ' + textStatus))
+        }
       })
-    }).done(() => {
-      // TODO Manage responses
-      if (_.isFunction(callback)) {
-        callback(null)
-      }
-    }).fail((xhr, textStatus) => {
-      if (_.isFunction(callback)) {
-        callback(new Error('Error in batch update, error: ' + textStatus))
-      }
-    })
+    } else {
+      // TODO Call background
+      chrome.runtime.sendMessage({
+        scope: 'googleSheets',
+        cmd: 'batchUpdate',
+        data: JSON.stringify({
+          data: data
+        })
+      }, (response) => {
+        if (response.error) {
+          callback(response.error)
+        } else {
+          callback(null)
+        }
+      })
+    }
   }
 
   updateCell (data, callback) {

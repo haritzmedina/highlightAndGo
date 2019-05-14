@@ -44,6 +44,24 @@ class GoogleSheetsManager {
             }
           })
           return true
+        } else if (request.cmd === 'batchUpdate') {
+          chrome.identity.getAuthToken({'interactive': true}, (token) => {
+            if (chrome.runtime.lastError) {
+              sendResponse({ error: chrome.runtime.lastError })
+            } else {
+              let data = JSON.parse(request.data)
+              if (data.data) {
+                this.googleSheetClient = new GoogleSheetClient(token)
+                this.googleSheetClient.batchUpdate(data.data, (err) => {
+                  if (err) {
+                    sendResponse({error: err})
+                  } else {
+                    sendResponse({result: 'done'})
+                  }
+                })
+              }
+            }
+          })
         }
       }
     })
