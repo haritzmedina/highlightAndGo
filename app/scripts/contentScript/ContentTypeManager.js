@@ -37,19 +37,16 @@ class ContentTypeManager {
           // Get document URL
           if (this.urlParam) {
             this.documentURL = this.urlParam
-            if (_.isFunction(callback)) {
-              callback()
-            }
           } else {
             // Is a local file
             if (window.PDFViewerApplication.url.startsWith('file:///')) {
               this.localFile = true
             } else { // Is an online resource
               this.documentURL = window.PDFViewerApplication.url
-              if (_.isFunction(callback)) {
-                callback()
-              }
             }
+          }
+          if (_.isFunction(callback)) {
+            callback()
           }
         })
       } else {
@@ -158,8 +155,12 @@ class ContentTypeManager {
   getDocumentURIToSaveInHypothesis () {
     if (this.doi) {
       return 'https://doi.org/' + this.doi
-    } else {
+    } else if (this.documentURL) {
       return this.documentURL
+    } else if (this.pdfFingerprint) {
+      return 'urn:x-pdf:' + this.pdfFingerprint
+    } else {
+      throw new Error('Unable to retrieve any IRI for this document.')
     }
   }
 

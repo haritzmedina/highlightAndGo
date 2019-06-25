@@ -198,7 +198,7 @@ class Alerts {
     }
   }
 
-  static inputTextAlert ({title = '', input = 'text', inputPlaceholder = '', inputValue = '', inputAttributes = {}, confirmButtonColor, confirmButtonText, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, html = '', callback}) {
+  static inputTextAlert ({title = '', input = 'text', inputPlaceholder = '', inputValue = '', inputAttributes = {}, preConfirm, confirmButtonColor, confirmButtonText, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, html = '', callback}) {
     Alerts.tryToLoadSwal()
     if (_.isNull(swal)) {
       if (_.isFunction(callback)) {
@@ -215,6 +215,7 @@ class Alerts {
           html: html,
           confirmButtonColor: confirmButtonColor,
           confirmButtonText: confirmButtonText || 'OK',
+          preConfirm: preConfirm,
           onOpen: onOpen,
           onBeforeOpen: onBeforeOpen,
           showCancelButton: showCancelButton
@@ -235,7 +236,7 @@ class Alerts {
     }
   }
 
-  static multipleInputAlert ({title = 'Input', html = '', preConfirm, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, callback}) {
+  static multipleInputAlert ({title = 'Input', html = '', preConfirm, onOpen, onBeforeOpen, confirmButtonText = 'OK', confirmButtonColor, position = Alerts.position.center, showCancelButton = true, callback}) {
     Alerts.tryToLoadSwal()
     if (_.isNull(swal)) {
       if (_.isFunction(callback)) {
@@ -250,6 +251,8 @@ class Alerts {
           preConfirm: preConfirm,
           position: position,
           onOpen: onOpen,
+          confirmButtonText: confirmButtonText,
+          confirmButtonColor: confirmButtonColor,
           onBeforeOpen: onBeforeOpen,
           showCancelButton: showCancelButton
         }).then((result) => {
@@ -257,7 +260,7 @@ class Alerts {
             if (_.has(result, 'dismiss')) {
               callback(null, Alerts.results.dismiss)
             } else {
-              callback(null)
+              callback(null, result.value)
             }
           }
         })

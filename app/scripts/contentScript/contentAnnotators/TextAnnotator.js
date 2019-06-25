@@ -294,7 +294,7 @@ class TextAnnotator extends ContentAnnotator {
     return data
   }
 
-  static constructAssessmentAnnotation ({text, status = 'approved', validatedAnnotation}) {
+  static constructAssessmentAnnotation ({text, agreement, status = 'approved', validatedAnnotation}) {
     let data = {
       '@context': 'http://www.w3.org/ns/anno.jsonld',
       type: 'Annotation',
@@ -314,6 +314,9 @@ class TextAnnotator extends ContentAnnotator {
       target: [],
       text: text,
       uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+    }
+    if (agreement) {
+      data.agreement = agreement
     }
     return data
   }
@@ -584,7 +587,15 @@ class TextAnnotator extends ContentAnnotator {
           })
           validatingAnnotations.forEach((validatingAnnotation) => {
             let userName = validatingAnnotation.user.replace('acct:', '').replace('@hypothes.is', '')
-            highlightedElement.title += '\nValidated by: ' + userName + ': ' + validatingAnnotation.text
+            let agreement = validatingAnnotation.agreement
+            if (agreement === 'agree') {
+              highlightedElement.title += '\nReviewer ' + userName + ' agrees: '
+            } else if (agreement === 'disagree') {
+              highlightedElement.title += '\nReviewer ' + userName + ' disagrees: '
+            } else {
+              highlightedElement.title += '\nReviewer ' + userName + ' validates: '
+            }
+            highlightedElement.title += validatingAnnotation.text
           })
         }
       })
@@ -758,22 +769,43 @@ class TextAnnotator extends ContentAnnotator {
               if (currentUserValidateAnnotation) {
                 inputValue = currentUserValidateAnnotation.text
               }
-              Alerts.inputTextAlert({
+              Alerts.multipleInputAlert({
                 title: 'Validating coding ' + validatingCode.name || '',
-                text: '',
+                html:
+                  '<textarea id="comment" class="swal2-textarea customizeInput" placeholder="Write any comment for validating this code.">' + inputValue + '</textarea>' +
+                  '<div><span class="radioButtonImage"><input type="radio" name="agreementRadio" value="agree" id="agreeRadio"/><label for="agreeRadio"><img title="Agree with the decision" id="agreeImage"/></label></span>' +
+                  '<span class="radioButtonImage"><input type="radio" name="agreementRadio" value="disagree" id="disagreeRadio"/><label for="disagreeRadio"><img title="Disagree with the decision" id="disagreeImage"/></label></span>' +
+                  '</div>',
                 inputValue: inputValue,
                 confirmButtonColor: 'rgba(100,200,100,1)',
                 confirmButtonText: 'Validate',
-                inputPlaceholder: 'Write any comment for validating this code.',
                 input: 'textarea',
-                callback: (err, text) => {
+                onOpen: () => {
+                  if (currentUserValidateAnnotation && currentUserValidateAnnotation.agreement === 'agree') {
+                    document.querySelector('#agreeRadio').checked = 'checked'
+                  } else if (currentUserValidateAnnotation && currentUserValidateAnnotation.agreement === 'disagree') {
+                    document.querySelector('#disagreeRadio').checked = 'checked'
+                  }
+                },
+                preConfirm: () => {
+                  let agreementChosenElement = document.querySelector('input[name="agreementRadio"]:checked')
+                  let text = document.querySelector('#comment').value
+                  return {
+                    text: text,
+                    agreement: _.isElement(agreementChosenElement) ? agreementChosenElement.value : null
+                  }
+                },
+                callback: (err, form) => {
                   if (err) {
                     window.alert('Unable to load comment input form')
                   } else {
                     if (currentUserValidateAnnotation) {
                       // Update already created annotation for assessing
-                      currentUserValidateAnnotation.text = text
-                      window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(currentUserValidateAnnotation, currentUserValidateAnnotation, (err, assessmentAnnotationResult) => {
+                      currentUserValidateAnnotation.text = form.text
+                      if (form.agreement) {
+                        currentUserValidateAnnotation.agreement = form.agreement
+                      }
+                      window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(currentUserValidateAnnotation.id, currentUserValidateAnnotation, (err, assessmentAnnotationResult) => {
                         if (err) {
                           Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to update your validation for this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
                         } else {
@@ -794,7 +826,7 @@ class TextAnnotator extends ContentAnnotator {
                       })
                     } else {
                       // Create a new annotation for assessing
-                      let assessmentAnnotation = TextAnnotator.constructAssessmentAnnotation({text: text, validatedAnnotation: annotation})
+                      let assessmentAnnotation = TextAnnotator.constructAssessmentAnnotation({text: form.text, agreement: form.agreement, validatedAnnotation: annotation})
                       window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(assessmentAnnotation, (err, assessmentAnnotationResult) => {
                         if (err) {
                           Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to validate this code. Please check internet connection and try again.'}) // TODO i18n + contact developer

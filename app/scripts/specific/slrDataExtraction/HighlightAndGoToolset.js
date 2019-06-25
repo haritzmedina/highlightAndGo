@@ -1,6 +1,8 @@
 const Toolset = require('../../contentScript/Toolset')
 const $ = require('jquery')
+const _ = require('lodash')
 const Alerts = require('../../utils/Alerts')
+const LanguageUtils = require('../../utils/LanguageUtils')
 const SLRGoogleSheetManager = require('./SLRGoogleSheetManager')
 
 class HighlightAndGoToolset extends Toolset {
@@ -19,11 +21,41 @@ class HighlightAndGoToolset extends Toolset {
       this.newSLRImage.title = 'Create a new Systematic Literature Review' // TODO i18n
       this.toolsetBody.appendChild(this.newSLRImage)
       this.newSLRImage.addEventListener('click', () => {
-        // TODO i18n
-        Alerts.infoAlert({
-          title: 'Functionality not available yet',
-          text: 'You can create a new SLR just creating a new Hypothes.is group <a href="https://hypothes.is/groups/new">here</a>.'})
-        // TODO
+        Alerts.inputTextAlert({
+          title: 'Create a new Systematic Literature Review',
+          inputPlaceholder: 'Type here the new of your SLR...',
+          preConfirm: (slrName) => {
+            if (_.isString(slrName)) {
+              if (slrName.length <= 0) {
+                const swal = require('sweetalert2')
+                swal.showValidationMessage('Name cannot be empty.')
+              } else if (slrName.length > 25) {
+                const swal = require('sweetalert2')
+                swal.showValidationMessage('The SLR name cannot be higher than 25 characters.')
+              } else {
+                return slrName
+              }
+            }
+          },
+          callback: (err, slrName) => {
+            if (err) {
+              window.alert('Unable to load swal. Please contact developer.')
+            } else {
+              slrName = LanguageUtils.normalizeString(slrName)
+              window.abwa.hypothesisClientManager.hypothesisClient.createNewGroup({
+                name: slrName,
+                description: 'A Highlight&Go group to conduct a SLR'
+              }, (err, result) => {
+                if (err) {
+                  Alerts.errorAlert({text: 'Unable to create a new group. Please try again or contact developers if the error continues happening.'})
+                } else {
+                  // Move group to new created one
+                  window.abwa.groupSelector.setCurrentGroup(result.id)
+                }
+              })
+            }
+          }
+        })
       })
 
       // Set create spreadsheet button

@@ -60,6 +60,9 @@
   border: 3px solid green;
 }
 
+[data-validated="true"][data-validation="disagree"] {
+  border: 3px solid red;
+}
 
 .tagButton[data-chosen="true"] {
   border: 3px solid black;

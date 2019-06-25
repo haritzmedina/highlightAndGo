@@ -137,23 +137,29 @@ class GroupSelector {
     // Display group selector and purposes selector
     $('#purposesWrapper').attr('aria-hidden', 'false')
     // Retrieve groups
-    this.retrieveHypothesisGroups((groups) => {
-      console.debug(groups)
-      let dropdownMenu = document.querySelector('#groupSelector')
-      dropdownMenu.innerHTML = '' // Remove all groups
-      this.user.groups.forEach(group => {
-        let groupSelectorItem = document.createElement('option')
-        groupSelectorItem.dataset.groupId = group.id
-        groupSelectorItem.innerText = group.name
-        groupSelectorItem.className = 'dropdown-item'
-        dropdownMenu.appendChild(groupSelectorItem)
-      })
-      // Set select option
-      $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
-      // Set event handler for group change
-      this.setEventForGroupSelectChange()
-      if (_.isFunction(callback)) {
-        callback()
+    this.retrieveHypothesisGroups((err, groups) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
+      } else {
+        console.debug(groups)
+        let dropdownMenu = document.querySelector('#groupSelector')
+        dropdownMenu.innerHTML = '' // Remove all groups
+        this.user.groups.forEach(group => {
+          let groupSelectorItem = document.createElement('option')
+          groupSelectorItem.dataset.groupId = group.id
+          groupSelectorItem.innerText = group.name
+          groupSelectorItem.className = 'dropdown-item'
+          dropdownMenu.appendChild(groupSelectorItem)
+        })
+        // Set select option
+        $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
+        // Set event handler for group change
+        this.setEventForGroupSelectChange()
+        if (_.isFunction(callback)) {
+          callback()
+        }
       }
     })
   }
@@ -168,6 +174,31 @@ class GroupSelector {
         this.user = profile
         if (_.isFunction(callback)) {
           callback(null, profile.groups)
+        }
+      }
+    })
+  }
+
+  setCurrentGroup (groupId, callback) {
+    this.renderGroupsContainer((err) => {
+      if (err) {
+        if (_.isFunction(callback)) {
+          callback(err)
+        }
+      } else {
+        // Set current group
+        let newCurrentGroup = _.find(this.user.groups, (group) => { return group.id === groupId })
+        if (newCurrentGroup) {
+          this.currentGroup = newCurrentGroup
+        }
+        // Update group selector
+        $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
+        // Event group changed
+        this.updateCurrentGroupHandler(this.currentGroup.id)
+        // Open sidebar
+        window.abwa.sidebar.openSidebar()
+        if (_.isFunction(callback)) {
+          callback()
         }
       }
     })
