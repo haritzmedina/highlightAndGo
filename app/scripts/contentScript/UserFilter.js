@@ -1,7 +1,6 @@
 const $ = require('jquery')
 const _ = require('lodash')
 const Events = require('./Events')
-const ModeManager = require('./ModeManager')
 const LanguageUtils = require('../utils/LanguageUtils')
 
 class UserFilter {
@@ -21,8 +20,6 @@ class UserFilter {
           callback(err)
         }
       } else {
-        // Init mode change event handler
-        this.initModeChangeEventHandler()
         // Annotations updated event handler
         this.initAnnotationsUpdatedEventHandler()
         // Init event handler when click in all
@@ -31,7 +28,7 @@ class UserFilter {
           callback()
         }
         // Init panel construction (if no annotation event is detected)
-        this.initUsersPanel(window.abwa.contentAnnotator.allAnnotations)
+        this.initUsersPanel(window.abwa.contentAnnotator.currentAnnotations)
       }
     })
   }
@@ -39,27 +36,13 @@ class UserFilter {
   initUserFilterStructure (callback) {
     let tagWrapperUrl = chrome.extension.getURL('pages/sidebar/userFilterWrapper.html')
     $.get(tagWrapperUrl, (html) => {
-      $('#modeWrapper').after($.parseHTML(html))
+      document.querySelector('#codingValidationContainer').insertAdjacentHTML('afterbegin', html)
       this.userFilterWrapper = document.querySelector('#userFilterWrapper')
       this.usersContainer = document.querySelector('#usersContainer')
-      if (window.abwa.modeManager.mode === ModeManager.modes.index) {
-        this.showUserFilterContainer()
-        this.activateAll() // Activate all the filters
-      } else if (window.abwa.modeManager.mode === ModeManager.modes.highlight) {
-        this.hideUserFilterContainer()
-      }
       if (_.isFunction(callback)) {
         callback()
       }
     })
-  }
-
-  hideUserFilterContainer () {
-    $(this.userFilterWrapper).hide()
-  }
-
-  showUserFilterContainer () {
-    $(this.userFilterWrapper).show()
   }
 
   initAllFilter () {
@@ -102,30 +85,11 @@ class UserFilter {
     })
   }
 
-  initModeChangeEventHandler (callback) {
-    this.events.modeChangeEvent = {element: document, event: Events.modeChanged, handler: this.createInitModeChangeEventHandler()}
-    this.events.modeChangeEvent.element.addEventListener(this.events.modeChangeEvent.event, this.events.modeChangeEvent.handler, false)
-    if (_.isFunction(callback)) {
-      callback()
-    }
-  }
-
   initAnnotationsUpdatedEventHandler (callback) {
     this.events.updatedAllAnnotations = {element: document, event: Events.updatedAllAnnotations, handler: this.createUpdatedAllAnnotationsEventHandler()}
     this.events.updatedAllAnnotations.element.addEventListener(this.events.updatedAllAnnotations.event, this.events.updatedAllAnnotations.handler, false)
     if (_.isFunction(callback)) {
       callback()
-    }
-  }
-
-  createInitModeChangeEventHandler () {
-    return () => {
-      // If mode is index, show sidebar panel, else hide
-      if (window.abwa.modeManager.mode === ModeManager.modes.index) {
-        this.showUserFilterContainer()
-      } else {
-        this.hideUserFilterContainer()
-      }
     }
   }
 
@@ -136,18 +100,25 @@ class UserFilter {
       if (_.has(event, 'detail.annotations')) {
         annotations = event.detail.annotations // If is included in the event
       } else {
-        annotations = window.abwa.contentAnnotator.allAnnotations // Or retrieve directly from contentAnnotator
+        annotations = window.abwa.contentAnnotator.allAnnotations
       }
+      annotations = _.filter(annotations, (annotation) => {
+        return annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying'
+      })
       this.updateUsersPanel(annotations)
     }
   }
 
   initUsersPanel () {
     let annotations = window.abwa.contentAnnotator.allAnnotations
-    if (_.isArray(annotations)) {
+    // Retrieve only annotations for motivation classifying
+    let classifyingAnnotations = _.filter(annotations, (annotation) => {
+      return annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying'
+    })
+    if (_.isArray(classifyingAnnotations)) {
       // Retrieve users who had annotated the document
-      this.allUsers = _.uniq(_.map(annotations, (annotation) => {
-        return annotation.user.replace('acct:', '').replace('@hypothes.is', '')
+      this.allUsers = _.uniq(_.map(classifyingAnnotations, (annotation) => {
+        return annotation.user.replace('acct:', '').replace('@hypothes.is', '') // TODO Replace by creator
       }))
       this.filteredUsers = _.clone(this.allUsers)
       // Upload sidebar panel with users
@@ -238,15 +209,13 @@ class UserFilter {
   }
 
   destroy () {
-    // Remove observer
-    // clearInterval(this.observerInterval)
     // Remove event listeners
     let events = _.values(this.events)
     for (let i = 0; i < events.length; i++) {
       events[i].element.removeEventListener(events[i].event, events[i].handler)
     }
     // Remove user filter container from sidebar
-    $(this.userFilterContainer).remove()
+    $(this.userFilterWrapper).remove()
   }
 }
 

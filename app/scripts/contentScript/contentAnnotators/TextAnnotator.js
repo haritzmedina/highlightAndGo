@@ -5,7 +5,7 @@ const TagManager = require('../TagManager')
 const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
 const LanguageUtils = require('../../utils/LanguageUtils')
-const Config = require('../../Config')
+const Alerts = require('../../utils/Alerts')
 const $ = require('jquery')
 require('jquery-contextmenu/dist/jquery.contextMenu')
 const _ = require('lodash')
@@ -30,6 +30,7 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   init (callback) {
+    console.debug('Initializing text annotator')
     this.initEvents(() => {
       // Retrieve current user profile
       this.currentUserProfile = window.abwa.groupSelector.user
@@ -42,6 +43,7 @@ class TextAnnotator extends ContentAnnotator {
             }
           }
           this.initAnnotationsObserver(() => {
+            console.debug('Initialized text annotator')
             if (_.isFunction(callback)) {
               callback()
             }
@@ -108,16 +110,13 @@ class TextAnnotator extends ContentAnnotator {
 
   createUserFilterChangeEventHandler () {
     return (event) => {
-      // This is only allowed in mode index
-      if (window.abwa.modeManager.mode === ModeManager.modes.index) {
-        let filteredUsers = event.detail.filteredUsers
-        // Unhighlight all annotations
-        this.unHighlightAllAnnotations()
-        // Retrieve annotations for filtered users
-        this.currentAnnotations = this.retrieveAnnotationsForUsers(filteredUsers)
-        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
-        this.highlightAnnotations(this.currentAnnotations)
-      }
+      let filteredUsers = event.detail.filteredUsers
+      // Unhighlight all annotations
+      this.unHighlightAllAnnotations()
+      // Retrieve annotations for filtered users
+      this.currentAnnotations = this.retrieveAnnotationsForUsers(filteredUsers)
+      LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+      this.redrawAnnotations()
     }
   }
 
@@ -128,38 +127,39 @@ class TextAnnotator extends ContentAnnotator {
    */
   retrieveAnnotationsForUsers (users) {
     return _.filter(this.allAnnotations, (annotation) => {
-      return _.find(users, (user) => {
-        return annotation.user === 'acct:' + user + '@hypothes.is'
+      let isFromSelectedUser = _.some(users, (user) => {
+        return annotation.user === 'acct:' + user + '@hypothes.is' // TODO Change by creator
       })
+      let isAssessing = annotation.motivation === 'assessing' || annotation.motivation === 'oa:assessing'
+      let isCodebook = annotation.motivation === 'slr:codebookDevelopment' || annotation.motivation === 'linking'
+      return (isFromSelectedUser || isAssessing) && !isCodebook
     })
   }
 
   initModeChangeEvent (callback) {
-    this.events.modeChangeEvent = {element: document, event: Events.modeChanged, handler: this.createInitModeChangeEventHandler()}
+    this.events.modeChangeEvent = {element: document, event: Events.modeChanged, handler: (event) => { this.modeChangeEventHandler(event) }}
     this.events.modeChangeEvent.element.addEventListener(this.events.modeChangeEvent.event, this.events.modeChangeEvent.handler, false)
     if (_.isFunction(callback)) {
       callback()
     }
   }
 
-  createInitModeChangeEventHandler () {
-    return () => {
-      // If mode is index, disable selection event
-      if (window.abwa.modeManager.mode === ModeManager.modes.index) {
-        // Highlight all annotations
-        this.currentAnnotations = this.allAnnotations
-        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
-        this.disableSelectionEvent()
-      } else {
-        // Unhighlight all annotations
-        this.unHighlightAllAnnotations()
-        // Highlight only annotations from current user
-        this.currentAnnotations = this.retrieveCurrentAnnotations()
-        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+  modeChangeEventHandler (event) {
+    // If mode is codebook or checking, disable selection event
+    if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.codebook) {
+      this.disableSelectionEvent()
+    } else if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
+      // Check current mode for data extraction
+      if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.mapping) {
         // Activate selection event and sidebar functionality
         this.activateSelectionEvent()
+      } else if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.checking) {
+        this.disableSelectionEvent()
       }
     }
+    this.currentAnnotations = this.retrieveCurrentAnnotations()
+    this.redrawAnnotations()
+    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
   }
 
   initAnnotateEvent (callback) {
@@ -172,49 +172,20 @@ class TextAnnotator extends ContentAnnotator {
 
   createAnnotationEventHandler () {
     return (event) => {
-      let selectors = []
       // If selection is empty, return null
       if (document.getSelection().toString().length === 0) {
-        window.alert('Nothing to highlight, current selection is empty') // TODO change by swal
+        Alerts.infoAlert({title: 'No evidence selected to code', text: 'You should consider to highlight evidences in the text to code the primary study.'}) // TODO i18n
         return
       }
       // If selection is child of sidebar, return null
       if ($(document.getSelection().anchorNode).parents('#annotatorSidebarWrapper').toArray().length !== 0) {
-        window.alert('The selected content cannot be highlighted, is not part of the document') // TODO change by swal
+        Alerts.infoAlert({title: 'Unable to code', text: 'The selected text content is not part of the primary study.'}) // TODO i18n
         return
       }
       let range = document.getSelection().getRangeAt(0)
-      // Create FragmentSelector
-      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'FragmentSelector' }) !== -1) {
-        let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
-        if (fragmentSelector) {
-          selectors.push(fragmentSelector)
-        }
-      }
-      // Create RangeSelector
-      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'RangeSelector' }) !== -1) {
-        let rangeSelector = DOMTextUtils.getRangeSelector(range)
-        if (rangeSelector) {
-          selectors.push(rangeSelector)
-        }
-      }
-      // Create TextPositionSelector
-      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextPositionSelector' }) !== -1) {
-        let rootElement = window.abwa.contentTypeManager.getDocumentRootElement()
-        let textPositionSelector = DOMTextUtils.getTextPositionSelector(range, rootElement)
-        if (textPositionSelector) {
-          selectors.push(textPositionSelector)
-        }
-      }
-      // Create TextQuoteSelector
-      if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextQuoteSelector' }) !== -1) {
-        let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
-        if (textQuoteSelector) {
-          selectors.push(textQuoteSelector)
-        }
-      }
+      let selectors = TextAnnotator.getSelectors(range)
       // Construct the annotation to send to hypothesis
-      let annotation = TextAnnotator.constructAnnotation(selectors, event.detail.tags)
+      let annotation = TextAnnotator.constructAnnotation(selectors, event.detail.code)
       window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(annotation, (err, annotation) => {
         if (err) {
           window.alert('Unexpected error, unable to create annotation')
@@ -235,14 +206,53 @@ class TextAnnotator extends ContentAnnotator {
     }
   }
 
-  static constructAnnotation (selectors, tags) {
+  static getSelectors (range) {
+    let selectors = []
+    // Create FragmentSelector
+    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'FragmentSelector' }) !== -1) {
+      let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
+      if (fragmentSelector) {
+        selectors.push(fragmentSelector)
+      }
+    }
+    // Create RangeSelector
+    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'RangeSelector' }) !== -1) {
+      let rangeSelector = DOMTextUtils.getRangeSelector(range)
+      if (rangeSelector) {
+        selectors.push(rangeSelector)
+      }
+    }
+    // Create TextPositionSelector
+    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextPositionSelector' }) !== -1) {
+      let rootElement = window.abwa.contentTypeManager.getDocumentRootElement()
+      let textPositionSelector = DOMTextUtils.getTextPositionSelector(range, rootElement)
+      if (textPositionSelector) {
+        selectors.push(textPositionSelector)
+      }
+    }
+    // Create TextQuoteSelector
+    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextQuoteSelector' }) !== -1) {
+      let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
+      if (textQuoteSelector) {
+        selectors.push(textQuoteSelector)
+      }
+    }
+    return selectors
+  }
+
+  static constructAnnotation (selectors, code) {
     let data = {
+      '@context': 'http://www.w3.org/ns/anno.jsonld',
+      'motivation': 'classifying',
+      creator: window.abwa.groupSelector.getCreatorData() || '',
       group: window.abwa.groupSelector.currentGroup.id,
+      body: 'https://hypothes.is/api/annotations/' + code.id,
+      document: {},
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
       },
       references: [],
-      tags: tags,
+      tags: ['slr:code:' + code.name, 'motivation:classifying'], // TODO Should we add all the parent codes as tags?
       target: [{
         selector: selectors
       }],
@@ -263,7 +273,6 @@ class TextAnnotator extends ContentAnnotator {
     }
     // If doi is available, add it to the annotation
     if (!_.isEmpty(window.abwa.contentTypeManager.doi)) {
-      data.document = data.document || {}
       let doi = window.abwa.contentTypeManager.doi
       data.document.dc = { identifier: [doi] }
       data.document.highwire = { doi: [doi] }
@@ -276,12 +285,44 @@ class TextAnnotator extends ContentAnnotator {
       data.document.link = data.document.link || []
       data.document.link.push({href: pdfUrl, type: 'application/pdf'})
     }
+    // If document title is retrieved
+    if (_.isString(window.abwa.contentTypeManager.documentTitle)) {
+      data.document.title = window.abwa.contentTypeManager.documentTitle
+    }
+    data.documentMetadata = data.document // Copy to metadata field because hypothes.is doesn't return from its API all the data that it is placed in document
+    data.uris = window.abwa.contentTypeManager.getDocumentURIs()
+    return data
+  }
+
+  static constructAssessmentAnnotation ({text, agreement, status = 'approved', validatedAnnotation}) {
+    let data = {
+      '@context': 'http://www.w3.org/ns/anno.jsonld',
+      type: 'Annotation',
+      motivation: 'assessing',
+      group: window.abwa.groupSelector.currentGroup.id,
+      body: {
+        type: 'TextualBody',
+        value: text
+      },
+      creator: window.abwa.groupSelector.getCreatorData() || '',
+      'oa:target': 'https://hypothes.is/api/annotations/' + validatedAnnotation.id,
+      permissions: {
+        read: ['group:' + window.abwa.groupSelector.currentGroup.id]
+      },
+      references: [validatedAnnotation.id],
+      tags: ['motivation:assessing'],
+      target: [],
+      text: text,
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+    }
+    if (agreement) {
+      data.agreement = agreement
+    }
     return data
   }
 
   initSelectionEvents (callback) {
     if (_.isEmpty(window.abwa.annotationBasedInitializer.initAnnotation)) {
-      // Create selection event
       this.activateSelectionEvent(() => {
         if (_.isFunction(callback)) {
           callback()
@@ -295,17 +336,22 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   activateSelectionEvent (callback) {
-    this.events.mouseUpOnDocumentHandler = {element: document, event: 'mouseup', handler: this.mouseUpOnDocumentHandlerConstructor()}
-    this.events.mouseUpOnDocumentHandler.element.addEventListener(this.events.mouseUpOnDocumentHandler.event, this.events.mouseUpOnDocumentHandler.handler)
-    if (_.isFunction(callback)) {
-      callback()
-    }
+    // Disable to ensure that the event does not exist
+    this.disableSelectionEvent(() => {
+      this.events.mouseUpOnDocumentHandler = {element: document, event: 'mouseup', handler: this.mouseUpOnDocumentHandlerConstructor()}
+      this.events.mouseUpOnDocumentHandler.element.addEventListener(this.events.mouseUpOnDocumentHandler.event, this.events.mouseUpOnDocumentHandler.handler)
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    })
   }
 
   disableSelectionEvent (callback) {
-    this.events.mouseUpOnDocumentHandler.element.removeEventListener(
-      this.events.mouseUpOnDocumentHandler.event,
-      this.events.mouseUpOnDocumentHandler.handler)
+    if (this.events.mouseUpOnDocumentHandler) {
+      this.events.mouseUpOnDocumentHandler.element.removeEventListener(
+        this.events.mouseUpOnDocumentHandler.event,
+        this.events.mouseUpOnDocumentHandler.handler)
+    }
     if (_.isFunction(callback)) {
       callback()
     }
@@ -354,7 +400,7 @@ class TextAnnotator extends ContentAnnotator {
         this.currentAnnotations = this.retrieveCurrentAnnotations()
         LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
         // Highlight annotations in the DOM
-        this.highlightAnnotations(this.currentAnnotations)
+        this.redrawAnnotations()
         if (_.isFunction(callback)) {
           callback()
         }
@@ -375,8 +421,9 @@ class TextAnnotator extends ContentAnnotator {
           callback(err)
         }
       } else {
+        // TODO Check if received annotations are annotated with codes in the classification scheme or motivation codebook
         // Search tagged annotations
-        let tagList = window.abwa.tagManager.getTagsList()
+        /* let tagList = window.abwa.tagManager.getTagsList()
         let taggedAnnotations = []
         for (let i = 0; i < annotations.length; i++) {
           // Check if annotation contains a tag of current group
@@ -386,6 +433,8 @@ class TextAnnotator extends ContentAnnotator {
           }
         }
         this.allAnnotations = taggedAnnotations || []
+        */
+        this.allAnnotations = annotations
         LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
         if (_.isFunction(callback)) {
           callback(null, this.allAnnotations)
@@ -425,12 +474,30 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   retrieveCurrentAnnotations () {
-    // Depending on the mode of the tool, we must need only
-    if (window.abwa.modeManager.mode === ModeManager.modes.index) {
+    // Retrieve current annotations depending on the mode
+    if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
+      if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.coding) {
+        // Get annotations for mapping mode in data extraction
+        return _.filter(this.allAnnotations, (annotation) => {
+          return annotation.motivation === 'classifying' && annotation.user === window.abwa.groupSelector.user.userid // TODO Change annotation.user by annotation.creator
+        })
+      } else if (window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.checking) {
+        // Return only annotations for users in filter
+        if (window.abwa.dataExtractionManager.userFilter) {
+          return this.retrieveAnnotationsForUsers(window.abwa.dataExtractionManager.userFilter.filteredUsers)
+        } else {
+          return _.filter(this.allAnnotations, (annotation) => {
+            return annotation.motivation === 'classifying' && annotation.motivation === 'assessing'
+          })
+        }
+      }
+    } else if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.codebook) {
+      // Get annotations for codebook mode
+      return _.filter(this.allAnnotations, (annotation) => {
+        return annotation.motivation === 'slr:codebookDevelopment'
+      })
+    } else {
       return this.allAnnotations
-    } else if (window.abwa.modeManager.mode === ModeManager.modes.highlight) {
-      // Filter annotations which user is different to current one
-      return _.filter(this.allAnnotations, (annotation) => { return annotation.user === this.currentUserProfile.userid })
     }
   }
 
@@ -450,37 +517,86 @@ class TextAnnotator extends ContentAnnotator {
 
   highlightAnnotation (annotation, callback) {
     let classNameToHighlight = this.retrieveHighlightClassName(annotation)
-    let tagList = window.abwa.tagManager.getTagsList()
-    let tagForAnnotation = TagManager.retrieveTagForAnnotation(annotation, tagList)
-    try {
-      let highlightedElements = []
-      // TODO Remove this case for google drive
-      if (window.location.href.includes('drive.google.com')) {
-        // Ensure popup exists
-        if (document.querySelector('.a-b-r-x')) {
-          highlightedElements = DOMTextUtils.highlightContent(
-            annotation.target[0].selector, classNameToHighlight, annotation.id)
-        }
-      } else {
-        highlightedElements = DOMTextUtils.highlightContent(
-          annotation.target[0].selector, classNameToHighlight, annotation.id)
+    // Get code for annotation
+    let code
+    if (annotation.motivation === 'linking' || annotation.motivation === 'oa:linking') {
+      // No need to highlight
+      if (_.isFunction(callback)) {
+        callback()
       }
+      return
+    } else if (annotation.motivation === 'slr:codebookDevelopment') {
+      code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+        return code.id === annotation.id
+      })
+    } else if (annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying') {
+      let codeAnnotationURL = annotation.body
+      let annotationCodeId = codeAnnotationURL.replace('https://hypothes.is/api/annotations/', '')
+      code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+        return code.id === annotationCodeId
+      })
+    } else if (annotation.motivation === 'assessing' || annotation.motivation === 'oa:assessing') {
+      // No need to highlight
+      if (_.isFunction(callback)) {
+        callback()
+      }
+      return
+    } else {
+      // Unexpected type of annotation, it will not shown
+      if (_.isFunction(callback)) {
+        callback(new Error('Unexpected type of annotation'))
+      }
+      return
+    }
+    // TODO Change the way the code is get (from body id of code)
+    let err
+    try {
+      let highlightedElements = DOMTextUtils.highlightContent(
+        annotation.target[0].selector, classNameToHighlight, annotation.id)
       // Highlight in same color as button
       highlightedElements.forEach(highlightedElement => {
         // If need to highlight, set the color corresponding to, in other case, maintain its original color
-        $(highlightedElement).css('background-color', tagForAnnotation.color)
-        // Set purpose color
-        highlightedElement.dataset.color = tagForAnnotation.color
-        highlightedElement.dataset.tags = tagForAnnotation.tags
-        let user = annotation.user.replace('acct:', '').replace('@hypothes.is', '')
-        if (this.config.namespace === Config.exams.namespace) {
-          let tagGroup = _.find(window.abwa.tagManager.currentTags, (tagGroup) => { return _.find(tagGroup.tags, tagForAnnotation) })
-          let highestMark = _.last(tagGroup.tags).name
-          highlightedElement.title = 'Rubric: ' + tagGroup.config.name + '\nMark: ' + tagForAnnotation.name + ' of ' + highestMark
-        } else if (this.config.namespace === Config.slrDataExtraction.namespace) {
-          highlightedElement.title = 'Author: ' + user + '\n' + 'Category: ' + tagForAnnotation.name
+        if (code) {
+          $(highlightedElement).css('background-color', code.color)
+          // Set purpose color
+          highlightedElement.dataset.color = code.color
         } else {
-          highlightedElement.title = 'Author: ' + user + '\n'
+          $(highlightedElement).css('background-color', 'rgba(150,150,150,0.6)')
+        }
+        let user = annotation.user.replace('acct:', '').replace('@hypothes.is', '')
+        // Set highlighted element title
+        if (annotation.motivation === 'slr:codebookDevelopment') {
+          highlightedElement.title = 'Annotation to define the code "' + code.name + '". Defined by: ' + user
+          // TODO Find who has validated/approved this code
+        } else if (annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying') {
+          if (code) {
+            highlightedElement.title = 'Author: ' + user + '\n' + 'Code: ' + code.name
+          } else {
+            highlightedElement.title = ''
+          }
+          if (annotation.text) {
+            highlightedElement.title += '\nComment: ' + annotation.text
+          }
+          // Find people who validate this
+          let validatingAnnotations = _.filter(this.allAnnotations, (allAnnotation) => {
+            if (allAnnotation.motivation === 'assessing' && _.has(allAnnotation, 'oa:target')) {
+              if (allAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '') === annotation.id) {
+                return allAnnotation
+              }
+            }
+          })
+          validatingAnnotations.forEach((validatingAnnotation) => {
+            let userName = validatingAnnotation.user.replace('acct:', '').replace('@hypothes.is', '')
+            let agreement = validatingAnnotation.agreement
+            if (agreement === 'agree') {
+              highlightedElement.title += '\nReviewer ' + userName + ' agrees: '
+            } else if (agreement === 'disagree') {
+              highlightedElement.title += '\nReviewer ' + userName + ' disagrees: '
+            } else {
+              highlightedElement.title += '\nReviewer ' + userName + ' validates: '
+            }
+            highlightedElement.title += validatingAnnotation.text
+          })
         }
       })
       // Create context menu event for highlighted elements
@@ -488,11 +604,10 @@ class TextAnnotator extends ContentAnnotator {
       // Create click event to move to next annotation
       this.createNextAnnotationHandler(annotation)
     } catch (e) {
-      // TODO Handle error (maybe send in callback the error ¿?
-      callback(new Error('Element not found'))
+      err = new Error('Element not found')
     } finally {
       if (_.isFunction(callback)) {
-        callback()
+        callback(err)
       }
     }
   }
@@ -532,50 +647,202 @@ class TextAnnotator extends ContentAnnotator {
       build: () => {
         // Create items for context menu
         let items = {}
-        // If current user is the same as author, allow to remove annotation
-        if (this.currentUserProfile.userid === annotation.user) {
-          items['delete'] = {name: 'Delete annotation'}
-        }
-        // Add validate item for SLR
-        if (this.config.namespace === Config.slrDataExtraction.namespace) {
-          if (window.abwa.modeManager.mode === ModeManager.modes.index) {
-            if (_.isObject(items['delete'])) {
+        // Depending on the mode
+        if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.codebook) {
+          let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+            return code.id === annotation.id
+          })
+          // If codebook manager is in creating mode
+          if (window.abwa.codeBookDevelopmentManager.mode === window.abwa.codeBookDevelopmentManager.constructor.modes.creating) {
+            if (this.currentUserProfile.userid === annotation.user) {
+              items['deleteCodebookCode'] = {name: 'Remove "' + code.name + '" code from codebook'}
+            } else {
+              // TODO Mark annotation to delete ¿?
+            }
+          } else {
+            items['validateCode'] = {name: 'Validate "' + code.name + '" code from codebook'}
+          }
+        } else if (window.abwa.modeManager.mode === window.abwa.modeManager.constructor.modes.dataextraction) {
+          // Delete annotation is allowed always if the creator is current user
+          if (this.currentUserProfile.userid === annotation.user) {
+            items['comment'] = {name: 'Comment'}
+            items['deleteAnnotation'] = {name: 'Delete annotation'}
+          }
+          // Validation is only shown if current user is not the same as creator and it is in mode checking
+          if (
+            this.currentUserProfile.userid !== annotation.user &&
+            window.abwa.dataExtractionManager.mode === window.abwa.dataExtractionManager.constructor.modes.checking // Only if other user and checking mode of data extraction
+          ) {
+            if (_.keys(items).length > 0) {
               items['sep1'] = '---------'
             }
-            items['validate'] = {name: 'Validate classification'}
+            let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+              return code.id === annotation.body.replace('https://hypothes.is/api/annotations/', '')
+            })
+            if (code) {
+              items['validateCoding'] = {name: 'Validate \'' + code.name + '\' code for this primary study.'}
+            } else {
+              items['validateCoding'] = {name: 'Validate classification'}
+            }
           }
         }
         return {
           callback: (key) => {
-            if (key === 'validate') {
-              // Validate annotation category
-              LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation})
-            } else if (key === 'delete') {
-              // Delete annotation
+            if (key === 'deleteCodebookCode') {
+              // Get the code for this annotation
+              let codeToDelete = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+                return code.id === annotation.id
+              })
+              if (codeToDelete) {
+                // Ask if want to delete
+                Alerts.confirmAlert({
+                  title: 'Are you sure to delete "' + codeToDelete.name + '" code?',
+                  text: 'This is a risky action and it cannot be undone. All the annotations in all the primary studies related to this code won\'t be deleted, but they won\'t be related to this code anymore, and currently it is not possible to re-code them.',
+                  alertType: Alerts.alertType.warning,
+                  callback: () => {
+                    // Remove code from classification scheme
+                    let removeCodeResult = window.abwa.codeBookDevelopmentManager.removeCodeFromCodebook(codeToDelete)
+                    // Remove annotation from all and current annotations
+                    this.removeAnnotationsFromModel(removeCodeResult.annotationIdsToRemove)
+                    // Redraw annotations
+                    this.redrawAnnotations()
+                  }
+                })
+              }
+            } else if (key === 'validateCode') {
+              // TODO Validate code from codebook
+            } else if (key === 'deleteAnnotation') {
               window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(annotation.id, (err, result) => {
                 if (err) {
-                  // Unable to delete this annotation
-                  console.error('Error while trying to delete annotation %s', annotation.id)
+                  Alerts.errorAlert({title: 'Unable to delete annotation', text: 'Check if you are logged in Hypothes.is, reload the page and try again.'})
                 } else {
-                  if (!result.deleted) {
-                    // Alert user error happened
-                    // TODO swal
-                    window.alert('Error deleting hypothesis annotation, please try it again')
+                  _.remove(this.allAnnotations, annotation)
+                  LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+                  // Update current annotations
+                  this.currentAnnotations = this.retrieveCurrentAnnotations()
+                  LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
+                  // Redraw
+                  this.redrawAnnotations()
+                }
+              })
+            } else if (key === 'comment') {
+              // Retrieve code for current annotation
+              let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => { return code.id === annotation.body.replace('https://hypothes.is/api/annotations/', '') })
+              let title = code ? 'Comment for code "' + code.name + '"' : 'Commenting'
+              Alerts.inputTextAlert({
+                title: title,
+                inputValue: annotation.text,
+                inputPlaceholder: 'Write your comment or memo.',
+                input: 'textarea',
+                callback: (err, text) => {
+                  if (err) {
+                    window.alert('Unable to load comment input form')
                   } else {
-                    // Remove annotation from data model
-                    _.remove(this.currentAnnotations, (currentAnnotation) => {
-                      return currentAnnotation.id === annotation.id
+                    annotation.text = text
+                    window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(annotation.id, annotation, (err, updatedAnnotation) => {
+                      if (err) {
+                        Alerts.errorAlert({title: 'Error updating your comment', text: 'Please check you are logged in hypothes.is.'})
+                      } else {
+                        LanguageUtils.dispatchCustomEvent(Events.comment, {annotation: annotation})
+                        // Redraw current annotations
+                        this.currentAnnotations = this.retrieveCurrentAnnotations()
+                        LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
+                        this.redrawAnnotations()
+                      }
                     })
-                    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
-                    _.remove(this.allAnnotations, (currentAnnotation) => {
-                      return currentAnnotation.id === annotation.id
-                    })
-                    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
-                    // Dispatch deleted annotation event
-                    LanguageUtils.dispatchCustomEvent(Events.annotationDeleted, {annotation: annotation})
-                    // Unhighlight annotation highlight elements
-                    DOMTextUtils.unHighlightElements([...document.querySelectorAll('[data-annotation-id="' + annotation.id + '"]')])
-                    console.debug('Deleted annotation ' + annotation.id)
+                  }
+                }
+              })
+            } else if (key === 'validateCoding') {
+              // Check if validated annotation already exists
+              let currentUserValidateAnnotation = {}
+              // Get code validating
+              let validatingCode = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
+                return code.id === annotation.body.replace('https://hypothes.is/api/annotations/', '')
+              })
+              if (_.has(window.abwa.codingManager.primaryStudyCoding, validatingCode.id)) {
+                currentUserValidateAnnotation = _.find(window.abwa.codingManager.primaryStudyCoding[validatingCode.id].validatingAnnotations, (validatingAnnotation) => {
+                  return validatingAnnotation.user === window.abwa.groupSelector.user.userid
+                })
+              }
+              let inputValue = ''
+              if (currentUserValidateAnnotation) {
+                inputValue = currentUserValidateAnnotation.text
+              }
+              Alerts.multipleInputAlert({
+                title: 'Validating coding ' + validatingCode.name || '',
+                html:
+                  '<textarea id="comment" class="swal2-textarea customizeInput" placeholder="Write any comment for validating this code.">' + inputValue + '</textarea>' +
+                  '<div><span class="radioButtonImage"><input type="radio" name="agreementRadio" value="agree" id="agreeRadio"/><label for="agreeRadio"><img title="Agree with the decision" id="agreeImage"/></label></span>' +
+                  '<span class="radioButtonImage"><input type="radio" name="agreementRadio" value="disagree" id="disagreeRadio"/><label for="disagreeRadio"><img title="Disagree with the decision" id="disagreeImage"/></label></span>' +
+                  '</div>',
+                inputValue: inputValue,
+                confirmButtonColor: 'rgba(100,200,100,1)',
+                confirmButtonText: 'Validate',
+                input: 'textarea',
+                onOpen: () => {
+                  if (currentUserValidateAnnotation && currentUserValidateAnnotation.agreement === 'agree') {
+                    document.querySelector('#agreeRadio').checked = 'checked'
+                  } else if (currentUserValidateAnnotation && currentUserValidateAnnotation.agreement === 'disagree') {
+                    document.querySelector('#disagreeRadio').checked = 'checked'
+                  }
+                },
+                preConfirm: () => {
+                  let agreementChosenElement = document.querySelector('input[name="agreementRadio"]:checked')
+                  let text = document.querySelector('#comment').value
+                  return {
+                    text: text,
+                    agreement: _.isElement(agreementChosenElement) ? agreementChosenElement.value : null
+                  }
+                },
+                callback: (err, form) => {
+                  if (err) {
+                    window.alert('Unable to load comment input form')
+                  } else {
+                    if (currentUserValidateAnnotation) {
+                      // Update already created annotation for assessing
+                      currentUserValidateAnnotation.text = form.text
+                      if (form.agreement) {
+                        currentUserValidateAnnotation.agreement = form.agreement
+                      }
+                      window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(currentUserValidateAnnotation.id, currentUserValidateAnnotation, (err, assessmentAnnotationResult) => {
+                        if (err) {
+                          Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to update your validation for this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
+                        } else {
+                          let index = _.findIndex(this.allAnnotations, (annotation) => {
+                            return annotation.id === assessmentAnnotationResult.id
+                          })
+                          if (index !== -1) {
+                            this.allAnnotations[index] = assessmentAnnotationResult
+                          }
+                          LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+                          // Redraw current annotations
+                          this.currentAnnotations = this.retrieveCurrentAnnotations()
+                          LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
+                          this.redrawAnnotations()
+                          // Send event new assessment annotation is created
+                          LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation, assessmentAnnotation: assessmentAnnotationResult})
+                        }
+                      })
+                    } else {
+                      // Create a new annotation for assessing
+                      let assessmentAnnotation = TextAnnotator.constructAssessmentAnnotation({text: form.text, agreement: form.agreement, validatedAnnotation: annotation})
+                      window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(assessmentAnnotation, (err, assessmentAnnotationResult) => {
+                        if (err) {
+                          Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to validate this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
+                        } else {
+                          // Update data model
+                          this.allAnnotations.push(assessmentAnnotationResult)
+                          LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+                          // Redraw current annotations
+                          this.currentAnnotations = this.retrieveCurrentAnnotations()
+                          LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
+                          this.redrawAnnotations()
+                          // Send event new assessment annotation is created
+                          LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation, assessmentAnnotation: assessmentAnnotationResult})
+                        }
+                      })
+                    }
                   }
                 }
               })
@@ -654,7 +921,7 @@ class TextAnnotator extends ContentAnnotator {
     super.openSidebar()
   }
 
-  destroy () {
+  destroy (callback) {
     // Remove observer interval
     clearInterval(this.observerInterval)
     // Clean interval
@@ -672,14 +939,14 @@ class TextAnnotator extends ContentAnnotator {
     }
     // Unhighlight all annotations
     this.unHighlightAllAnnotations()
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
   unHighlightAllAnnotations () {
     // Remove created annotations
-    let highlightedElements = _.flatten(_.map(
-      this.allAnnotations,
-      (annotation) => { return [...document.querySelectorAll('[data-annotation-id="' + annotation.id + '"]')] })
-    )
+    let highlightedElements = [...document.querySelectorAll('.highlightedAnnotation')]
     DOMTextUtils.unHighlightElements(highlightedElements)
   }
 
@@ -749,6 +1016,32 @@ class TextAnnotator extends ContentAnnotator {
     this.unHighlightAllAnnotations()
     // Highlight current annotations
     this.highlightAnnotations(this.currentAnnotations)
+  }
+
+  removeAnnotationFromModel (annotation) {
+    _.remove(this.currentAnnotations, (currentAnnotation) => {
+      return currentAnnotation.id === annotation.id
+    })
+    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+    _.remove(this.allAnnotations, (currentAnnotation) => {
+      return currentAnnotation.id === annotation.id
+    })
+    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+  }
+
+  removeAnnotationsFromModel (annotationIds) {
+    _.remove(this.currentAnnotations, (currentAnnotation) => {
+      return _.find(annotationIds, (annotationId) => {
+        return annotationId === currentAnnotation.id
+      })
+    })
+    LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {currentAnnotations: this.currentAnnotations})
+    _.remove(this.allAnnotations, (currentAnnotation) => {
+      return _.find(annotationIds, (annotationId) => {
+        return annotationId === currentAnnotation.id
+      })
+    })
+    LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
   }
 }
 

@@ -75,7 +75,7 @@ class Alerts {
     }
   }
 
-  static errorAlert ({text = chrome.i18n.getMessage('unexpectedError'), title = 'Oops...', callback, onClose}) {
+  static errorAlert ({text = chrome.i18n.getMessage('unexpectedError'), title = 'Oops...', footer = null, callback, onClose}) {
     Alerts.tryToLoadSwal()
     if (_.isNull(swal)) {
       if (_.isFunction(callback)) {
@@ -87,6 +87,7 @@ class Alerts {
           type: Alerts.alertType.error,
           title: title,
           html: text,
+          footer: footer,
           onClose: onClose
         }).then(() => {
           if (_.isFunction(callback)) {
@@ -197,7 +198,7 @@ class Alerts {
     }
   }
 
-  static inputTextAlert ({input = 'text', inputPlaceholder = '', inputValue = '', inputAttributes = {}, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, html = '', callback}) {
+  static inputTextAlert ({title = '', input = 'text', inputPlaceholder = '', inputValue = '', inputAttributes = {}, preConfirm, confirmButtonColor, confirmButtonText, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, html = '', callback}) {
     Alerts.tryToLoadSwal()
     if (_.isNull(swal)) {
       if (_.isFunction(callback)) {
@@ -206,11 +207,15 @@ class Alerts {
     } else {
       let fire = () => {
         swal.fire({
+          title: title,
           input: input,
           inputPlaceholder: inputPlaceholder,
           inputValue: inputValue,
           inputAttributes: inputAttributes,
           html: html,
+          confirmButtonColor: confirmButtonColor,
+          confirmButtonText: confirmButtonText || 'OK',
+          preConfirm: preConfirm,
           onOpen: onOpen,
           onBeforeOpen: onBeforeOpen,
           showCancelButton: showCancelButton
@@ -231,7 +236,7 @@ class Alerts {
     }
   }
 
-  static multipleInputAlert ({title = 'Input', html = '', preConfirm, onOpen, onBeforeOpen, position = Alerts.position.center, showCancelButton = true, callback}) {
+  static multipleInputAlert ({title = 'Input', html = '', preConfirm, onOpen, onBeforeOpen, confirmButtonText = 'OK', confirmButtonColor, position = Alerts.position.center, showCancelButton = true, callback}) {
     Alerts.tryToLoadSwal()
     if (_.isNull(swal)) {
       if (_.isFunction(callback)) {
@@ -246,11 +251,17 @@ class Alerts {
           preConfirm: preConfirm,
           position: position,
           onOpen: onOpen,
+          confirmButtonText: confirmButtonText,
+          confirmButtonColor: confirmButtonColor,
           onBeforeOpen: onBeforeOpen,
           showCancelButton: showCancelButton
-        }).then(() => {
+        }).then((result) => {
           if (_.isFunction(callback)) {
-            callback(null)
+            if (_.has(result, 'dismiss')) {
+              callback(null, Alerts.results.dismiss)
+            } else {
+              callback(null, result.value)
+            }
           }
         })
       }
@@ -326,6 +337,10 @@ Alerts.position = {
   bottom: 'bottom',
   bottomStart: 'bottom-start',
   bottomEnd: 'bottom-end'
+}
+
+Alerts.results = {
+  dismiss: 'dismiss'
 }
 
 module.exports = Alerts

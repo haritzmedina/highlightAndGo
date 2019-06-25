@@ -5,6 +5,8 @@ if (typeof window === 'undefined') {
   $ = require('jquery')
 }
 
+const axios = require('axios')
+
 const _ = require('lodash')
 
 class GoogleSheetClient {
@@ -12,15 +14,84 @@ class GoogleSheetClient {
     if (token) {
       this.token = token
     }
-    this.baseURI = 'https://sheets.googleapis.com/v4/spreadsheets/'
+    this.baseURI = 'https://sheets.googleapis.com/v4/spreadsheets'
+  }
+
+  createSpreadsheet (data, callback) {
+    $.ajax({
+      method: 'POST',
+      url: this.baseURI,
+      headers: {
+        'Authorization': 'Bearer ' + this.token,
+        'Content-Type': '*/*',
+        'Access-Control-Allow-Origin': '*'
+      },
+      data: JSON.stringify(data)
+    }).done((result) => {
+      callback(null, result)
+    }).fail(() => {
+      callback(new Error('Unable to create a spreadsheet'))
+    })
+  }
+
+  /**
+   * Given data to update spreadsheet, it updates in google sheets using it's API
+   * @param data Contains data.spreadsheetId, sheetId, rows, rowIndex and columnIndex
+   * @param callback
+   */
+  updateSheetCells (data = {}, callback) {
+    let spreadsheetId = data.spreadsheetId
+    let sheetId = data.sheetId || 0
+    let rows = data.rows
+    let rowIndex = data.rowIndex
+    let columnIndex = data.columnIndex
+    if (spreadsheetId && _.isEmpty(sheetId) && _.isArray(rows) && _.isNumber(rowIndex) && _.isNumber(columnIndex)) {
+      let settings = {
+        'async': true,
+        'crossDomain': true,
+        'url': this.baseURI + '/' + spreadsheetId + ':batchUpdate',
+        'data': JSON.stringify({
+          requests: [
+            {
+              updateCells: {
+                rows: rows,
+                fields: '*',
+                start: {
+                  sheetId: sheetId,
+                  rowIndex: rowIndex,
+                  columnIndex: columnIndex
+                }
+              }
+            }
+          ]
+        }),
+        'method': 'POST',
+        'headers': {
+          'Authorization': 'Bearer ' + this.token,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      }
+      // Call using axios
+      axios(settings).then((response) => {
+        if (_.isFunction(callback)) {
+          callback(null, response.data)
+        }
+      })
+    } else {
+      callback(new Error('To update spreadsheet it is required '))
+    }
   }
 
   getSpreadsheet (spreadsheetId, callback) {
     $.ajax({
+      async: true,
+      crossDomain: true,
       method: 'GET',
-      url: this.baseURI + spreadsheetId,
+      url: this.baseURI + '/' + spreadsheetId,
       headers: {
-        'Authorization': 'Bearer ' + this.token
+        'Authorization': 'Bearer ' + this.token,
+        'Content-Type': 'application/json'
       },
       data: {
         includeGridData: true

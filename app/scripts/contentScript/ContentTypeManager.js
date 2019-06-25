@@ -2,6 +2,8 @@ const _ = require('lodash')
 const Events = require('./Events')
 const URLUtils = require('../utils/URLUtils')
 const LanguageUtils = require('../utils/LanguageUtils')
+const CryptoUtils = require('../utils/CryptoUtils')
+const axios = require('axios')
 
 const URL_CHANGE_INTERVAL_IN_SECONDS = 1
 
@@ -11,6 +13,7 @@ class ContentTypeManager {
     this.documentURL = null
     this.urlChangeInterval = null
     this.urlParam = null
+    this.localFile = false
     this.documentType = ContentTypeManager.documentTypes.html // By default document type is html
   }
 
@@ -25,28 +28,46 @@ class ContentTypeManager {
       // If current web is pdf viewer.html, set document type as pdf
       if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
         this.waitUntilPDFViewerLoad(() => {
+          // Save document type as pdf
+          this.documentType = ContentTypeManager.documentTypes.pdf
+          // Try to load title
+          this.tryToLoadTitle()
+          // Save pdf fingerprint
           this.pdfFingerprint = window.PDFViewerApplication.pdfDocument.pdfInfo.fingerprint
+          // Get document URL
           if (this.urlParam) {
             this.documentURL = this.urlParam
           } else {
-            this.documentURL = window.PDFViewerApplication.url
+            // Is a local file
+            if (window.PDFViewerApplication.url.startsWith('file:///')) {
+              this.localFile = true
+            } else { // Is an online resource
+              this.documentURL = window.PDFViewerApplication.url
+            }
           }
-          this.documentType = ContentTypeManager.documentTypes.pdf
           if (_.isFunction(callback)) {
             callback()
           }
         })
       } else {
+        this.documentType = ContentTypeManager.documentTypes.html
+        this.tryToLoadTitle()
         if (this.urlParam) {
           this.documentURL = this.urlParam
         } else {
-          this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
-        }
-        this.documentType = ContentTypeManager.documentTypes.html
-        // Support in ajax websites web url change
-        this.initSupportWebURLChange()
-        if (_.isFunction(callback)) {
-          callback()
+          if (window.location.href.startsWith('file:///')) {
+            this.localFile = true
+            this.documentURL = URLUtils.retrieveMainUrl(window.location.href) // TODO Check this, i think this url is not valid
+            // Calculate fingerprint for plain text files
+            this.tryToLoadPlainTextFingerprint()
+          } else {
+            // Support in ajax websites web url change, web url can change dynamically, but local files never do
+            this.initSupportWebURLChange()
+            this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          }
         }
       }
     }
@@ -55,7 +76,7 @@ class ContentTypeManager {
   destroy (callback) {
     if (this.documentType === ContentTypeManager.documentTypes.pdf) {
       // Reload to original pdf website
-      window.location.href = this.documentURL
+      window.location.href = this.documentURL || window.PDFViewerApplication.baseUrl
     } else {
       if (_.isFunction(callback)) {
         callback()
@@ -80,14 +101,17 @@ class ContentTypeManager {
     let decodedUri = decodeURIComponent(window.location.href)
     let params = URLUtils.extractHashParamsFromUrl(decodedUri)
     if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
-      this.doi = params.doi
+      this.doi = decodeURIComponent(params.doi)
     }
     // Try to load doi from page metadata
     if (_.isEmpty(this.doi)) {
       try {
         this.doi = document.querySelector('meta[name="citation_doi"]').content
+        if (!this.doi) {
+          this.doi = document.querySelector('meta[name="dc.identifier"]').content
+        }
       } catch (e) {
-        console.log('Doi not found for this document')
+        console.debug('Doi not found for this document')
       }
     }
     // TODO Try to load doi from chrome tab storage
@@ -95,8 +119,11 @@ class ContentTypeManager {
 
   tryToLoadURLParam () {
     let decodedUri = decodeURIComponent(window.location.href)
+    console.log(decodedUri)
     let params = URLUtils.extractHashParamsFromUrl(decodedUri, '::')
+    console.log(params)
     if (!_.isEmpty(params) && !_.isEmpty(params.url)) {
+      console.debug(params.url)
       this.urlParam = params.url
     }
   }
@@ -126,7 +153,15 @@ class ContentTypeManager {
   }
 
   getDocumentURIToSaveInHypothesis () {
-    return this.documentURL
+    if (this.doi) {
+      return 'https://doi.org/' + this.doi
+    } else if (this.documentURL) {
+      return this.documentURL
+    } else if (this.pdfFingerprint) {
+      return 'urn:x-pdf:' + this.pdfFingerprint
+    } else {
+      throw new Error('Unable to retrieve any IRI for this document.')
+    }
   }
 
   initSupportWebURLChange () {
@@ -140,6 +175,99 @@ class ContentTypeManager {
       }
     }, URL_CHANGE_INTERVAL_IN_SECONDS * 1000)
   }
+
+  tryToLoadPlainTextFingerprint () {
+    let fileTextContentElement = document.querySelector('body > pre')
+    if (fileTextContentElement) {
+      let fileTextContent = fileTextContentElement.innerText
+      this.documentFingerprint = CryptoUtils.hash(fileTextContent.innerText)
+    }
+  }
+
+  tryToLoadTitle () {
+    // Try to load by doi
+    let promise = new Promise((resolve, reject) => {
+      if (this.doi) {
+        let settings = {
+          'async': true,
+          'crossDomain': true,
+          'url': 'https://doi.org/' + this.doi,
+          'method': 'GET',
+          'headers': {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        }
+        // Call using axios
+        axios(settings).then((response) => {
+          if (response.data && response.data.title) {
+            this.documentTitle = response.data.title
+          }
+          resolve()
+        })
+      } else {
+        resolve()
+      }
+    })
+    promise.then(() => {
+      // Try to load title from page metadata
+      if (_.isEmpty(this.documentTitle)) {
+        try {
+          let documentTitleElement = document.querySelector('meta[name="citation_title"]')
+          if (!_.isNull(documentTitleElement)) {
+            this.documentTitle = documentTitleElement.content
+          }
+          if (!this.documentTitle) {
+            let documentTitleElement = document.querySelector('meta[property="og:title"]')
+            if (!_.isNull(documentTitleElement)) {
+              this.documentTitle = documentTitleElement.content
+            }
+            if (!this.documentTitle) {
+              let promise = new Promise((resolve, reject) => {
+                // Try to load title from pdf metadata
+                if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+                  this.waitUntilPDFViewerLoad(() => {
+                    if (window.PDFViewerApplication.documentInfo.Title) {
+                      this.documentTitle = window.PDFViewerApplication.documentInfo.Title
+                    }
+                    resolve()
+                  })
+                } else {
+                  resolve()
+                }
+              })
+              promise.then(() => {
+                // Try to load title from document title
+                if (!this.documentTitle) {
+                  this.documentTitle = document.title || 'Unknown document'
+                }
+              })
+            }
+          }
+        } catch (e) {
+          console.debug('Title not found for this document')
+        }
+      }
+    })
+  }
+
+  getDocumentURIs () {
+    let uris = []
+    if (this.doi) {
+      uris.push('https://doi.org/' + this.doi)
+    }
+    if (this.documentURL) {
+      uris.push(this.documentURL)
+    }
+    if (this.pdfFingerprint) {
+      uris.push('urn:x-pdf:' + this.pdfFingerprint)
+    }
+    if (this.documentFingerprint) {
+      uris.push('urn:x-txt:' + this.documentFingerprint)
+    }
+    return uris
+  }
 }
 
 ContentTypeManager.documentTypes = {
@@ -149,7 +277,7 @@ ContentTypeManager.documentTypes = {
   },
   pdf: {
     name: 'pdf',
-    selectors: ['TextPositionSelector', 'TextQuoteSelector']
+    selectors: ['FragmentSelector', 'TextPositionSelector', 'TextQuoteSelector']
   }
 }
 

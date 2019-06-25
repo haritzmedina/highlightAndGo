@@ -1,0 +1,53 @@
+<svg width="35.999" height="36.005" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <g>
+  <title>background</title>
+  <rect fill="none" id="canvas_background" height="402" width="582" y="-1" x="-1"/>
+ </g>
+ <g>
+  <title>Layer 1</title>
+  <path id="svg_1" fill="none" marker-start="none" marker-end="none" d="m0,0l0,36.005l35.999,0l0,-36.005l-35.999,0z"/>
+  <defs>
+   <rect width="35.999" id="SVGID_1_" height="36.005"/>
+   <linearGradient y2="Infinity" y1="Infinity" x2="Infinity" x1="Infinity" id="SVGID_3_">
+    <stop stop-color="#57769A" offset="0"/>
+    <stop stop-color="#7299BF" offset="1"/>
+   </linearGradient>
+   <linearGradient y2="Infinity" y1="Infinity" x2="Infinity" x1="Infinity" id="SVGID_4_">
+    <stop stop-color="#FFFFFF" offset="0"/>
+    <stop stop-color="#D6E6F6" offset="1"/>
+   </linearGradient>
+   <linearGradient y2="-Infinity" y1="-Infinity" x2="Infinity" x1="Infinity" id="SVGID_5_">
+    <stop stop-color="#FFFFFF" offset="0"/>
+    <stop stop-color="#000000" offset="1"/>
+   </linearGradient>
+   <linearGradient y2="Infinity" y1="Infinity" x2="Infinity" x1="Infinity" id="SVGID_6_">
+    <stop stop-color="#FFFFFF" offset="0"/>
+    <stop stop-color="#7299BF" offset="1"/>
+   </linearGradient>
+   <linearGradient y2="-Infinity" y1="-Infinity" x2="Infinity" x1="Infinity" id="SVGID_7_">
+    <stop stop-color="#FFFFFF" offset="0"/>
+    <stop stop-color="#000000" offset="1"/>
+   </linearGradient>
+  </defs>
+  <clipPath id="SVGID_2_">
+   <use id="svg_3" xlink:href="#SVGID_1_"/>
+  </clipPath>
+  <path stroke="null" id="svg_5" fill="url(#SVGID_3_)" marker-start="none" marker-end="none" d="m5.799209,2.404203l0,29.967274l24.792589,0l0,-23.007256l-7.113042,-6.960018l-17.679547,0z"/>
+  <path stroke="null" id="svg_6" fill="url(#SVGID_4_)" marker-start="none" marker-end="none" d="m6.392006,31.739379l0,-28.624477l16.741547,0.002862l6.55104,6.440507l0,22.181108l-23.292588,0z"/>
+  <defs>
+   <filter y="3.747" x="5.999" width="0.75" id="Adobe_OpacityMaskFilter" height="29.25" filterUnits="userSpaceOnUse"/>
+  </defs>
+  <mask y="3.747" x="5.999" width="0.75" maskUnits="userSpaceOnUse" id="TranspMask_13_1_" height="29.25">
+   <rect id="svg_7" fill="url(#SVGID_5_)" filter="url(#Adobe_OpacityMaskFilter)" y="-373.37" x="-269.075" width="576.899" height="784.45"/>
+  </mask>
+  <path id="svg_8" mask="url(#TranspMask_13_1_)" fill="#FFFFFF" marker-start="none" marker-end="none" d="m5.999,3.747l0,29.25l0.75,0l0,-29.25l-0.75,0z"/>
+  <path stroke="null" id="svg_9" fill="url(#SVGID_6_)" marker-start="none" marker-end="none" d="m29.605994,9.396294l-6.396294,-6.239091l0,6.239091l6.396294,0z"/>
+  <defs>
+   <filter y="9.747" x="23.249" width="6.75" id="Adobe_OpacityMaskFilter_1_" height="3.75" filterUnits="userSpaceOnUse"/>
+  </defs>
+  <mask y="9.747" x="23.249" width="6.75" maskUnits="userSpaceOnUse" id="TranspMask_14_1_" height="3.75">
+   <rect id="svg_10" fill="url(#SVGID_7_)" filter="url(#Adobe_OpacityMaskFilter_1_)" y="-373.37" x="-269.075" width="576.899" height="784.45"/>
+  </mask>
+  <path id="svg_11" mask="url(#TranspMask_14_1_)" fill="#7299BF" marker-start="none" marker-end="none" d="m23.249,9.75l6.75,3.747l0,-3.75l-6.75,0.003z"/>
+ </g>
+</svg>

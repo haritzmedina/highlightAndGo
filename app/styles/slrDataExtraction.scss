@@ -6,6 +6,38 @@ img.warningSidebar {
 
 /* Fix small size sweetalert2 */
 .swal2-container {
-  zoom: 1.5 !important;
   z-index: $sidebarZIndex - 1 !important;
+}
+
+
+/* Validation css */
+input[name="agreementRadio"]{
+  margin:0;padding:0;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+}
+
+.radioButtonImage img {
+  padding: 5px;
+  border-radius: 7px;
+  max-width: 20px;
+  max-height: 20px;
+  cursor: pointer;
+}
+
+.radioButtonImage input:checked + label > img#agreeImage {
+  background-color: rgba(0, 255, 0, 0.6);
+}
+
+.radioButtonImage input:checked + label > img#disagreeImage {
+  background-color: rgba(255, 0, 0, 0.6);
+}
+
+#agreeImage {
+  content:url($chromeExtensionMainURL + "images/agree.png");
+}
+
+#disagreeImage {
+  content:url($chromeExtensionMainURL + "images/disagree.png");
 }
