@@ -3,8 +3,6 @@ node_js:
   - v8
   - v9
   - v10
-  - v11
-  - v12
 addons:
   chrome: stable
 before_install:
