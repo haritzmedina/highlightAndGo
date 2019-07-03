@@ -38,7 +38,12 @@ class SLRGoogleSheetManager {
       chrome.runtime.sendMessage({
         scope: 'googleSheets',
         cmd: 'createSpreadsheet',
-        data: {properties: {title: window.abwa.groupSelector.currentGroup.name}}
+        data: {
+          properties: {
+            title: window.abwa.groupSelector.currentGroup.name,
+            locale: 'en'
+          }
+        }
       }, (result) => {
         if (_.has(result.err)) {
           reject(result.err)
