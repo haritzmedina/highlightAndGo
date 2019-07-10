@@ -24,11 +24,12 @@ class UserFilter {
         this.initAnnotationsUpdatedEventHandler()
         // Init event handler when click in all
         this.initAllFilter()
+        // Init panel construction (if no annotation event is detected)
+        this.initUsersPanel()
+        // Callback
         if (_.isFunction(callback)) {
           callback()
         }
-        // Init panel construction (if no annotation event is detected)
-        this.initUsersPanel(window.abwa.contentAnnotator.currentAnnotations)
       }
     })
   }
@@ -110,7 +111,10 @@ class UserFilter {
   }
 
   initUsersPanel () {
-    let annotations = window.abwa.contentAnnotator.allAnnotations
+    let annotations = []
+    if (window.abwa.contentAnnotator) {
+      annotations = window.abwa.contentAnnotator.allAnnotations || []
+    }
     // Retrieve only annotations for motivation classifying
     let classifyingAnnotations = _.filter(annotations, (annotation) => {
       return annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying'
@@ -118,7 +122,7 @@ class UserFilter {
     if (_.isArray(classifyingAnnotations)) {
       // Retrieve users who had annotated the document
       this.allUsers = _.uniq(_.map(classifyingAnnotations, (annotation) => {
-        return annotation.user.replace('acct:', '').replace('@hypothes.is', '') // TODO Replace by creator
+        return annotation.user
       }))
       this.filteredUsers = _.clone(this.allUsers)
       // Upload sidebar panel with users
@@ -142,7 +146,7 @@ class UserFilter {
       let oldFilteredUsers = _.clone(this.filteredUsers)
       // Retrieve users who had annotated the document
       this.allUsers = _.uniq(_.map(annotations, (annotation) => {
-        return annotation.user.replace('acct:', '').replace('@hypothes.is', '')
+        return annotation.user
       }))
       this.filteredUsers = _.clone(this.allUsers)
       // Upload sidebar panel with users
@@ -166,27 +170,28 @@ class UserFilter {
   }
 
   createUserFilterElement (name) {
+    let normalizedName = LanguageUtils.normalizeStringToValidID(name)
     let userFilterTemplate = document.querySelector('#userFilterTemplate')
     let userFilterElement = $(userFilterTemplate.content.firstElementChild).clone().get(0)
     // Set text and properties for label and input
     let input = userFilterElement.querySelector('input')
-    input.id = 'userFilter_' + name
+    input.id = 'userFilter_' + normalizedName
     let label = userFilterElement.querySelector('label')
-    label.innerText = name
-    label.htmlFor = 'userFilter_' + name
+    label.innerText = name.replace('acct:', '').replace('@hypothes.is', '') // Remove to user name hypothesis
+    label.htmlFor = 'userFilter_' + normalizedName
     // Set event handler for input check status
     input.addEventListener('change', (event) => {
       // Update filtered array
       if (event.target.checked) {
         // Add to filtered elements
-        if (!_.includes(this.filteredUsers, name)) {
-          this.filteredUsers.push(name)
+        if (!_.includes(this.filteredUsers, normalizedName)) {
+          this.filteredUsers.push(normalizedName)
         }
         // Activate all filter if all users are selected
         this.checkAllActivated()
       } else {
         // Remove from filtered elements
-        _.pull(this.filteredUsers, name)
+        _.pull(this.filteredUsers, normalizedName)
         // Deactivate all filter
         document.querySelector('#userFilter_all').checked = false
       }

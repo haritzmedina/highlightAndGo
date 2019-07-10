@@ -23,7 +23,7 @@ class MappingStudyManager {
   }
 
   retrieveAnnotationsForClassificationScheme (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+    window.abwa.storageManager.client.searchAnnotations({
       tag: 'motivation:slr:codebookDevelopment',
       group: window.abwa.groupSelector.currentGroup.id,
       sort: 'created',
@@ -32,7 +32,7 @@ class MappingStudyManager {
       if (err) {
         callback(err)
       } else {
-        window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+        window.abwa.storageManager.client.searchAnnotations({
           tag: 'motivation:linking',
           group: window.abwa.groupSelector.currentGroup.id
         }, (err, linkingAnnotations) => {

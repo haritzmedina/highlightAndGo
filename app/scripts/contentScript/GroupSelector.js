@@ -3,10 +3,8 @@ const LanguageUtils = require('../utils/LanguageUtils')
 const _ = require('lodash')
 const $ = require('jquery')
 
-const selectedGroupNamespace = 'hypothesis.currentGroup'
+const selectedGroupNamespace = 'storage.currentGroup'
 const defaultGroup = {id: '__world__', name: 'Public', public: true}
-
-const checkHypothesisLoggedInWhenPromptInSeconds = 2 // When not logged in, check if user has logged in
 
 class GroupSelector {
   constructor () {
@@ -46,7 +44,7 @@ class GroupSelector {
     if (window.abwa.annotationBasedInitializer.initAnnotation) {
       let annotationGroupId = window.abwa.annotationBasedInitializer.initAnnotation.group
       // Load group of annotation
-      this.retrieveHypothesisGroups((err, groups) => {
+      this.retrieveGroups((err, groups) => {
         if (err) {
           if (_.isFunction(callback)) {
             callback(err)
@@ -90,54 +88,22 @@ class GroupSelector {
   }
 
   reloadGroupsContainer (callback) {
-    if (window.abwa.hypothesisClientManager.isLoggedIn()) {
-      // Hide login/sign up form
-      $('#notLoggedInGroupContainer').attr('aria-hidden', 'true')
-      // Display group container
-      $('#loggedInGroupContainer').attr('aria-hidden', 'false')
-      // Set current group if not defined
-      this.defineCurrentGroup(() => {
-        // Render groups container
-        this.renderGroupsContainer(() => {
-          if (_.isFunction(callback)) {
-            callback()
-          }
-        })
-      })
-    } else {
-      // Display login/sign up form
-      $('#notLoggedInGroupContainer').attr('aria-hidden', 'false')
-      // Hide group container
-      $('#loggedInGroupContainer').attr('aria-hidden', 'true')
-      // Hide purposes wrapper
-      $('#purposesWrapper').attr('aria-hidden', 'true')
-      // Init isLogged checking
-      this.initIsLoggedChecking()
-      // Open the sidebar to show that login is required
-      window.abwa.sidebar.openSidebar()
-      if (_.isFunction(callback)) {
-        callback()
-      }
-    }
-  }
-
-  initIsLoggedChecking () {
-    // Check if user has been logged in
-    this.loggedInInterval = setInterval(() => {
-      chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
-        if (!_.isNull(token)) {
-          // Reload the web page
-          window.location.reload()
+    // Set current group if not defined
+    this.defineCurrentGroup(() => {
+      // Render groups container
+      this.renderGroupsContainer(() => {
+        if (_.isFunction(callback)) {
+          callback()
         }
       })
-    }, checkHypothesisLoggedInWhenPromptInSeconds * 1000)
+    })
   }
 
   renderGroupsContainer (callback) {
     // Display group selector and purposes selector
     $('#purposesWrapper').attr('aria-hidden', 'false')
     // Retrieve groups
-    this.retrieveHypothesisGroups((err, groups) => {
+    this.retrieveGroups((err, groups) => {
       if (err) {
         if (_.isFunction(callback)) {
           callback(err)
@@ -164,8 +130,8 @@ class GroupSelector {
     })
   }
 
-  retrieveHypothesisGroups (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.getUserProfile((err, profile) => {
+  retrieveGroups (callback) {
+    window.abwa.storageManager.client.getUserProfile((err, profile) => {
       if (err) {
         if (_.isFunction(callback)) {
           callback(err)
@@ -248,10 +214,10 @@ class GroupSelector {
         } else if (this.user.metadata.link) {
           return this.user.metadata.link
         } else {
-          return 'https://hypothes.is/users/' + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
+          return window.abwa.storageManager.storageUrl + '/users/' + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
         }
       } else {
-        return 'https://hypothes.is/users/' + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
+        return window.abwa.storageManager.storageUrl + 'users/' + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
       }
     } else {
       return null

@@ -1,7 +1,7 @@
 const DOM = require('../utils/DOM')
 const $ = require('jquery')
 
-const checkHypothesisLoggedIntervalInSeconds = 3600 // fetch token every X seconds
+const checkHypothesisLoggedIntervalInSeconds = 20 // fetch token every X seconds
 const checkHypothesisLoggedInWhenPromptInSeconds = 5 // When user is prompted to login, the checking should be with higher period
 const maxTries = 10 // max tries before deleting the token
 
@@ -76,10 +76,10 @@ class HypothesisManager {
 
   setToken (err, token) {
     if (err) {
-      console.error('The token is unreachable')
+      console.debug('The token is unreachable')
       if (this.tries >= maxTries) { // The token is unreachable after some tries, probably the user is logged out
         this.token = null // Probably the website is down or the user has been logged out
-        console.error('The token is deleted after unsuccessful %s tries', maxTries)
+        console.debug('The token is deleted after unsuccessful %s tries', maxTries)
       } else {
         this.tries += 1 // The token is unreachable, add a done try
         console.debug('The token is unreachable for %s time(s), but is maintained %s', this.tries, this.token)
@@ -118,7 +118,7 @@ class HypothesisManager {
                 // Remove listener for hypothesis token
                 clearInterval(interval)
                 // Hypothes.is login tab is closed
-                sendResponse({error: 'Hypothesis tab closed intentionally'})
+                sendResponse({error: 'The hypothes.is login tab was closed'})
               }
               chrome.tabs.onRemoved.removeListener(closeTabListener)
             }

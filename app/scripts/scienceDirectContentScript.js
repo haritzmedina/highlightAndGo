@@ -1,5 +1,6 @@
 const TextUtils = require('./utils/URLUtils')
-const HypothesisClientManager = require('./hypothesis/HypothesisClientManager')
+const HypothesisClientManager = require('./storage/hypothesis/HypothesisClientManager')
+const LocalStorageManager = require('./storage/local/LocalStorageManager')
 const _ = require('lodash')
 
 class ScienceDirectContentScript {
@@ -9,19 +10,42 @@ class ScienceDirectContentScript {
     if (!_.isEmpty(params) && !_.isEmpty(params.hag)) {
       // Activate the extension
       chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, (result) => {
-        // Retrieve if annotation is done in current url or in pdf version
-        window.hag.hypothesisClientManager = new HypothesisClientManager()
-        window.hag.hypothesisClientManager.init(() => {
-          window.hag.hypothesisClientManager.hypothesisClient.fetchAnnotation(params.hag, (err, annotation) => {
-            if (err) {
-              console.error(err)
-            } else {
-              // TODO Check if annotation is from this page
-            }
-          })
+        this.loadStorage((err) => {
+          if (err) {
+
+          } else {
+            window.hag.storageManager.client.fetchAnnotation(params.hag, (err, annotation) => {
+              if (err) {
+                console.error(err)
+              } else {
+                // TODO Check if annotation is from this page
+              }
+            })
+          }
         })
       })
     }
+  }
+
+  loadStorage (callback) {
+    chrome.runtime.sendMessage({scope: 'storage', cmd: 'getSelectedStorage'}, ({storage}) => {
+      if (storage === 'hypothesis') {
+        // Hypothesis
+        window.hag.storageManager = new HypothesisClientManager()
+      } else {
+        // Local storage
+        window.hag.storageManager = new LocalStorageManager()
+      }
+      window.hag.storageManager.init((err) => {
+        if (_.isFunction(callback)) {
+          if (err) {
+            callback(err)
+          } else {
+            callback()
+          }
+        }
+      })
+    })
   }
 }
 

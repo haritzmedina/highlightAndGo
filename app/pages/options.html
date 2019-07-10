@@ -1,17 +1,79 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Options</title>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
   <link rel="stylesheet" type="text/css" href="../styles/options.css">
+
+  <title>Highlight&Go configuration</title>
 </head>
 <body>
+<div class="container">
+  <!-- Header -->
+  <header></header>
 
-  <label>
-    <input type="checkbox" name="exampleOption" checked>
-    Example Option
-  </label>
+  <!-- Navigation bar -->
 
-  <script src="../scripts/options.js"></script>
+  <!-- Container -->
+  <div id="main-container" class="container">
+
+    <div class="jumbotron">
+      <img alt="Highlight and go logo" title="Highlight and go logo" class="logo" src="../images/icon-38.png">
+      <h2 class="title">Highlight&Go configuration</h2>
+      <div id="userManualCard" class="card">
+        <div class="card-header bg-dark text-white">User manual</div>
+        <div class="card-body">
+          <div class="form-group">
+            Visit whenever you want the <a href="https://github.com/haritzmedina/highlightandgo/wiki" target="_blank">user manual</a> for further information or checkout the <a href="https://www.youtube.com/watch?v=iPC6YEr3qlo">video</a>.
+          </div>
+        </div>
+      </div>
+      <div id="annotationStorageConfigurationCard" class="card">
+        <div class="card-header bg-dark text-white">Annotation storage</div>
+        <div class="card-body">
+          <div class="form-check">
+            <label for="storageDropdown">Select your annotations storage</label>
+            <select class="form-control" id="storageDropdown">
+              <option value="hypothesis" selected="selected">Hypothes.is</option>
+              <option value="localStorage">Local storage - Beta</option>
+              <option value="neo4j">Neo4J - Beta</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="localStorageConfigurationCard" class="card storageConfiguration">
+        <div class="card-header bg-dark text-white">Local storage</div>
+        <div class="card-body">
+          <div class="form-check">
+            <button id="restoreDatabaseButton">Restore database</button>
+            <button id="backupDatabaseButton">Backup database</button>
+            <button id="deleteDatabaseButton">Delete database</button>
+          </div>
+        </div>
+      </div>
+      <div id="neo4jConfigurationCard" class="card storageConfiguration">
+        <a id="neo4jConfiguration"></a>
+        <div class="card-header bg-dark text-white">Neo4J configuration</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label for="neo4jEndpoint" class="requiredFormInput">Endpoint URL</label>
+            <input type="url" class="form-control" id="neo4jEndpoint" placeholder="Enter your neo4j endpoint">
+          </div>
+          <div class="form-group">
+            <label for="neo4jToken" class="requiredFormInput">Token</label>
+            <input type="text" class="form-control" id="neo4jToken" placeholder="Enter your neo4j token">
+          </div>
+          <div class="form-group">
+            <label for="neo4jUser">User</label>
+            <input type="text" class="form-control" id="neo4jUser" placeholder="Enter your username or orcid">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="../scripts/options.js"></script>
 </body>
 </html>

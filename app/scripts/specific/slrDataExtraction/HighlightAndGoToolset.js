@@ -42,7 +42,7 @@ class HighlightAndGoToolset extends Toolset {
               window.alert('Unable to load swal. Please contact developer.')
             } else {
               slrName = LanguageUtils.normalizeString(slrName)
-              window.abwa.hypothesisClientManager.hypothesisClient.createNewGroup({
+              window.abwa.storageManager.client.createNewGroup({
                 name: slrName,
                 description: 'A Highlight&Go group to conduct a SLR'
               }, (err, result) => {

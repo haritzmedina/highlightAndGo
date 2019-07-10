@@ -55,7 +55,7 @@ class SLRGoogleSheetManager {
     // Promise to retrieve all annotations from current group
     promises.push(new Promise((resolve, reject) => {
       // TODO Change the limit of annotations
-      window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+      window.abwa.storageManager.client.searchAnnotations({
         group: window.abwa.groupSelector.currentGroup.id,
         limit: 100000000,
         order: 'desc',

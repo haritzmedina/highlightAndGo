@@ -14,6 +14,8 @@ chrome.tabs.onCreated.addListener((tab) => {
 })
 
 const HypothesisManager = require('./background/HypothesisManager')
+const Neo4JManager = require('./background/Neo4JManager')
+const StorageManager = require('./background/StorageManager')
 const GoogleSheetsManager = require('./background/GoogleSheetsManager')
 const DoiManager = require('./background/DoiManager')
 const Popup = require('./popup/Popup')
@@ -30,6 +32,14 @@ class Background {
     // Initialize hypothesis manager
     this.hypothesisManager = new HypothesisManager()
     this.hypothesisManager.init()
+
+    // Initialize Neo4J manager
+    this.neo4JManager = new Neo4JManager()
+    this.neo4JManager.init()
+
+    // Initialize storage manager
+    this.storageManager = new StorageManager()
+    this.storageManager.init()
 
     // Initialize google sheets manager
     this.googleSheetsManager = new GoogleSheetsManager()
