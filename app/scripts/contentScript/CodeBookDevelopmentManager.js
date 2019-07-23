@@ -394,7 +394,7 @@ class CodeBookDevelopmentManager {
    * 3. Ask if nothing is selected (no-evidence based codebook annotation)
    * 4. Creates a temporal annotation for the code to give an ID to the code
    * 5. Ask for a name and description for the new code
-   * 6. Saves the changes in hypothes.is
+   * 6. Saves the changes in storage
    * 7. Updates the sidebar
    * 8. Highlights the codebook code evidence in the document
    * @return {Function}
@@ -568,7 +568,7 @@ class CodeBookDevelopmentManager {
     if (newCodeAnnotations.linkAnnotation) {
       annotations.push(newCodeAnnotations.linkAnnotation)
     }
-    // Create annotations in hypothes.is
+    // Create annotations in storage
     window.abwa.storageManager.client.createNewAnnotations(annotations, (err, annotations) => {
       if (err) {
         if (_.isFunction(callback)) {

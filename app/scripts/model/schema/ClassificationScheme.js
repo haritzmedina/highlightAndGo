@@ -23,9 +23,9 @@ class ClassificationScheme extends AnnotationGuide {
     AnnotationGuide.fromAnnotation(annotation)
   }
 
-  static fromAnnotations (annotations) {
+  static fromAnnotations (annotations, storage = window.abwa.storageManager.getStorageMetadata()) {
     // TODO Retrieve spreadsheet information
-    let classificationScheme = new ClassificationScheme({name: '', storage: window.abwa.storageManager.storageMetadata})
+    let classificationScheme = new ClassificationScheme({name: '', storage: storage})
     // Get criterias
     let codebookAnnotations = _.filter(annotations, (annotation) => {
       return _.some(annotation.tags, (tag) => {
@@ -52,8 +52,8 @@ class ClassificationScheme extends AnnotationGuide {
       let parentAnnotationUrl = linkingAnnotation.body
       let childrenAnnotationUrl = linkingAnnotation['oa:target']
       // Get body and target
-      let parentId = parentAnnotationUrl.replace(this.storage.annotationUrl, '')
-      let childrenId = childrenAnnotationUrl.replace(this.storage.annotationUrl, '')
+      let parentId = parentAnnotationUrl.replace(classificationScheme.storage.annotationUrl, '')
+      let childrenId = childrenAnnotationUrl.replace(classificationScheme.storage.annotationUrl, '')
       // Find parent code
       let parentCode = _.find(codes, (code) => {
         return code.id === parentId
