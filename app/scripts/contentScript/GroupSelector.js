@@ -1,6 +1,7 @@
 const ChromeStorage = require('../utils/ChromeStorage')
 const LanguageUtils = require('../utils/LanguageUtils')
 const Alerts = require('../utils/Alerts')
+const Events = require('./Events')
 const _ = require('lodash')
 const $ = require('jquery')
 
@@ -202,7 +203,7 @@ class GroupSelector {
     ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.currentGroup)}, ChromeStorage.local, () => {
       console.debug('Group updated. Name: %s id: %s', this.currentGroup.name, this.currentGroup.id)
       // Dispatch event
-      LanguageUtils.dispatchCustomEvent(GroupSelector.eventGroupChange, {
+      LanguageUtils.dispatchCustomEvent(Events.groupChanged, {
         group: this.currentGroup,
         time: new Date()
       })
@@ -210,10 +211,6 @@ class GroupSelector {
   }
 
   destroy (callback) {
-    // Destroy intervals
-    if (this.loggedInInterval) {
-      clearInterval(this.loggedInInterval)
-    }
     if (_.isFunction(callback)) {
       callback()
     }
@@ -233,17 +230,15 @@ class GroupSelector {
         } else if (this.user.metadata.link) {
           return this.user.metadata.link
         } else {
-          return window.abwa.storageManager.storageUrl + '/users/' + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
+          return window.abwa.storageManager.storageMetadata.userUrl + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
         }
       } else {
-        return window.abwa.storageManager.storageUrl + 'users/' + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
+        return window.abwa.storageManager.storageMetadata.userUrl + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
       }
     } else {
       return null
     }
   }
 }
-
-GroupSelector.eventGroupChange = 'hypothesisGroupChanged'
 
 module.exports = GroupSelector

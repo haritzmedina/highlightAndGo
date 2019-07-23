@@ -215,10 +215,10 @@ class SLRGoogleSheetManager {
         let codingAnnotationForPrimaryStudy = codingAnnotationsForPrimaryStudy[i]
         // Check if annotation is validated
         let validatingAnnotation = _.find(validatingAnnotations, (validatingAnnotation) => {
-          let validatedAnnotationId = validatingAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
+          let validatedAnnotationId = validatingAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
           return codingAnnotationForPrimaryStudy.id === validatedAnnotationId
         })
-        let codeId = codingAnnotationForPrimaryStudy.body.replace('https://hypothes.is/api/annotations/', '')
+        let codeId = codingAnnotationForPrimaryStudy.body.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
         let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => { return code.id === codeId })
         if (code) {
           let parentCode = code.getAncestorCode()
@@ -316,7 +316,7 @@ class Code {
   toCell (users) {
     if (this.validatingAnnotation) {
       // Find validated annotation
-      let validatedAnnotationId = this.validatingAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
+      let validatedAnnotationId = this.validatingAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
       let annotation = _.find(this.annotations, (annotation) => { return annotation.id === validatedAnnotationId })
       if (!_.isObject(annotation)) { // If not found, retrieve first annotation, but something is probably wrong
         annotation = this.annotations[0]
@@ -421,7 +421,7 @@ class Codes {
         let validatedCode = _.find(chosenCodes, (chosenCode) => { return chosenCode.validatingAnnotation })
         if (validatedCode) {
           // Find validated annotation
-          let validatedAnnotationId = validatedCode.validatingAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
+          let validatedAnnotationId = validatedCode.validatingAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
           let annotation = _.find(validatedCode.annotations, (annotation) => { return annotation.id === validatedAnnotationId })
           if (!_.isObject(annotation)) { // If not found, retrieve first annotation, but something is probably wrong
             annotation = validatedCode.annotations[0]

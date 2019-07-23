@@ -12,10 +12,15 @@ class StorageManager {
      */
     this.client = {}
     /**
-     * The storage is the URL used to identify uniquely the storage where the data is saving
-     * @type {string}
+     * The storage holds metadata about the storage, such as its base URL, endpoint, annotations url, groups url,...
+     * @type {{annotationUrl: string, storageUrl: string}}
      */
-    this.storageUrl = 'https://localannotationsdatabase.org'
+    this.storageMetadata = {
+      annotationUrl: 'https://localannotationsdatabase.org/annotation/',
+      groupUrl: 'https://localannotationsdatabase.org/group/',
+      userUrl: 'https://localannotationsdatabase.org/user/',
+      storageUrl: 'https://localannotationsdatabase.org'
+    }
   }
 
   /**
@@ -46,6 +51,14 @@ class StorageManager {
     if (_.isFunction(callback)) {
       callback(null)
     }
+  }
+
+  /**
+   * Method to retrieve storage metadata
+   * @return {{annotationUrl: string, storageUrl: string}}
+   */
+  getStorageMetadata () {
+    return this.storageMetadata
   }
 
   /**

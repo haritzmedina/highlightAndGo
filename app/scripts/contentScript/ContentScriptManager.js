@@ -3,6 +3,7 @@ const _ = require('lodash')
 const ContentTypeManager = require('./ContentTypeManager')
 const ModeManager = require('./ModeManager')
 const Sidebar = require('./Sidebar')
+const Events = require('./Events')
 const GroupSelector = require('./GroupSelector')
 const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
 const MappingStudyManager = require('./MappingStudyManager')
@@ -57,7 +58,7 @@ class ContentScriptManager {
 
   initListenerForGroupChange () {
     this.events.groupChangedEvent = this.groupChangedEventHandlerCreator()
-    document.addEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent, false)
+    document.addEventListener(Events.groupChanged, this.events.groupChangedEvent, false)
   }
 
   reloadMappingStudyManager (callback) {
@@ -184,7 +185,7 @@ class ContentScriptManager {
           })
         })
       })
-      document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
+      document.removeEventListener(Events.groupChanged, this.events.groupChangedEvent)
     })
   }
 

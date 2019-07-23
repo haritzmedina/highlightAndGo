@@ -420,7 +420,7 @@ class LocalStorageClient {
       let createdGroup = LocalStorageClient.constructGroup({
         name: data.name,
         description: data.description,
-        storageUrl: this.manager.storageUrl,
+        storageUrl: this.manager.storageMetadata.url,
         groups: this.database.groups
       })
       this.database.groups.push(createdGroup)

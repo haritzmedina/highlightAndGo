@@ -4,6 +4,7 @@ const Events = {
   comment: 'annotationComment',
   annotationDeleted: 'annotationDeleted',
   annotationValidated: 'annotationValidated',
+  groupChanged: 'groupChanged',
   modeChanged: 'modeChanged',
   userFilterChange: 'userFilterChange',
   updatedAllAnnotations: 'updatedAllAnnotations',

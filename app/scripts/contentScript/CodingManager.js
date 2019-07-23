@@ -45,7 +45,7 @@ class CodingManager {
       return annotation.motivation === 'assessing'
     })
     validatingAnnotations.forEach((validatingAnnotation) => {
-      let validatedAnnotationId = validatingAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
+      let validatedAnnotationId = validatingAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
       _.forEach(_.toPairs(this.primaryStudyCoding), (pair) => {
         let codeId = pair[0]
         let data = pair[1]
@@ -63,7 +63,7 @@ class CodingManager {
       })
     })
     validatingAnnotations.forEach((validatingAnnotation) => {
-      let validatedAnnotationId = validatingAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
+      let validatedAnnotationId = validatingAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
       _.forEach(_.toPairs(this.userPrimaryStudyCoding), (pair) => {
         let codeId = pair[0]
         let data = pair[1]
@@ -91,7 +91,7 @@ class CodingManager {
     let coding = {}
     codingAnnotations.forEach((annotation) => {
       // Get code id
-      let codeId = annotation.body.replace('https://hypothes.is/api/annotations/', '')
+      let codeId = annotation.body.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
       // Check if code is in codebook
       if (codeId) {
         let codeIsInCodeBook = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => { return codeId === code.id })

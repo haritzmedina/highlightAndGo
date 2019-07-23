@@ -746,7 +746,7 @@ class CodeBookDevelopmentManager {
     }
     // Retrieve link annotation id
     let linkAnnotationId = code.parentLinkAnnotationId
-    let hypothesisUpdatePromise
+    let linkingAnnotationUpdatePromise
     // Remove code from old parent
     if (code.parentCode) {
       _.remove(code.parentCode.codes, code)
@@ -785,7 +785,7 @@ class CodeBookDevelopmentManager {
       code.parentElement = window.abwa.mappingStudyManager.classificationScheme
       code.parentLinkAnnotationId = null
       // Remove parent link annotation
-      hypothesisUpdatePromise = new Promise((resolve, reject) => {
+      linkingAnnotationUpdatePromise = new Promise((resolve, reject) => {
         window.abwa.storageManager.client.deleteAnnotation(linkAnnotationId, (err) => {
           if (err) {
             reject(err)
@@ -798,7 +798,7 @@ class CodeBookDevelopmentManager {
     } else {
       // Update annotation if parent has change
       if (linkAnnotationId) {
-        hypothesisUpdatePromise = new Promise((resolve, reject) => {
+        linkingAnnotationUpdatePromise = new Promise((resolve, reject) => {
           // Get new link annotation corpus
           let codeAnnotations = code.toAnnotation()
           if (codeAnnotations.linkAnnotation) {
@@ -813,7 +813,7 @@ class CodeBookDevelopmentManager {
           }
         })
       } else { // Create new link annotation if parent does not exist
-        hypothesisUpdatePromise = new Promise((resolve, reject) => {
+        linkingAnnotationUpdatePromise = new Promise((resolve, reject) => {
           // Get new link annotation corpus
           let codeAnnotations = code.toAnnotation()
           if (codeAnnotations.linkAnnotation) {
@@ -842,7 +842,7 @@ class CodeBookDevelopmentManager {
     // Update link annotation in hypothes.is
     this.updateSidebarButtons()
     // Update
-    return {code: code, classificationScheme: window.abwa.mappingStudyManager.classificationScheme, hypothesisUpdatePromise}
+    return {code: code, classificationScheme: window.abwa.mappingStudyManager.classificationScheme, linkingAnnotationUpdatePromise}
   }
 
   destroy () {
