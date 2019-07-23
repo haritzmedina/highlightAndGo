@@ -1,10 +1,10 @@
 const ChromeStorage = require('../utils/ChromeStorage')
 const LanguageUtils = require('../utils/LanguageUtils')
+const Alerts = require('../utils/Alerts')
 const _ = require('lodash')
 const $ = require('jquery')
 
 const selectedGroupNamespace = 'storage.currentGroup'
-const defaultGroup = {id: '__world__', name: 'Public', public: true}
 
 class GroupSelector {
   constructor () {
@@ -15,9 +15,15 @@ class GroupSelector {
   init (callback) {
     console.debug('Initializing group selector')
     this.addGroupSelectorToSidebar(() => {
-      this.reloadGroupsContainer(() => {
-        if (_.isFunction(callback)) {
-          callback()
+      this.reloadGroupsContainer((err) => {
+        if (err) {
+          if (_.isFunction(callback)) {
+            callback(err)
+          }
+        } else {
+          if (_.isFunction(callback)) {
+            callback()
+          }
         }
       })
       this.getUserProfileMetadata()
@@ -60,42 +66,55 @@ class GroupSelector {
         }
       })
     } else { // If initialization annotation is not set
-      if (!this.currentGroup) {
-        // Retrieve last saved group
-        ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
-          if (err) {
-            if (_.isFunction(callback)) {
-              callback(new Error('Unable to retrieve current selected group'))
-            }
-          } else {
-            // Parse chrome storage result
-            if (!_.isEmpty(savedCurrentGroup) && savedCurrentGroup.data) {
-              this.currentGroup = JSON.parse(savedCurrentGroup.data)
+      this.retrieveGroups((err) => {
+        if (err) {
+          callback(err)
+        } else {
+          // Retrieve last saved group
+          ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
+            if (err) {
+              if (_.isFunction(callback)) {
+                callback(new Error('Unable to retrieve current selected group'))
+              }
             } else {
-              this.currentGroup = defaultGroup
+              // Parse chrome storage result
+              if (!_.isEmpty(savedCurrentGroup) && savedCurrentGroup.data) {
+                this.currentGroup = JSON.parse(savedCurrentGroup.data)
+                if (_.isFunction(callback)) {
+                  callback()
+                }
+              } else {
+                if (_.isEmpty(this.user.groups)) {
+                  if (_.isFunction(callback)) {
+                    callback(new Error('No groups created, create one'))
+                  }
+                } else {
+                  this.currentGroup = _.first(this.user.groups)
+                  if (_.isFunction(callback)) {
+                    callback()
+                  }
+                }
+              }
             }
-            if (_.isFunction(callback)) {
-              callback()
-            }
-          }
-        })
-      } else {
-        if (_.isFunction(callback)) {
-          callback()
+          })
         }
-      }
+      })
     }
   }
 
   reloadGroupsContainer (callback) {
     // Set current group if not defined
-    this.defineCurrentGroup(() => {
-      // Render groups container
-      this.renderGroupsContainer(() => {
-        if (_.isFunction(callback)) {
-          callback()
-        }
-      })
+    this.defineCurrentGroup((err) => {
+      if (err) {
+        callback(err)
+      } else {
+        // Render groups container
+        this.renderGroupsContainer(() => {
+          if (_.isFunction(callback)) {
+            callback()
+          }
+        })
+      }
     })
   }
 
@@ -103,31 +122,22 @@ class GroupSelector {
     // Display group selector and purposes selector
     $('#purposesWrapper').attr('aria-hidden', 'false')
     // Retrieve groups
-    this.retrieveGroups((err, groups) => {
-      if (err) {
-        if (_.isFunction(callback)) {
-          callback(err)
-        }
-      } else {
-        console.debug(groups)
-        let dropdownMenu = document.querySelector('#groupSelector')
-        dropdownMenu.innerHTML = '' // Remove all groups
-        this.user.groups.forEach(group => {
-          let groupSelectorItem = document.createElement('option')
-          groupSelectorItem.dataset.groupId = group.id
-          groupSelectorItem.innerText = group.name
-          groupSelectorItem.className = 'dropdown-item'
-          dropdownMenu.appendChild(groupSelectorItem)
-        })
-        // Set select option
-        $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
-        // Set event handler for group change
-        this.setEventForGroupSelectChange()
-        if (_.isFunction(callback)) {
-          callback()
-        }
-      }
+    let dropdownMenu = document.querySelector('#groupSelector')
+    dropdownMenu.innerHTML = '' // Remove all groups
+    this.user.groups.forEach(group => {
+      let groupSelectorItem = document.createElement('option')
+      groupSelectorItem.dataset.groupId = group.id
+      groupSelectorItem.innerText = group.name
+      groupSelectorItem.className = 'dropdown-item'
+      dropdownMenu.appendChild(groupSelectorItem)
     })
+    // Set select option
+    $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
+    // Set event handler for group change
+    this.setEventForGroupSelectChange()
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
   retrieveGroups (callback) {
@@ -146,8 +156,9 @@ class GroupSelector {
   }
 
   setCurrentGroup (groupId, callback) {
-    this.renderGroupsContainer((err) => {
+    this.retrieveGroups((err) => {
       if (err) {
+        Alerts.errorAlert({text: 'Unable to retrieve list of groups.'})
         if (_.isFunction(callback)) {
           callback(err)
         }
@@ -157,15 +168,23 @@ class GroupSelector {
         if (newCurrentGroup) {
           this.currentGroup = newCurrentGroup
         }
-        // Update group selector
-        $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
-        // Event group changed
-        this.updateCurrentGroupHandler(this.currentGroup.id)
-        // Open sidebar
-        window.abwa.sidebar.openSidebar()
-        if (_.isFunction(callback)) {
-          callback()
-        }
+        this.renderGroupsContainer((err) => {
+          if (err) {
+            if (_.isFunction(callback)) {
+              callback(err)
+            }
+          } else {
+            // Update group selector
+            $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
+            // Event group changed
+            this.updateCurrentGroupHandler(this.currentGroup.id)
+            // Open sidebar
+            window.abwa.sidebar.openSidebar()
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          }
+        })
       }
     })
   }
