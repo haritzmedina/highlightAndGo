@@ -78,9 +78,18 @@ class GroupSelector {
                 callback(new Error('Unable to retrieve current selected group'))
               }
             } else {
-              // Parse chrome storage result
+              let storedGroup
+              // Parse retrieved data from chrome storage
               if (!_.isEmpty(savedCurrentGroup) && savedCurrentGroup.data) {
-                this.currentGroup = JSON.parse(savedCurrentGroup.data)
+                // Check if stored group exists in groups
+                let parsedGroup = JSON.parse(savedCurrentGroup.data)
+                storedGroup = _.find(this.user.groups, (group) => {
+                  return group.id === parsedGroup.id
+                })
+              }
+              // Check if stored group is a valid group
+              if (storedGroup) {
+                this.currentGroup = storedGroup
                 if (_.isFunction(callback)) {
                   callback()
                 }
