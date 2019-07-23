@@ -239,7 +239,7 @@ class LocalStorageClient {
           // Update the annotation from list
           annotations[annotationToUpdateIndex] = annotationUpdated
           // Return deleted annotation
-          return annotation
+          return annotationUpdated
         } else {
           // Your are not the owner
           throw new Error('Your are not the owner of the annotation ID: ' + id)
