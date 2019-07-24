@@ -52,16 +52,12 @@ class LocalStorageClient {
 
   static constructAnnotation ({annotation, user, annotations}) {
     // Check if the required parameter uri exists
-    if (annotation.uri) {
+    if (annotation.uri && annotation.group) {
       // TODO Check if annotation follows the standard schema
       let annotationToCreate = LocalStorageClient.constructEmptyAnnotation()
       // Override properties of annotation with inserted content
       annotationToCreate = Object.assign(annotationToCreate, annotation)
 
-      // Append required params but not added in annotation (groupid, user, etc.)
-      if (_.isEmpty(annotationToCreate.group)) {
-        annotationToCreate.group = '__world__'
-      }
       // UserInfo
       if (_.isEmpty(annotationToCreate.user_info)) {
         annotationToCreate.user_info = {display_name: user.display_name}
@@ -92,7 +88,11 @@ class LocalStorageClient {
       // Return constructed annotation to create
       return annotationToCreate
     } else {
-      throw new Error('Required parameter missing in annotation: uri.\n' + annotation.toString())
+      if (_.isEmpty(annotation.group)) {
+        throw new Error('Required parameter missing in annotation: group.\n' + annotation.toString())
+      } else if (_.isEmpty(annotation.uri)) {
+        throw new Error('Required parameter missing in annotation: uri.\n' + annotation.toString())
+      }
     }
   }
 
@@ -420,7 +420,7 @@ class LocalStorageClient {
       let createdGroup = LocalStorageClient.constructGroup({
         name: data.name,
         description: data.description,
-        storageUrl: this.manager.storageUrl,
+        storageUrl: this.manager.storageMetadata.url,
         groups: this.database.groups
       })
       this.database.groups.push(createdGroup)

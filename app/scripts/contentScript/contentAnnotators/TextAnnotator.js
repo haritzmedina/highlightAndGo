@@ -246,7 +246,7 @@ class TextAnnotator extends ContentAnnotator {
       'motivation': 'classifying',
       creator: window.abwa.groupSelector.getCreatorData() || '',
       group: window.abwa.groupSelector.currentGroup.id,
-      body: 'https://hypothes.is/api/annotations/' + code.id,
+      body: window.abwa.storageManager.storageMetadata.annotationUrl + code.id,
       document: {},
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
@@ -257,7 +257,7 @@ class TextAnnotator extends ContentAnnotator {
         selector: selectors
       }],
       text: '',
-      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
     }
     // For pdf files it is also send the relationship between pdf fingerprint and web url
     if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
@@ -267,7 +267,7 @@ class TextAnnotator extends ContentAnnotator {
         link: [{
           href: 'urn:x-pdf:' + pdfFingerprint
         }, {
-          href: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+          href: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
         }]
       }
     }
@@ -305,7 +305,7 @@ class TextAnnotator extends ContentAnnotator {
         value: text
       },
       creator: window.abwa.groupSelector.getCreatorData() || '',
-      'oa:target': 'https://hypothes.is/api/annotations/' + validatedAnnotation.id,
+      'oa:target': window.abwa.storageManager.storageMetadata.annotationUrl + validatedAnnotation.id,
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
       },
@@ -313,7 +313,7 @@ class TextAnnotator extends ContentAnnotator {
       tags: ['motivation:assessing'],
       target: [],
       text: text,
-      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
     }
     if (agreement) {
       data.agreement = agreement
@@ -411,8 +411,8 @@ class TextAnnotator extends ContentAnnotator {
   updateAllAnnotations (callback) {
     // Retrieve annotations for current url and group
     window.abwa.storageManager.client.searchAnnotations({
-      url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
-      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+      url: window.abwa.contentTypeManager.getDocumentURIToSearchInStorage(),
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage(),
       group: window.abwa.groupSelector.currentGroup.id,
       order: 'asc'
     }, (err, annotations) => {
@@ -446,8 +446,8 @@ class TextAnnotator extends ContentAnnotator {
   getAllAnnotations (callback) {
     // Retrieve annotations for current url and group
     window.abwa.storageManager.client.searchAnnotations({
-      url: window.abwa.contentTypeManager.getDocumentURIToSearchInHypothesis(),
-      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis(),
+      url: window.abwa.contentTypeManager.getDocumentURIToSearchInStorage(),
+      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage(),
       group: window.abwa.groupSelector.currentGroup.id,
       order: 'asc'
     }, (err, annotations) => {
@@ -531,7 +531,7 @@ class TextAnnotator extends ContentAnnotator {
       })
     } else if (annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying') {
       let codeAnnotationURL = annotation.body
-      let annotationCodeId = codeAnnotationURL.replace('https://hypothes.is/api/annotations/', '')
+      let annotationCodeId = codeAnnotationURL.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
       code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
         return code.id === annotationCodeId
       })
@@ -580,7 +580,7 @@ class TextAnnotator extends ContentAnnotator {
           // Find people who validate this
           let validatingAnnotations = _.filter(this.allAnnotations, (allAnnotation) => {
             if (allAnnotation.motivation === 'assessing' && _.has(allAnnotation, 'oa:target')) {
-              if (allAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '') === annotation.id) {
+              if (allAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') === annotation.id) {
                 return allAnnotation
               }
             }
@@ -677,7 +677,7 @@ class TextAnnotator extends ContentAnnotator {
               items['sep1'] = '---------'
             }
             let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
-              return code.id === annotation.body.replace('https://hypothes.is/api/annotations/', '')
+              return code.id === annotation.body.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
             })
             if (code) {
               items['validateCoding'] = {name: 'Validate \'' + code.name + '\' code for this primary study.'}
@@ -727,7 +727,7 @@ class TextAnnotator extends ContentAnnotator {
               })
             } else if (key === 'comment') {
               // Retrieve code for current annotation
-              let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => { return code.id === annotation.body.replace('https://hypothes.is/api/annotations/', '') })
+              let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => { return code.id === annotation.body.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') })
               let title = code ? 'Comment for code "' + code.name + '"' : 'Commenting'
               Alerts.inputTextAlert({
                 title: title,
@@ -758,7 +758,7 @@ class TextAnnotator extends ContentAnnotator {
               let currentUserValidateAnnotation = {}
               // Get code validating
               let validatingCode = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
-                return code.id === annotation.body.replace('https://hypothes.is/api/annotations/', '')
+                return code.id === annotation.body.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
               })
               if (_.has(window.abwa.codingManager.primaryStudyCoding, validatingCode.id)) {
                 currentUserValidateAnnotation = _.find(window.abwa.codingManager.primaryStudyCoding[validatingCode.id].validatingAnnotations, (validatingAnnotation) => {

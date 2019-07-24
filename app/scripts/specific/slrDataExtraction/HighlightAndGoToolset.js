@@ -51,6 +51,8 @@ class HighlightAndGoToolset extends Toolset {
                 } else {
                   // Move group to new created one
                   window.abwa.groupSelector.setCurrentGroup(result.id)
+                  // Reload everything by group
+                  window.abwa.contentScriptManager.reloadContentByGroup()
                 }
               })
             }

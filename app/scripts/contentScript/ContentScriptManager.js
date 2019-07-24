@@ -3,6 +3,7 @@ const _ = require('lodash')
 const ContentTypeManager = require('./ContentTypeManager')
 const ModeManager = require('./ModeManager')
 const Sidebar = require('./Sidebar')
+const Events = require('./Events')
 const GroupSelector = require('./GroupSelector')
 const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
 const MappingStudyManager = require('./MappingStudyManager')
@@ -34,15 +35,19 @@ class ContentScriptManager {
             window.abwa.annotationBasedInitializer = new AnnotationBasedInitializer()
             window.abwa.annotationBasedInitializer.init(() => {
               window.abwa.groupSelector = new GroupSelector()
-              window.abwa.groupSelector.init(() => {
-                // Reload for first time the content by group
-                this.reloadContentByGroup(() => {
-                  // Initialize listener for group change to reload the content
-                  this.initListenerForGroupChange()
-                  // Set status as initialized
-                  this.status = ContentScriptManager.status.initialized
-                  console.debug('Initialized content script manager')
-                })
+              window.abwa.groupSelector.init((err) => {
+                if (err) {
+                  this.reloadToolset()
+                } else {
+                  // Reload for first time the content by group
+                  this.reloadContentByGroup(() => {
+                    // Initialize listener for group change to reload the content
+                    this.initListenerForGroupChange()
+                    // Set status as initialized
+                    this.status = ContentScriptManager.status.initialized
+                    console.debug('Initialized content script manager')
+                  })
+                }
               })
             })
           }
@@ -53,7 +58,7 @@ class ContentScriptManager {
 
   initListenerForGroupChange () {
     this.events.groupChangedEvent = this.groupChangedEventHandlerCreator()
-    document.addEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent, false)
+    document.addEventListener(Events.groupChanged, this.events.groupChangedEvent, false)
   }
 
   reloadMappingStudyManager (callback) {
@@ -91,7 +96,7 @@ class ContentScriptManager {
   }
 
   groupChangedEventHandlerCreator () {
-    return (event) => {
+    return () => {
       this.reloadContentByGroup()
     }
   }
@@ -180,7 +185,7 @@ class ContentScriptManager {
           })
         })
       })
-      document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
+      document.removeEventListener(Events.groupChanged, this.events.groupChangedEvent)
     })
   }
 

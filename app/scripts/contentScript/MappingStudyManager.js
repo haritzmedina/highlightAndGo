@@ -15,6 +15,7 @@ class MappingStudyManager {
       } else {
         this.classificationSchemeAnnotations = classificationSchemeAnnotations
         this.classificationScheme = ClassificationScheme.fromAnnotations(classificationSchemeAnnotations)
+        this.storageMetadata = window.abwa.storageManager.getStorageMetadata()
         if (_.isFunction(callback)) {
           callback()
         }

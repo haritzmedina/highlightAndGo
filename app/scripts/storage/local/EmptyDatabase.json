@@ -3,16 +3,7 @@
     "userid": "generic_user",
     "display_name": "Generic user"
   },
-  "groups": [
-    {
-      "description": "A Highlight&Go group to conduct a SLR",
-      "id": "default",
-      "links": {
-        "html": "https://localannotationsdatabase.org/groups/default"
-      },
-      "name": "default"
-    }
-  ],
+  "groups": [],
   "annotations": [
 
   ]

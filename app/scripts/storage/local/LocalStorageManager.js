@@ -9,7 +9,6 @@ class LocalStorageManager extends StorageManager {
   constructor () {
     super()
     this.localStorageClient = this.client
-    this.storageUrl = 'https://localannotationsdatabase.org'
     this.annotationsDatabase = {}
   }
 
