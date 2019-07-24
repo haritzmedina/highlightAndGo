@@ -3,7 +3,7 @@ const _ = require('lodash')
 const StorageManager = require('../StorageManager')
 const Alerts = require('../../utils/Alerts')
 
-const Neo4JClient = require('../local/LocalStorageClient') // TODO Substitute by the real neo4j client
+const Neo4JClient = require('./Neo4JClient') // TODO Substitute by the real neo4j client
 
 const userLoginCheckIntervalPeriodInSeconds = 5
 
@@ -24,11 +24,11 @@ class Neo4JClientManager extends StorageManager {
           callback(err)
         } else {
           // TODO Check if user grant permission to access neo4j account
-          if (credentials.endpoint === 'https://onekin.org' && credentials.token === 'aaa' && credentials.user === 'bbb') {
+        //  if (true){ //credentials.endpoint === 'https://onekin.or' && credentials.token === 'aaa' && credentials.user === 'bbb') {
             callback(null, true)
-          } else {
-            callback(null, false)
-          }
+//          } else {
+  //          callback(null, false)
+    //      }
         }
       })
     }
