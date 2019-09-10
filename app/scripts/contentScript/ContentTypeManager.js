@@ -18,7 +18,7 @@ class ContentTypeManager {
   }
 
   init (callback) {
-    if (document.querySelector('embed[type="application/pdf"][name="plugin"]')) {
+    if (document.querySelector('embed[type="application/pdf"]')) {
       window.location = chrome.extension.getURL('content/pdfjs/web/viewer.html') + '?file=' + encodeURIComponent(window.location.href)
     } else {
       // Load publication metadata
