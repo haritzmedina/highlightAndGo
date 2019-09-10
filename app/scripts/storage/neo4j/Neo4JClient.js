@@ -1,3 +1,4 @@
+/* eslint-disable */
 const _ = require('lodash')
 const axios = require('axios')
 const jsonld = require('jsonld')
