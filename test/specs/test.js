@@ -3,8 +3,6 @@ const puppeteer = require('puppeteer')
 const assert = require('assert')
 
 const extensionPath = './dist/chrome/' // For instance, 'dist'
-// test.js
-
 let extensionPage = null
 let browser = null
 

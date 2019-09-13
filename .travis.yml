@@ -6,7 +6,8 @@ node_js:
 addons:
   chrome: stable
 services:
-  - xvfb
+  - xvfb # From: https://docs.travis-ci.com/user/gui-and-headless-browsers/#using-xvfb-to-run-tests-that-require-a-gui
+  - neo4j # From: https://docs.travis-ci.com/user/database-setup/#neo4j
 before_install:
   - sudo apt-get update
 before_script:
