@@ -25,10 +25,10 @@ class Neo4JClientManager extends StorageManager {
         } else {
           // TODO Check if user grant permission to access neo4j account
         //  if (true){ //credentials.endpoint === 'https://onekin.or' && credentials.token === 'aaa' && credentials.user === 'bbb') {
-            callback(null, true)
-//          } else {
-  //          callback(null, false)
-    //      }
+          callback(null, true)
+          //          } else {
+          //          callback(null, false)
+          //      }
         }
       })
     }
