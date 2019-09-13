@@ -369,7 +369,7 @@ class CodeBookDevelopmentManager {
                     let codeAnnotations = codeToModify.toAnnotation()
                     let codeAnnotation = codeAnnotations.codeAnnotation
                     // Update annotation in hypothes.is
-                    window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(codeToModify.id, codeAnnotation, (err) => {
+                    window.abwa.storageManager.client.updateAnnotation(codeToModify.id, codeAnnotation, (err) => {
                       if (err) {
                         Alerts.errorAlert({text: 'An unexpected error occurred in hypothes.is, please try again', title: 'Unable to update'})
                       } else {
@@ -394,7 +394,7 @@ class CodeBookDevelopmentManager {
    * 3. Ask if nothing is selected (no-evidence based codebook annotation)
    * 4. Creates a temporal annotation for the code to give an ID to the code
    * 5. Ask for a name and description for the new code
-   * 6. Saves the changes in hypothes.is
+   * 6. Saves the changes in storage
    * 7. Updates the sidebar
    * 8. Highlights the codebook code evidence in the document
    * @return {Function}
@@ -496,7 +496,7 @@ class CodeBookDevelopmentManager {
                 if (_.isObject(linkAnnotation)) {
                   annotationsToDelete.push(linkAnnotation)
                 }
-                window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotations(annotationsToDelete, () => {})
+                window.abwa.storageManager.client.deleteAnnotations(annotationsToDelete, () => {})
               } else {
                 // Complete the created annotation and update codebook
                 createAnnotationPromise.catch(() => {
@@ -568,8 +568,8 @@ class CodeBookDevelopmentManager {
     if (newCodeAnnotations.linkAnnotation) {
       annotations.push(newCodeAnnotations.linkAnnotation)
     }
-    // Create annotations in hypothes.is
-    window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotations(annotations, (err, annotations) => {
+    // Create annotations in storage
+    window.abwa.storageManager.client.createNewAnnotations(annotations, (err, annotations) => {
       if (err) {
         if (_.isFunction(callback)) {
           callback(err)
@@ -595,7 +595,7 @@ class CodeBookDevelopmentManager {
     let promises = []
     // Update code annotation
     promises.push(new Promise((resolve, reject) => {
-      window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(currentAnnotationId, codeAnnotation, (err, annotation) => {
+      window.abwa.storageManager.client.updateAnnotation(currentAnnotationId, codeAnnotation, (err, annotation) => {
         if (err) {
           if (_.isFunction(callback)) {
             reject(err)
@@ -611,7 +611,7 @@ class CodeBookDevelopmentManager {
     // Update link annotation
     promises.push(new Promise((resolve, reject) => {
       if (currentLinkAnnotationId) {
-        window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(currentLinkAnnotationId, linkAnnotation, (err, annotation) => {
+        window.abwa.storageManager.client.updateAnnotation(currentLinkAnnotationId, linkAnnotation, (err, annotation) => {
           if (err) {
             if (_.isFunction(callback)) {
               reject(err)
@@ -671,7 +671,7 @@ class CodeBookDevelopmentManager {
     }
     // Remove all annotations from hypothes.is
     let deleteAnnotationsPromise = new Promise((resolve, reject) => {
-      window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotations(annotationIdsToRemove, (err) => {
+      window.abwa.storageManager.client.deleteAnnotations(annotationIdsToRemove, (err) => {
         if (err) {
           reject(err)
         } else {
@@ -746,7 +746,7 @@ class CodeBookDevelopmentManager {
     }
     // Retrieve link annotation id
     let linkAnnotationId = code.parentLinkAnnotationId
-    let hypothesisUpdatePromise
+    let linkingAnnotationUpdatePromise
     // Remove code from old parent
     if (code.parentCode) {
       _.remove(code.parentCode.codes, code)
@@ -785,8 +785,8 @@ class CodeBookDevelopmentManager {
       code.parentElement = window.abwa.mappingStudyManager.classificationScheme
       code.parentLinkAnnotationId = null
       // Remove parent link annotation
-      hypothesisUpdatePromise = new Promise((resolve, reject) => {
-        window.abwa.hypothesisClientManager.hypothesisClient.deleteAnnotation(linkAnnotationId, (err) => {
+      linkingAnnotationUpdatePromise = new Promise((resolve, reject) => {
+        window.abwa.storageManager.client.deleteAnnotation(linkAnnotationId, (err) => {
           if (err) {
             reject(err)
           } else {
@@ -798,12 +798,12 @@ class CodeBookDevelopmentManager {
     } else {
       // Update annotation if parent has change
       if (linkAnnotationId) {
-        hypothesisUpdatePromise = new Promise((resolve, reject) => {
+        linkingAnnotationUpdatePromise = new Promise((resolve, reject) => {
           // Get new link annotation corpus
           let codeAnnotations = code.toAnnotation()
           if (codeAnnotations.linkAnnotation) {
             // Update annotation in hypothes.is
-            window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(linkAnnotationId, codeAnnotations.linkAnnotation, (err, annotation) => {
+            window.abwa.storageManager.client.updateAnnotation(linkAnnotationId, codeAnnotations.linkAnnotation, (err, annotation) => {
               if (err) {
                 reject(err)
               } else {
@@ -813,12 +813,12 @@ class CodeBookDevelopmentManager {
           }
         })
       } else { // Create new link annotation if parent does not exist
-        hypothesisUpdatePromise = new Promise((resolve, reject) => {
+        linkingAnnotationUpdatePromise = new Promise((resolve, reject) => {
           // Get new link annotation corpus
           let codeAnnotations = code.toAnnotation()
           if (codeAnnotations.linkAnnotation) {
             // Update annotation in hypothes.is
-            window.abwa.hypothesisClientManager.hypothesisClient.createNewAnnotation(codeAnnotations.linkAnnotation, (err, annotation) => {
+            window.abwa.storageManager.client.createNewAnnotation(codeAnnotations.linkAnnotation, (err, annotation) => {
               if (err) {
                 reject(err)
               } else {
@@ -826,7 +826,7 @@ class CodeBookDevelopmentManager {
                 code.parentLinkAnnotationId = annotation.id
                 // Update in Hypothes.is code with its @id
                 let codeAnnotationUpdated = code.toAnnotation()
-                window.abwa.hypothesisClientManager.hypothesisClient.updateAnnotation(annotation.id, codeAnnotationUpdated.linkAnnotation, () => {
+                window.abwa.storageManager.client.updateAnnotation(annotation.id, codeAnnotationUpdated.linkAnnotation, () => {
                   if (err) {
                     reject(err)
                   } else {
@@ -842,7 +842,7 @@ class CodeBookDevelopmentManager {
     // Update link annotation in hypothes.is
     this.updateSidebarButtons()
     // Update
-    return {code: code, classificationScheme: window.abwa.mappingStudyManager.classificationScheme, hypothesisUpdatePromise}
+    return {code: code, classificationScheme: window.abwa.mappingStudyManager.classificationScheme, linkingAnnotationUpdatePromise}
   }
 
   destroy () {

@@ -18,7 +18,7 @@ class ContentTypeManager {
   }
 
   init (callback) {
-    if (document.querySelector('embed[type="application/pdf"][name="plugin"]')) {
+    if (document.querySelector('embed[type="application/pdf"]')) {
       window.location = chrome.extension.getURL('content/pdfjs/web/viewer.html') + '?file=' + encodeURIComponent(window.location.href)
     } else {
       // Load publication metadata
@@ -144,7 +144,7 @@ class ContentTypeManager {
     }
   }
 
-  getDocumentURIToSearchInHypothesis () {
+  getDocumentURIToSearchInStorage () {
     if (this.documentType === ContentTypeManager.documentTypes.pdf) {
       return 'urn:x-pdf:' + this.pdfFingerprint
     } else {
@@ -152,7 +152,7 @@ class ContentTypeManager {
     }
   }
 
-  getDocumentURIToSaveInHypothesis () {
+  getDocumentURIToSaveInStorage () {
     if (this.doi) {
       return 'https://doi.org/' + this.doi
     } else if (this.documentURL) {

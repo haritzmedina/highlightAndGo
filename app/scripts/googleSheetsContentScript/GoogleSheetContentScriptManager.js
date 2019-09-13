@@ -1,6 +1,7 @@
 const _ = require('lodash')
 
-const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
+const HypothesisClientManager = require('../storage/hypothesis/HypothesisClientManager')
+const LocalStorageManager = require('../storage/local/LocalStorageManager')
 const GoogleSheetsClientManager = require('../googleSheets/GoogleSheetsClientManager')
 
 const Alerts = require('../utils/Alerts')
@@ -8,37 +9,58 @@ const Alerts = require('../utils/Alerts')
 class GoogleSheetContentScriptManager {
   init (callback) {
     window.hag.googleSheetClientManager = new GoogleSheetsClientManager()
-    window.hag.hypothesisClientManager = new HypothesisClientManager()
-    window.hag.hypothesisClientManager.init(() => {
-      this.initLoginProcess((err, tokens) => {
-        if (err) {
-          Alerts.errorAlert({title: 'Oops!', text: 'Unable to configure current spreadsheet. Failed login to services.'}) // TODO i18n
-          if (_.isFunction(callback)) {
-            callback()
+    this.loadStorage((err) => {
+      if (err) {
+
+      } else {
+        this.initLoginProcess((err) => {
+          if (err) {
+            Alerts.errorAlert({title: 'Oops!', text: 'Unable to configure current spreadsheet. Failed login to services.'}) // TODO i18n
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          } else {
+            // TODO Show current hypothes.is groups with annotations of highlight&Go
           }
-        } else {
-          // TODO Show current hypothes.is groups with annotations of highlight&Go
-        }
-      })
+        })
+      }
     })
   }
 
   initLoginProcess (callback) {
-    window.hag.hypothesisClientManager.logInHypothesis((err, hypothesisToken) => {
+    window.hag.storageManager.logIn((err) => {
       if (err) {
         callback(err)
       } else {
-        window.hag.googleSheetClientManager.logInGoogleSheets((err, gSheetToken) => {
+        window.hag.googleSheetClientManager.logInGoogleSheets((err) => {
           if (err) {
             callback(err)
           } else {
-            callback(null, {
-              hypothesis: hypothesisToken,
-              gSheet: gSheetToken
-            })
+            callback(null)
           }
         })
       }
+    })
+  }
+
+  loadStorage (callback) {
+    chrome.runtime.sendMessage({scope: 'storage', cmd: 'getSelectedStorage'}, ({storage}) => {
+      if (storage === 'hypothesis') {
+        // Hypothesis
+        window.abwa.storageManager = new HypothesisClientManager()
+      } else {
+        // Local storage
+        window.abwa.storageManager = new LocalStorageManager()
+      }
+      window.abwa.storageManager.init((err) => {
+        if (_.isFunction(callback)) {
+          if (err) {
+            callback(err)
+          } else {
+            callback()
+          }
+        }
+      })
     })
   }
 }

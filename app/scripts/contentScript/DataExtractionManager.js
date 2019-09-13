@@ -51,11 +51,11 @@ class DataExtractionManager {
       // this.addEventListenerUpdatedAllAnnotations()
       // Add event listener for coding model updated
       this.addEventListenerCodingModelUpdated()
+      if (_.isFunction(callback)) {
+        callback()
+      }
+      console.debug('Initialized data extraction manager')
     })
-    if (_.isFunction(callback)) {
-      callback()
-    }
-    console.debug('Initialized data extraction manager')
   }
 
   addEventListenerModeToggle () {

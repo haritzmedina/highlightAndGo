@@ -14,7 +14,7 @@ class MappingStudyManager {
         callback(err)
       } else {
         this.classificationSchemeAnnotations = classificationSchemeAnnotations
-        this.classificationScheme = ClassificationScheme.fromAnnotations(classificationSchemeAnnotations)
+        this.classificationScheme = ClassificationScheme.fromAnnotations(classificationSchemeAnnotations, window.abwa.storageManager.getStorageMetadata())
         if (_.isFunction(callback)) {
           callback()
         }
@@ -23,7 +23,7 @@ class MappingStudyManager {
   }
 
   retrieveAnnotationsForClassificationScheme (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+    window.abwa.storageManager.client.searchAnnotations({
       tag: 'motivation:slr:codebookDevelopment',
       group: window.abwa.groupSelector.currentGroup.id,
       sort: 'created',
@@ -32,7 +32,7 @@ class MappingStudyManager {
       if (err) {
         callback(err)
       } else {
-        window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+        window.abwa.storageManager.client.searchAnnotations({
           tag: 'motivation:linking',
           group: window.abwa.groupSelector.currentGroup.id
         }, (err, linkingAnnotations) => {

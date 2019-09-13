@@ -10,8 +10,8 @@ class AnnotationBasedInitializer {
     // Check if annotation is in hash params
     let annotationId = AnnotationBasedInitializer.getAnnotationHashParam()
     if (annotationId) {
-      if (_.isObject(window.abwa.hypothesisClientManager.hypothesisClient)) {
-        window.abwa.hypothesisClientManager.hypothesisClient.fetchAnnotation(annotationId, (err, annotation) => {
+      if (_.isObject(window.abwa.storageManager.client)) {
+        window.abwa.storageManager.client.fetchAnnotation(annotationId, (err, annotation) => {
           if (err) {
             console.error(err)
           } else {

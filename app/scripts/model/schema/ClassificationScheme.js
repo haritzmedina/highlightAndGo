@@ -6,8 +6,8 @@ const LanguageUtils = require('../../utils/LanguageUtils')
 const Config = require('../../Config')
 
 class ClassificationScheme extends AnnotationGuide {
-  constructor ({name = '', hypothesisGroup, codes = []}) {
-    super({name: name, hypothesisGroup: hypothesisGroup, guideElements: codes})
+  constructor ({name = '', storage, codes = []}) {
+    super({name: name, storage: storage, guideElements: codes})
     this.codes = this.guideElements
   }
 
@@ -23,9 +23,9 @@ class ClassificationScheme extends AnnotationGuide {
     AnnotationGuide.fromAnnotation(annotation)
   }
 
-  static fromAnnotations (annotations) {
+  static fromAnnotations (annotations, storage = window.abwa.storageManager.getStorageMetadata()) {
     // TODO Retrieve spreadsheet information
-    let classificationScheme = new ClassificationScheme({name: '', hypothesisGroup: window.abwa.groupSelector.currentGroup})
+    let classificationScheme = new ClassificationScheme({name: '', storage: storage})
     // Get criterias
     let codebookAnnotations = _.filter(annotations, (annotation) => {
       return _.some(annotation.tags, (tag) => {
@@ -52,8 +52,8 @@ class ClassificationScheme extends AnnotationGuide {
       let parentAnnotationUrl = linkingAnnotation.body
       let childrenAnnotationUrl = linkingAnnotation['oa:target']
       // Get body and target
-      let parentId = parentAnnotationUrl.replace('https://hypothes.is/api/annotations/', '')
-      let childrenId = childrenAnnotationUrl.replace('https://hypothes.is/api/annotations/', '')
+      let parentId = parentAnnotationUrl.replace(classificationScheme.storage.annotationUrl, '')
+      let childrenId = childrenAnnotationUrl.replace(classificationScheme.storage.annotationUrl, '')
       // Find parent code
       let parentCode = _.find(codes, (code) => {
         return code.id === parentId

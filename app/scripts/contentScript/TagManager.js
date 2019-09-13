@@ -39,7 +39,7 @@ class TagManager {
   }
 
   getGroupAnnotations (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.searchAnnotations({
+    window.abwa.storageManager.client.searchAnnotations({
       url: window.abwa.groupSelector.currentGroup.url,
       order: 'desc'
     }, (err, annotations) => {

@@ -37,8 +37,8 @@ class ModeManager {
               resolve()
             } else if (initAnnotation.motivation === 'assessing') {
               if (initAnnotation['oa:target']) {
-                let validatedAnnotationId = initAnnotation['oa:target'].replace('https://hypothes.is/api/annotations/', '')
-                window.abwa.hypothesisClientManager.hypothesisClient.fetchAnnotation(validatedAnnotationId, (err, annotation) => {
+                let validatedAnnotationId = initAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
+                window.abwa.storageManager.client.fetchAnnotation(validatedAnnotationId, (err, annotation) => {
                   if (err) {
                     resolve() // Ignore error, default mode will be selected
                   } else {
@@ -58,6 +58,8 @@ class ModeManager {
               }
             }
           }
+        } else {
+          resolve()
         }
       })
       promise.then(() => {

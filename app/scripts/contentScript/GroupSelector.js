@@ -1,12 +1,11 @@
 const ChromeStorage = require('../utils/ChromeStorage')
 const LanguageUtils = require('../utils/LanguageUtils')
+const Alerts = require('../utils/Alerts')
+const Events = require('./Events')
 const _ = require('lodash')
 const $ = require('jquery')
 
-const selectedGroupNamespace = 'hypothesis.currentGroup'
-const defaultGroup = {id: '__world__', name: 'Public', public: true}
-
-const checkHypothesisLoggedInWhenPromptInSeconds = 2 // When not logged in, check if user has logged in
+const selectedGroupNamespace = 'storage.currentGroup'
 
 class GroupSelector {
   constructor () {
@@ -17,9 +16,15 @@ class GroupSelector {
   init (callback) {
     console.debug('Initializing group selector')
     this.addGroupSelectorToSidebar(() => {
-      this.reloadGroupsContainer(() => {
-        if (_.isFunction(callback)) {
-          callback()
+      this.reloadGroupsContainer((err) => {
+        if (err) {
+          if (_.isFunction(callback)) {
+            callback(err)
+          }
+        } else {
+          if (_.isFunction(callback)) {
+            callback()
+          }
         }
       })
       this.getUserProfileMetadata()
@@ -46,7 +51,7 @@ class GroupSelector {
     if (window.abwa.annotationBasedInitializer.initAnnotation) {
       let annotationGroupId = window.abwa.annotationBasedInitializer.initAnnotation.group
       // Load group of annotation
-      this.retrieveHypothesisGroups((err, groups) => {
+      this.retrieveGroups((err, groups) => {
         if (err) {
           if (_.isFunction(callback)) {
             callback(err)
@@ -62,110 +67,91 @@ class GroupSelector {
         }
       })
     } else { // If initialization annotation is not set
-      if (!this.currentGroup) {
-        // Retrieve last saved group
-        ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
-          if (err) {
-            if (_.isFunction(callback)) {
-              callback(new Error('Unable to retrieve current selected group'))
-            }
-          } else {
-            // Parse chrome storage result
-            if (!_.isEmpty(savedCurrentGroup) && savedCurrentGroup.data) {
-              this.currentGroup = JSON.parse(savedCurrentGroup.data)
+      this.retrieveGroups((err) => {
+        if (err) {
+          callback(err)
+        } else {
+          // Retrieve last saved group
+          ChromeStorage.getData(selectedGroupNamespace, ChromeStorage.local, (err, savedCurrentGroup) => {
+            if (err) {
+              if (_.isFunction(callback)) {
+                callback(new Error('Unable to retrieve current selected group'))
+              }
             } else {
-              this.currentGroup = defaultGroup
+              let storedGroup
+              // Parse retrieved data from chrome storage
+              if (!_.isEmpty(savedCurrentGroup) && savedCurrentGroup.data) {
+                // Check if stored group exists in groups
+                let parsedGroup = JSON.parse(savedCurrentGroup.data)
+                storedGroup = _.find(this.user.groups, (group) => {
+                  return group.id === parsedGroup.id
+                })
+              }
+              // Check if stored group is a valid group
+              if (storedGroup) {
+                this.currentGroup = storedGroup
+                if (_.isFunction(callback)) {
+                  callback()
+                }
+              } else {
+                if (_.isEmpty(this.user.groups)) {
+                  if (_.isFunction(callback)) {
+                    callback(new Error('No groups created, create one'))
+                  }
+                } else {
+                  this.currentGroup = _.first(this.user.groups)
+                  if (_.isFunction(callback)) {
+                    callback()
+                  }
+                }
+              }
             }
-            if (_.isFunction(callback)) {
-              callback()
-            }
-          }
-        })
-      } else {
-        if (_.isFunction(callback)) {
-          callback()
+          })
         }
-      }
+      })
     }
   }
 
   reloadGroupsContainer (callback) {
-    if (window.abwa.hypothesisClientManager.isLoggedIn()) {
-      // Hide login/sign up form
-      $('#notLoggedInGroupContainer').attr('aria-hidden', 'true')
-      // Display group container
-      $('#loggedInGroupContainer').attr('aria-hidden', 'false')
-      // Set current group if not defined
-      this.defineCurrentGroup(() => {
+    // Set current group if not defined
+    this.defineCurrentGroup((err) => {
+      if (err) {
+        callback(err)
+      } else {
         // Render groups container
         this.renderGroupsContainer(() => {
           if (_.isFunction(callback)) {
             callback()
           }
         })
-      })
-    } else {
-      // Display login/sign up form
-      $('#notLoggedInGroupContainer').attr('aria-hidden', 'false')
-      // Hide group container
-      $('#loggedInGroupContainer').attr('aria-hidden', 'true')
-      // Hide purposes wrapper
-      $('#purposesWrapper').attr('aria-hidden', 'true')
-      // Init isLogged checking
-      this.initIsLoggedChecking()
-      // Open the sidebar to show that login is required
-      window.abwa.sidebar.openSidebar()
-      if (_.isFunction(callback)) {
-        callback()
       }
-    }
-  }
-
-  initIsLoggedChecking () {
-    // Check if user has been logged in
-    this.loggedInInterval = setInterval(() => {
-      chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
-        if (!_.isNull(token)) {
-          // Reload the web page
-          window.location.reload()
-        }
-      })
-    }, checkHypothesisLoggedInWhenPromptInSeconds * 1000)
+    })
   }
 
   renderGroupsContainer (callback) {
     // Display group selector and purposes selector
     $('#purposesWrapper').attr('aria-hidden', 'false')
     // Retrieve groups
-    this.retrieveHypothesisGroups((err, groups) => {
-      if (err) {
-        if (_.isFunction(callback)) {
-          callback(err)
-        }
-      } else {
-        console.debug(groups)
-        let dropdownMenu = document.querySelector('#groupSelector')
-        dropdownMenu.innerHTML = '' // Remove all groups
-        this.user.groups.forEach(group => {
-          let groupSelectorItem = document.createElement('option')
-          groupSelectorItem.dataset.groupId = group.id
-          groupSelectorItem.innerText = group.name
-          groupSelectorItem.className = 'dropdown-item'
-          dropdownMenu.appendChild(groupSelectorItem)
-        })
-        // Set select option
-        $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
-        // Set event handler for group change
-        this.setEventForGroupSelectChange()
-        if (_.isFunction(callback)) {
-          callback()
-        }
-      }
+    let dropdownMenu = document.querySelector('#groupSelector')
+    dropdownMenu.innerHTML = '' // Remove all groups
+    this.user.groups.forEach(group => {
+      let groupSelectorItem = document.createElement('option')
+      groupSelectorItem.dataset.groupId = group.id
+      groupSelectorItem.innerText = group.name
+      groupSelectorItem.className = 'dropdown-item'
+      dropdownMenu.appendChild(groupSelectorItem)
     })
+    // Set select option
+    $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
+    // Set event handler for group change
+    this.setEventForGroupSelectChange()
+    if (_.isFunction(callback)) {
+      callback()
+    }
   }
 
-  retrieveHypothesisGroups (callback) {
-    window.abwa.hypothesisClientManager.hypothesisClient.getUserProfile((err, profile) => {
+  retrieveGroups (callback) {
+    window.abwa.storageManager.client.getUserProfile((err, profile) => {
       if (err) {
         if (_.isFunction(callback)) {
           callback(err)
@@ -180,8 +166,9 @@ class GroupSelector {
   }
 
   setCurrentGroup (groupId, callback) {
-    this.renderGroupsContainer((err) => {
+    this.retrieveGroups((err) => {
       if (err) {
+        Alerts.errorAlert({text: 'Unable to retrieve list of groups.'})
         if (_.isFunction(callback)) {
           callback(err)
         }
@@ -191,15 +178,23 @@ class GroupSelector {
         if (newCurrentGroup) {
           this.currentGroup = newCurrentGroup
         }
-        // Update group selector
-        $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
-        // Event group changed
-        this.updateCurrentGroupHandler(this.currentGroup.id)
-        // Open sidebar
-        window.abwa.sidebar.openSidebar()
-        if (_.isFunction(callback)) {
-          callback()
-        }
+        this.renderGroupsContainer((err) => {
+          if (err) {
+            if (_.isFunction(callback)) {
+              callback(err)
+            }
+          } else {
+            // Update group selector
+            $('#groupSelector').find('option[data-group-id="' + this.currentGroup.id + '"]').prop('selected', 'selected')
+            // Event group changed
+            this.updateCurrentGroupHandler(this.currentGroup.id)
+            // Open sidebar
+            window.abwa.sidebar.openSidebar()
+            if (_.isFunction(callback)) {
+              callback()
+            }
+          }
+        })
       }
     })
   }
@@ -217,7 +212,7 @@ class GroupSelector {
     ChromeStorage.setData(selectedGroupNamespace, {data: JSON.stringify(this.currentGroup)}, ChromeStorage.local, () => {
       console.debug('Group updated. Name: %s id: %s', this.currentGroup.name, this.currentGroup.id)
       // Dispatch event
-      LanguageUtils.dispatchCustomEvent(GroupSelector.eventGroupChange, {
+      LanguageUtils.dispatchCustomEvent(Events.groupChanged, {
         group: this.currentGroup,
         time: new Date()
       })
@@ -225,10 +220,6 @@ class GroupSelector {
   }
 
   destroy (callback) {
-    // Destroy intervals
-    if (this.loggedInInterval) {
-      clearInterval(this.loggedInInterval)
-    }
     if (_.isFunction(callback)) {
       callback()
     }
@@ -248,17 +239,15 @@ class GroupSelector {
         } else if (this.user.metadata.link) {
           return this.user.metadata.link
         } else {
-          return 'https://hypothes.is/users/' + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
+          return window.abwa.storageManager.storageMetadata.userUrl + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
         }
       } else {
-        return 'https://hypothes.is/users/' + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
+        return window.abwa.storageManager.storageMetadata.userUrl + this.user.userid.replace('acct:', '').replace('@hypothes.is', '')
       }
     } else {
       return null
     }
   }
 }
-
-GroupSelector.eventGroupChange = 'hypothesisGroupChanged'
 
 module.exports = GroupSelector

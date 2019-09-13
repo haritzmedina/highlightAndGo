@@ -14,7 +14,7 @@ class Code extends GuideElement {
     this.classificationScheme = classificationScheme
     this.annotation = annotation
     this.multivalued = multivalued
-    this.uri = uri || window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+    this.uri = uri || window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
     this.uris = uris || window.abwa.contentTypeManager.getDocumentURIs() || [this.uri]
     this.creator = creator
   }
@@ -51,8 +51,8 @@ class Code extends GuideElement {
       ],
       uris: this.uris || window.abwa.contentTypeManager.getDocumentURIs(),
       target: target,
-      text: jsYaml.dump({description: this.description, value: this.name, multivalued: this.multivalued}),
-      uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+      text: '',
+      uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
     }
     let linkAnnotation = this.getParentLinkingAnnotation()
     return {codeAnnotation: codeAnnotation, linkAnnotation: linkAnnotation}
@@ -65,16 +65,16 @@ class Code extends GuideElement {
         '@id': this.parentLinkAnnotationId,
         '@type': 'Annotation',
         motivation: 'linking',
-        body: 'https://hypothes.is/api/annotations/' + this.parentCode.id,
+        body: window.abwa.storageManager.storageMetadata.annotationUrl + this.parentCode.id,
         group: window.abwa.groupSelector.currentGroup.id,
         permissions: {
           read: ['group:' + window.abwa.groupSelector.currentGroup.id]
         },
         tags: ['motivation:linking'],
         target: [],
-        'oa:target': 'https://hypothes.is/api/annotations/' + this.id,
-        text: jsYaml.dump({body: 'https://hypothes.is/api/annotations/' + this.parentCode.id, target: 'https://hypothes.is/api/annotations/' + this.id}),
-        uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInHypothesis()
+        'oa:target': window.abwa.storageManager.storageMetadata.annotationUrl + this.id,
+        text: jsYaml.dump({body: window.abwa.storageManager.storageMetadata.annotationUrl + this.parentCode.id, target: window.abwa.storageManager.storageMetadata.annotationUrl + this.id}),
+        uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
       }
     } else {
       return null

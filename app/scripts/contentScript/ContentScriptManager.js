@@ -3,12 +3,16 @@ const _ = require('lodash')
 const ContentTypeManager = require('./ContentTypeManager')
 const ModeManager = require('./ModeManager')
 const Sidebar = require('./Sidebar')
+const Events = require('./Events')
 const GroupSelector = require('./GroupSelector')
 const AnnotationBasedInitializer = require('./AnnotationBasedInitializer')
 const MappingStudyManager = require('./MappingStudyManager')
 const CodingManager = require('./CodingManager')
-const HypothesisClientManager = require('../hypothesis/HypothesisClientManager')
+const HypothesisClientManager = require('../storage/hypothesis/HypothesisClientManager')
+const Neo4JClientManager = require('../storage/neo4j/Neo4JClientManager')
+const LocalStorageManager = require('../storage/local/LocalStorageManager')
 const TextAnnotator = require('./contentAnnotators/TextAnnotator')
+const Alerts = require('../utils/Alerts')
 
 const HighlightAndGoToolset = require('../specific/slrDataExtraction/HighlightAndGoToolset')
 
@@ -22,42 +26,39 @@ class ContentScriptManager {
     console.debug('Initializing content script manager')
     this.status = ContentScriptManager.status.initializing
     this.loadContentTypeManager(() => {
-      window.abwa.hypothesisClientManager = new HypothesisClientManager()
-      window.abwa.hypothesisClientManager.init((err) => {
-        if (err) {
-          window.abwa.sidebar = new Sidebar()
-          window.abwa.sidebar.init(() => {
-            window.abwa.groupSelector = new GroupSelector()
-            window.abwa.groupSelector.init(() => {
-
-            })
-          })
-        } else {
-          window.abwa.sidebar = new Sidebar()
-          window.abwa.sidebar.init(() => {
+      window.abwa.sidebar = new Sidebar()
+      window.abwa.sidebar.init(() => {
+        this.loadStorage((err) => {
+          if (err) {
+            Alerts.errorAlert({text: 'Unable to load annotation storage. Error: ' + err.message})
+          } else {
             window.abwa.annotationBasedInitializer = new AnnotationBasedInitializer()
             window.abwa.annotationBasedInitializer.init(() => {
               window.abwa.groupSelector = new GroupSelector()
-              window.abwa.groupSelector.init(() => {
-                // Reload for first time the content by group
-                this.reloadContentByGroup(() => {
-                  // Initialize listener for group change to reload the content
-                  this.initListenerForGroupChange()
-                  // Set status as initialized
-                  this.status = ContentScriptManager.status.initialized
-                  console.debug('Initialized content script manager')
-                })
+              window.abwa.groupSelector.init((err) => {
+                if (err) {
+                  this.reloadToolset()
+                } else {
+                  // Reload for first time the content by group
+                  this.reloadContentByGroup(() => {
+                    // Initialize listener for group change to reload the content
+                    this.initListenerForGroupChange()
+                    // Set status as initialized
+                    this.status = ContentScriptManager.status.initialized
+                    console.debug('Initialized content script manager')
+                  })
+                }
               })
             })
-          })
-        }
+          }
+        })
       })
     })
   }
 
   initListenerForGroupChange () {
     this.events.groupChangedEvent = this.groupChangedEventHandlerCreator()
-    document.addEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent, false)
+    document.addEventListener(Events.groupChanged, this.events.groupChangedEvent, false)
   }
 
   reloadMappingStudyManager (callback) {
@@ -95,7 +96,7 @@ class ContentScriptManager {
   }
 
   groupChangedEventHandlerCreator () {
-    return (event) => {
+    return () => {
       this.reloadContentByGroup()
     }
   }
@@ -119,10 +120,11 @@ class ContentScriptManager {
   reloadModeManager (callback) {
     this.destroyModeManager()
     window.abwa.modeManager = new ModeManager(ModeManager.modes.dataextraction)
-    window.abwa.modeManager.init()
-    if (_.isFunction(callback)) {
-      callback()
-    }
+    window.abwa.modeManager.init(() => {
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    })
   }
 
   reloadToolset (callback) {
@@ -172,7 +174,7 @@ class ContentScriptManager {
         this.destroyModeManager(() => {
           window.abwa.groupSelector.destroy(() => {
             window.abwa.sidebar.destroy(() => {
-              window.abwa.hypothesisClientManager.destroy(() => {
+              window.abwa.storageManager.destroy(() => {
                 this.status = ContentScriptManager.status.notInitialized
                 console.debug('Destroyed content script manager')
                 if (_.isFunction(callback)) {
@@ -183,7 +185,7 @@ class ContentScriptManager {
           })
         })
       })
-      document.removeEventListener(GroupSelector.eventGroupChange, this.events.groupChangedEvent)
+      document.removeEventListener(Events.groupChanged, this.events.groupChangedEvent)
     })
   }
 
@@ -204,6 +206,53 @@ class ContentScriptManager {
         }
       })
     }
+  }
+
+  loadStorage (callback) {
+    chrome.runtime.sendMessage({scope: 'storage', cmd: 'getSelectedStorage'}, ({storage}) => {
+      if (storage === 'hypothesis') {
+        // Hypothesis
+        window.abwa.storageManager = new HypothesisClientManager()
+      } else if (storage === 'localStorage') {
+        // Local storage
+        window.abwa.storageManager = new LocalStorageManager()
+      } else if (storage === 'neo4j') {
+        window.abwa.storageManager = new Neo4JClientManager()
+      } else {
+        // By default it is selected Hypothes.is
+        window.abwa.storageManager = new HypothesisClientManager()
+      }
+      window.abwa.storageManager.init((err) => {
+        if (err) {
+          Alerts.errorAlert({text: 'Unable to initialize storage manager. Error: ' + err.message + '. ' +
+              'Please reload webpage and try again.'})
+        } else {
+          window.abwa.storageManager.isLoggedIn((err, isLoggedIn) => {
+            if (err) {
+              if (_.isFunction(callback)) {
+                callback(err)
+              }
+            } else {
+              if (isLoggedIn) {
+                if (_.isFunction(callback)) {
+                  callback()
+                }
+              } else {
+                window.abwa.storageManager.logIn((err) => {
+                  if (err) {
+                    callback(err)
+                  } else {
+                    if (_.isFunction(callback)) {
+                      callback()
+                    }
+                  }
+                })
+              }
+            }
+          })
+        }
+      })
+    })
   }
 }
 
