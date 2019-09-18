@@ -1,8 +1,8 @@
 /* eslint-env mocha, browser */
 const puppeteer = require('puppeteer')
 const assert = require('assert')
-
-const extensionPath = './dist/chrome/' // For instance, 'dist'
+const path = require('path')
+const extensionPath = path.join(__dirname, '/../../dist/chrome/') // For instance, 'dist'
 let browser = null
 
 describe('Sidebar loading testing', function () {
@@ -23,8 +23,6 @@ describe('Sidebar loading testing', function () {
       await delay(1000)
 
       let sidebarWidthOpened = await extensionPage.$eval('#abwaSidebarContainer', elem => elem.offsetWidth)
-
-      console.log(sidebarWidthCollapsed + ' ' + sidebarWidthOpened)
 
       assert.equal(sidebarWidthCollapsed, 1)
       assert.equal(sidebarWidthOpened, 162)

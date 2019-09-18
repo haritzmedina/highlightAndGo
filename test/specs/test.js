@@ -2,7 +2,8 @@
 const puppeteer = require('puppeteer')
 const assert = require('assert')
 
-const extensionPath = './dist/chrome/' // For instance, 'dist'
+const path = require('path')
+const extensionPath = path.join(__dirname, '/../../dist/chrome/') // For instance, 'dist'
 let extensionPage = null
 let browser = null
 
