@@ -50,7 +50,7 @@ class CodingManager {
         let codeId = pair[0]
         let data = pair[1]
         let isValidated = _.find(data.annotations, (annotation) => {
-          return annotation.id === validatedAnnotationId
+          return annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') === validatedAnnotationId
         })
         if (isValidated) {
           this.primaryStudyCoding[codeId].validated = true
@@ -68,7 +68,7 @@ class CodingManager {
         let codeId = pair[0]
         let data = pair[1]
         let isValidated = _.find(data.annotations, (annotation) => {
-          return annotation.id === validatedAnnotationId
+          return annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') === validatedAnnotationId
         })
         if (isValidated) {
           this.primaryStudyCoding[codeId].validated = true

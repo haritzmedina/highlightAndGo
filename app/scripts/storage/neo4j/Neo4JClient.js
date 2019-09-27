@@ -4,17 +4,117 @@ const jsonld = require('jsonld')
 
 // Configuration constants
 const now = new Date()
-
+var contextus = []
 /// /UTILS
+function doNothing () {}
+
+function sleep (miliseconds) {
+  var currentTime = new Date().getTime()
+  while (currentTime + miliseconds >= new Date().getTime()) { }
+}
+
 /*
-function infinitumReplacement (txt, find, replacement) {
-  let resptxt = txt.replace(find, replacement)
-  while (resptxt.equals(txt) === false) {
-    txt = resptxt
-    resptxt = txt.replace(find, replacement)
+function isString (value) {
+  return typeof value === 'string' || value instanceof String
+}
+*/
+
+function traverse (o) {
+  for (var i in o) {
+    debuggingg('>>>> ' + i + ' <<<<' + JSON.stringify(o[i]))
+    if (i === 'text') {
+      o[i] = unescape(o[i])
+    }
+    if (i === 'group' && o[i] !== null && typeof (o[i]) === 'object') {
+      o[i] = o[i]['@value']
+    }
+    if (i === 'id' && o[i] !== null && typeof (o[i]) === 'object') {
+      debuggingg('>>>> RETURNING')
+      return traverse(o[i])
+    }
+    if (o[i] !== null && typeof (o[i]) === 'object') {
+      // going one step down in the object tree!!
+      debuggingg('>>>> TRAVERSING')
+      o[i] = traverse(o[i])
+    }
   }
-  return resptxt
-} */
+  return o
+}
+
+function apiCallJSON (settings, callback) {
+  debuggingg('apiCallJSON:: ' + settings.data)
+  axios(settings).catch(() => {
+    if (_.isFunction(callback)) {
+      callback(new Error('Unable to execute:  ' + settings.data), [])
+    }
+  }).then((response) => {
+    if (!_.isUndefined(response)) {
+      let expandedData = response.data
+      if (expandedData.length === 0) {
+        callback(null, [])
+      } else {
+        // compact a document according to a particular context
+        jsonld.compact(expandedData, { '@context': [ 'http://www.w3.org/ns/anno.jsonld', { '@vocab': 'http://rdf.onekin.org/resources/ns/' } ] }, function (err, compacted) {
+          if (err) console.error('Error compacting: ' + err)
+          callback(null, compacted)
+        })
+      }
+    }
+  })
+}
+
+function apiCall (settings, callback) {
+  debuggingg('apiCall:: ' + settings.data)
+  axios(settings).catch(() => {
+    if (_.isFunction(callback)) {
+      callback(new Error('Unable to execute:  ' + settings.data), [])
+    }
+  }).then((response) => {
+    if (!_.isUndefined(response)) {
+      if (!_.isUndefined(response.data.results[0])) { doNothing() } // debuggingg('RESULT:' + JSON.stringify(response.data.results[0]))
+      if (!_.isUndefined(response.data.errors[0])) { doNothing() } // debuggingg('ERROR::' + JSON.stringify(response.data.errors[0]))
+      let result = response.data
+      callback(null, result)
+    }
+  })
+}
+
+/**
+   * Giving an annotation data, it is created in Neo4J
+   * @param context The this object to access configuration data
+   * @param query
+   * @param callback Function to execute after annotation creation
+   */
+function commitNeo4J (query, callback) {
+  debuggingg(' QUERY>> ' + query)
+  let url = contextus.baseURI + '/db/data/transaction/commit'
+  let statement = `{ "statements" : [ {"includeStats" : true,
+    "statement" :  "` + query + `"} ]}`
+  let settings = {
+    'async': true,
+    'crossDomain': true,
+    'url': url,
+    'method': 'POST',
+    'headers': {
+      'authorization': 'Basic ' + contextus.userToken, // admin:onekin https://www.base64decode.org/   https://neo4j.com/docs/http-api/3.5/security/
+      'content-type': 'application/json',
+      'cache-control': 'no-cache'
+    },
+    data: statement
+  }
+  debuggingg(JSON.stringify(settings, null, 2))
+  apiCall(settings, callback)
+}
+
+var verbose = true
+function debuggingg (msg, priority) {
+  if (priority === true) verbose = true
+  verbose = true
+  if (verbose) {
+    console.debug('::>' + msg)
+  }
+  if (priority === false) verbose = false
+}
 
 function randomString (length = 17, charSet) {
   charSet = charSet || 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-'
@@ -34,7 +134,91 @@ function escapify (myJSON) {
   return myEscapedJSONString
 }
 
-/// ///
+/**
+   * Giving an annotation data, it is created in Neo4J
+   * @param context The this object to access configuration data
+   * @param queries queries
+   * @param callback Function to execute after annotation creation
+   */
+/* function commitNeo4JMultiple (queries, callback, context) {
+  if (!context) {
+    context = contextus
+  }
+  let url = context.baseURI + '/db/data/transaction/commit'
+  let sts = `{ "statements" : [ `
+  let first = true
+  for (let i = 0; i < queries.length; i++) {
+    if (first) {
+      first = false
+      sts += `{"includeStats" : true, "statement" :  "` + queries[i] + `"}`
+    } else {
+      sts += `, {"includeStats" : true, "statement" :  "` + queries[i] + `"}`
+    }
+  }
+  sts += ` ]}`
+  let settings = {
+    'async': true,
+    'crossDomain': true,
+    'url': url,
+    'method': 'POST',
+    'headers': {
+      'authorization': 'Basic ' + context.userToken, // IKER https:// neo4j.com/docs/http-api/3.5/security/
+      'content-type': 'application/json',
+      'cache-control': 'no-cache'
+    },
+    data: sts
+  }
+  apiCall(settings, callback)
+} */
+
+/**
+ * Lauches a cypher query and returns the rdf representation
+ * @param cypher
+ * @param callback
+ */
+function cypherRDFNeo4J (cypher, callback) {
+  let url = contextus.baseURI + '/rdf/cypheronrdf'
+  let statement = ` {"cypher" : "` + cypher + `"}`
+  let settings = {
+    'async': true,
+    'crossDomain': true,
+    'url': url,
+    'method': 'POST',
+    'headers': {
+      'authorization': 'Basic ' + contextus.userToken, // IKER https:// neo4j.com/docs/http-api/3.5/security/
+      'content-type': 'application/json',
+      'Accept': 'application/ld+json',
+      'cache-control': 'no-cache'
+    },
+    data: statement
+  }
+  apiCallJSON(settings, callback)
+}
+
+function initializeGraph (err, response) {
+  let q = "CREATE (:NamespacePrefixDefinition {`http://www.w3.org/ns/activitystreams#`: 'as',`http://xmlns.com/foaf/0.1/`: 'foaf', `http://www.w3.org/ns/oa#`: 'oa', `http://www.w3.org/ns/prov#`: 'prov', `http://rdf.onekin.org/resources/ns/`: 'onekin'})"
+  if (err) {
+    commitNeo4J(q, debuggingg, contextus)
+    return
+  }
+  if (!_.isUndefined(response.results[0].data[0].row)) {
+    if (response.results[0].data[0].row[0] === 0) {
+      commitNeo4J(q, createIndex)
+    }
+  }
+}
+
+function createIndex (err, response) {
+  let q = []
+  q = 'CREATE INDEX ON :Resource(uri)'
+  if (err) {
+    commitNeo4J(q, debuggingg, contextus)
+    return
+  }
+  commitNeo4J(q, debuggingg)
+}
+
+/// END UTILS ///
 
 /**
  * Neo4J client class
@@ -46,11 +230,9 @@ class Neo4JClient {
     * @param userToken The base64(user+password) to access the Neo4J API
   * @param baseURI The base URI of the Neo4J server. For example,  http:// localhost:7474
    */
-  // UserToken iker  aWtlcjppa2Vy
-  // AppToken neo4j  bmVvNGo6cGFzc3dvcmQ=
   constructor (userName, userToken, baseURI) {
     this.userName = 'defaultUser'
-    this.userToken = 'aWtlcjppa2Vy'
+    this.userToken = 'YWRtaW46b25la2lu' // admin:onekin
     this.baseURI = 'http://localhost:7474'
     this.baseN4J = 'http://neo4j.com/base/'
     if (userName) {
@@ -68,145 +250,12 @@ class Neo4JClient {
       id: 1,
       url: this.baseURI
     }
-    let q = "CREATE (:NamespacePrefixDefinition {`http://www.w3.org/ns/activitystreams#`: 'as',`http://xmlns.com/foaf/0.1/`: 'foaf', `http://www.w3.org/ns/oa#`: 'oa', `http://www.w3.org/ns/prov#`: 'prov', `http://rdf.onekin.org/resources/ns/`: 'onekin'})"
-    this.commitNeo4J(this, q, console.log)
-  }
-
-  /**
-     * Giving an annotation data, it is created in Neo4J
-     * @param context The this object to access configuration data
-     * @param queries queries
-     * @param callback Function to execute after annotation creation
-     */
-  commitNeo4JMultiple (context, queries, callback) {
-    let url = context.baseURI + '/db/data/transaction/commit'
-    let sts = `{ "statements" : [ `
-    let first = true
-    for (let i = 0; i < queries.length; i++) {
-      if (first) {
-        first = false
-        sts += `{"includeStats" : true, "statement" :  "` + queries[i] + `"}`
-      } else {
-        sts += `, {"includeStats" : true, "statement" :  "` + queries[i] + `"}`
-      }
-    }
-    sts += ` ]}`
-    //  console.log('MULTIPLE2----> ' + sts)
-    let settings = {
-      'async': true,
-      'crossDomain': true,
-      'url': url,
-      'method': 'POST',
-      'headers': {
-        'authorization': 'Basic ' + context.userToken, // IKER https:// neo4j.com/docs/http-api/3.5/security/
-        'content-type': 'application/json',
-        'cache-control': 'no-cache'
-      },
-      data: sts
-    }
-    let apiCall = () => {
-      axios(settings).catch(() => {
-        if (_.isFunction(callback)) {
-          callback(new Error('Unable to execute query::  ' + queries), [])
-        }
-      }).then((response) => {
-        if (!_.isUndefined(response)) {
-          if (!_.isUndefined(response.data.results[0])) console.log('RESULT:' + response.data.results[0])
-          if (!_.isUndefined(response.data.errors[0])) console.log('ERROR::' + response.data.errors[0])
-          let result = response.data
-          callback(null, result)
-        }
-      })
-    }
-    apiCall()
-  }
-
-  /**
-     * Giving an annotation data, it is created in Neo4J
-     * @param context The this object to access configuration data
-     * @param query
-     * @param callback Function to execute after annotation creation
-     */
-  commitNeo4J (context, query, callback) {
-    let url = context.baseURI + '/db/data/transaction/commit'
-    let statement = `{ "statements" : [ {"includeStats" : true,
-      "statement" :  "` + query + `"} ]}`
-    //  console.log(statement)
-    let settings = {
-      'async': true,
-      'crossDomain': true,
-      'url': url,
-      'method': 'POST',
-      'headers': {
-        'authorization': 'Basic ' + context.userToken, // IKER https:// neo4j.com/docs/http-api/3.5/security/
-        'content-type': 'application/json',
-        'cache-control': 'no-cache'
-      },
-      data: statement
-    }
-    let apiCall = () => {
-      axios(settings).catch(() => {
-        if (_.isFunction(callback)) {
-          callback(new Error('Unable to execute query::  ' + query), [])
-        }
-      }).then((response) => {
-        if (!_.isUndefined(response)) {
-          if (!_.isUndefined(response.data.results[0])) console.log('RESULT:' + response.data.results[0])
-          if (!_.isUndefined(response.data.errors[0])) console.log('ERROR::' + response.data.errors[0])
-          let result = response.data
-          callback(null, result)
-        }
-      })
-    }
-    apiCall()
-  }
-
-  /**
-   * Lauches a cypher query and returns the rdf representation
-   * @param cypher
-   * @param callback
-   */
-  cypherRDFNeo4J (cypher, callback) {
-    let url = this.baseURI + '/rdf/cypheronrdf'
-    let statement = ` {"cypher" : "` + cypher + `"}`
-    let settings = {
-      'async': true,
-      'crossDomain': true,
-      'url': url,
-      'method': 'POST',
-      'headers': {
-        'authorization': 'Basic ' + this.userToken, // IKER https:// neo4j.com/docs/http-api/3.5/security/
-        'content-type': 'application/json',
-        'Accept': 'application/ld+json',
-        'cache-control': 'no-cache'
-      },
-      data: statement
-    }
-    console.log(statement)
-    let apiCall = () => {
-      axios(settings).catch(() => {
-        if (_.isFunction(callback)) {
-          callback(new Error('Unable to create annotation after '), [])
-        }
-      }).then((response) => {
-        if (!_.isUndefined(response)) {
-        //  let resptxt = JSON.stringify(response.data)
-          // resptxt = resptxt.replace(new RegExp('http://rdf.onekin.org/resources/ns/', 'g'), '')
-          // resptxt = infinitumReplacement(resptxt, '[{"@value":', '')
-          // resptxt = resptxt.replace(new RegExp('}]', 'g'), '')
-          // resptxt = resptxt.replace(new RegExp('http://www.w3.org/ns/oa#', 'g'), 'oa:')
-          let expandedData = response.data
-          // compact a document according to a particular context
-          jsonld.compact(expandedData, { '@context': [ 'http://www.w3.org/ns/anno.jsonld', { '@vocab': 'http://rdf.onekin.org/resources/ns/' } ] }, function (err, compacted) {
-            if (err) console.log('Error compacting: ' + err)
-            callback(null, compacted)
-          })
-          //      console.log('cypherRDFNeo4J:: ' + resptxt)
-          //    callback(null, response.data)
-        }
-      })
-    }
-    apiCall()
+    contextus.userName = this.userName
+    contextus.userToken = this.userToken
+    contextus.baseURI = this.baseURI
+    contextus.baseN4J = this.baseN4J
+    let q = 'match (n:NamespacePrefixDefinition) return count(n)'
+    commitNeo4J(q, initializeGraph)
   }
 
   /**
@@ -215,45 +264,49 @@ class Neo4JClient {
    * @param callback Function to execute after annotation creation
    */
   createNewAnnotation (data, callback) {
-    debugger
-    // let url = this.baseURI + '/db/data/transaction/commit'
-    data['@id'] = randomString()
-    //data['id'] = null
-    data['text'] = null
-    /*if (data['@type']) {
-      if (data['@type'].push) {
-        data['@type'].push('oa:Annotation')
-      } else { data['@type'] = [data['@type'], 'oa:Annotation'] }
-    } else {
-      if (data['type']) {
-        if (data['type'].push) {
-          data['type'].push('Annotation')
-        } else data['type'] = [data['type'], 'Annotation']
-      } else data['@type'] = 'oa:Annotation'
-    }*/
-    data['permissions'] = null
+    sleep(100)
+    if (!data['@type'] && !data['type']) {
+      data['@type'] = 'Annotation'
+    } else if (!data['@type'] && data['type']) {
+      data['@type'] = data['type']
+      delete data['type']
+    }
+    data['user'] = this.userName
+    if (!data['@id'] && !data['id']) {
+      data['@id'] = randomString()
+    }
+    if (data['@id'] && data['id']) {
+      delete data['id']
+    }
+    if (!data['@id'].startsWith(this.baseN4J)) {
+      data['@id'] = this.baseN4J + data['@id']
+    }
+
+    if (data['target'] && data['oa:target']) {
+      data['target'] = data['oa:target']
+      delete data['oa:target']
+    }
+    if (data['text']) {
+      data['text'] = escape(data['text'])
+    }
+    // data['permissions'] = null
     data['@context'] = [ 'http://www.w3.org/ns/anno.jsonld', { '@vocab': 'http://rdf.onekin.org/resources/ns/' } ]
-    let q = []
-    // q[0] = `CALL semantics.importRDFSnippet(' ` + escapify(data) + `', 'JSON-LD', {handleMultival: '1'})`
-    q[0] = `CALL semantics.importRDFSnippet(' ` + escapify(data) + `', 'JSON-LD')`
-    let cont = 0
-    if (data['tags']) {
-      cont++
-      q[cont] = `MATCH (n{uri : '` +this.baseN4J+ data['id'] + `'}) SET  n.onekin__tags = ` + escapify(data['tags'])
-    }
-    if (data['references']) {
-      cont++
-      q[cont] = `MATCH (n{uri : '` +this.baseN4J+ data['id'] + `'}) SET  n.onekin__references = ` + escapify(data['references'])
-    }
-    console.log('Querying22: ' + q)
-    this.commitNeo4JMultiple(this, q, (err, result) => {
+    let q = `CALL semantics.importRDFSnippet(' ` + escapify(data) + `', 'JSON-LD', { handleMultival: 'ARRAY' , multivalPropList : ['http://rdf.onekin.org/resources/ns/references','http://rdf.onekin.org/resources/ns/tags']})`
+    debuggingg(' PRE-QUERY>> ' + q)
+    commitNeo4J(q, (err, result) => {
       if (err) {
         let msg = 'Error creating annotation: ' + JSON.stringify(err)
-        console.error()
+        console.error(err)
         callback(new Error(msg))
       } else {
         data['user'] = this.userName
-        data['id'] = data['@id']
+        data['id'] = data['@id'].replace(this.baseN4J, '')
+        if (data['text']) {
+          data['text'] = unescape(data['text'])
+        }
+        if (data['target'] && !data['oa:target']) {
+          data['oa:target'] = data['target']
+        }
         callback(null, data)
       }
     })
@@ -333,9 +386,9 @@ class Neo4JClient {
       callback(new Error('Some annotations cannot be created'))
     }).then((responses) => {
       if (responses.length === annotations.length) {
-                if (_.isFunction(callback)) {
-                  callback(null, responses)
-                }
+        if (_.isFunction(callback)) {
+          callback(null, responses)
+        }
       } else {
         if (_.isFunction(callback)) {
           callback(new Error('Some annotations cannot be created'))
@@ -359,7 +412,6 @@ class Neo4JClient {
     }
   }
 
-  // /IK AQUI:..... cypher para obtener los grupos a los que pertenece el user. No roles.
   /**
    * Returns users profile:
    * @param callback
@@ -380,51 +432,42 @@ class Neo4JClient {
    * @param callback
    */
   fetchAnnotation (id, callback) {
-    let cypher = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q) where n.uri = '` +this.baseN4J+ id + `' return n,a,p,b,q, c, r`
-
-    this.cypherRDFNeo4J(cypher, (err, data) => {
+    let cypher = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q) where n.uri = '` + this.baseN4J + id + `' return n,a,p,b,q, c, r`
+    debuggingg('FETCHING ID => ' + id)
+    cypherRDFNeo4J(cypher, (err, data) => {
       if (err) {
-
+        console.error(err)
       } else {
-        console.log(JSON.stringify(data, null, 1))
         let newdata = this.transformJSON(data)
-        console.log(JSON.stringify(newdata, null, 4))
         callback(null, newdata)
+      }
+    })
+    this.cleanGarbage()
+  }
+
+  cleanGarbage () {
+    // let cypher = `MATCH (n:Resource) WHERE not ()--> (n) AND NOT (n) -->() DELETE n `
+    let cypher = `match (n:Resource) where not ()--> (n) AND  n.uri STARTS WITH 'genid' detach delete n `
+    debuggingg('Cleaning garbage STARTING ')
+    commitNeo4J(cypher, (err, data) => {
+      if (err) {
+        console.error(err)
+      } else {
+        debuggingg('Cleaning garbage => ' + JSON.stringify(data))
       }
     })
   }
 
-  /**
-   * Updates the annotation with::: IK: REMOVE AND INSERT????
-   * @param id
-   * @param data
-   * @param callback
-   */
   updateAnnotation (idold, data, callback) {
-    let cN4J = this.commitNeo4J
-    let updateAnnotationNext = (err, data) => {
-      let id = data['id']
-      if (err) {
-        let msg = 'Error while updating the annotation'
-        console.error(msg)
-        callback(new Error(msg))
-        return
-      }
-      // let cypher = `MATCH (n{uri : '` + id + `'})-->(p)-->(q) DETACH DELETE  n,p,q`
-      let cypher = `MATCH (n{uri : '` +this.baseN4J+ id + `'})-->(p)-->(q),  (n1{uri : '` +this.baseN4J+ idold + `'})-->(p1)-->(q1) SET  n1=n, q1=q, n1.uri = '` +this.baseN4J+ idold + `'`
-      console.log('VAAAA: ' + cypher)
-      cN4J(this, cypher, (err, res) => {
-        if (err) {
-
-        } else {
-      /*    this.deleteAnnotation(data, (err, res) => {
-            if (err) console.error(err)
-            callback(null, res)
-          })*/
-        }
+    data['@id'] = idold
+    debuggingg('UPDATING IDOLD => ' + idold)
+    let ik = 5 > 1
+    if (ik) {
+      this.deleteAnnotation(data, (err, res) => {
+        if (err) console.error(err)
+        this.createNewAnnotation(data, callback)
       })
     }
-    this.createNewAnnotation(data, updateAnnotationNext)
   }
 
   /**
@@ -433,19 +476,37 @@ class Neo4JClient {
    * @param callback
    */
   deleteAnnotation (annotation, callback) {
+    let linking = false
     let id = null
     if (_.isString(annotation)) {
       id = annotation
+      linking = true
     } else if (_.has(annotation, 'id')) {
       id = annotation.id
+    } else if (_.has(annotation, '@id')) {
+      id = annotation['@id']
     } else {
       callback(new Error('This is not an annotation or an annotation ID.'))
       return
     }
-    let cypher = `MATCH (n{uri : '` +this.baseN4J+ id + `'})-[oa__hasTarget]->(p)-[oa__hasSelector]->(q) DETACH  DELETE  n,p,q`
-    this.commitNeo4J(this, cypher, (err, data) => {
-      if (err) {
 
+    if (!id.startsWith(this.baseN4J)) {
+      id = this.baseN4J + id
+    }
+    // let cypher = `MATCH (n{uri : '` + id + `'})-[oa__hasTarget]->(p)-[oa__hasSelector]->(q) DETACH  DELETE  n,p,q`
+    let cypher = `MATCH (n{uri : '` + id + `'})-[:oa__hasTarget]->(p)-[:oa__hasSelector]->(q) DETACH  DELETE  n,p,q`
+    if (_.has(annotation, 'tags')) {
+      if (annotation['tags'].includes('motivation:linking')) {
+        cypher = `MATCH (n{uri : '` + id + `'}) DETACH  DELETE n`
+      }
+    }
+    if (linking) {
+      cypher = `MATCH (n{uri : '` + id + `'}) DETACH  DELETE n`
+    }
+    debuggingg('DELETING ID => ' + id + JSON.stringify(annotation))
+    commitNeo4J(cypher, (err, data) => {
+      if (err) {
+        console.error(err)
       } else {
         callback(null, { deleted: true })
       }
@@ -498,18 +559,42 @@ class Neo4JClient {
     let q = ''
     // URL
 
+    let qmatch = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q) `
+    let qreturn = ` return n,a,p,b,q,c,r`
+    let qwhere = ` where `
+    let qwhereboolean = false
     if (data.id) {
-      q = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q) where n.uri = '` +this.baseN4J+ data.id + `' return n,a,p,b,q, c, r`
+      qwhere += ` n.uri = '` + this.baseN4J + data.id + `' `
+      qwhereboolean = true
+      debuggingg('SEARCHING ID => ' + data.id)
     }
-    if (data.uri) {
-        q = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q) where n.onekin__uri = '` + data.uri + `' return n,a,p,b,q, c, r`
-    }
-    if (data.url) {
-        q = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q) where n.onekin__uri = '` + data.url + `' return n,a,p,b,q, c, r`
+    if (data.uri && data.url) {
+      if (qwhereboolean) qwhere += ` AND `
+      qwhere += `( n.onekin__uri = '` + data.uri + `' `
+      qwhere += `OR n.onekin__uri = '` + data.url + `') `
+      qwhereboolean = true
+      debuggingg('SEARCHING URI and URL => ' + data.uri + ' || ' + data.url)
+    } else {
+      if (data.uri) {
+        if (qwhereboolean) qwhere += ` AND `
+        qwhere += ` n.onekin__uri = '` + data.uri + `' `
+        qwhereboolean = true
+        debuggingg('SEARCHING URI => ' + data.uri)
+      }
+      if (data.url) {
+        if (qwhereboolean) qwhere += ` AND `
+        qwhere += ` n.onekin__uri = '` + data.url + `' `
+        qwhereboolean = true
+        debuggingg('SEARCHING URL => ' + data.url)
+      }
     }
     // User
     if ((data.user)) {
-      q = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q), (n)-[dct__creator]->(n2) where n2.uri = '` + data.user + `' return n,a,p,b,q,c,r`
+      qmatch += `, (n)-[dct__creator]->(n2) `
+      if (qwhereboolean) qwhere += ` AND `
+      qwhere += ` n2.uri = '` + data.user + `' `
+      qwhereboolean = true
+      debuggingg('SEARCHING USER=> ' + data.user)
     }
 
     // Tags
@@ -527,28 +612,95 @@ class Neo4JClient {
       // Remove duplicated tags
       tags = _.uniq(tags)
       // Check if annotation's tags includes all the tags
-      q = `match (n)-->(p)-->(q)  WHERE '` + data.tag + `' IN n.onekin__tags return n,p,q`
-      q = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q)  WHERE '` + data.tag + `' IN n.onekin__tags return n,a,p,b,q, c, r`
+      if (qwhereboolean) qwhere += ` AND `
+      qwhere += ` '` + tags + `' IN n.onekin__tags `
+      qwhereboolean = true
+      var linking = false
+      if (tags[0] === 'motivation:linking') {
+        linking = true
+        qreturn = ` return n,c`
+      }
     }
 
-    this.cypherRDFNeo4J(q, (err, data) => {
-      if (err) {
+    if (qwhereboolean) {
+      q = qmatch + qwhere + qreturn
+    } else {
+      q = qmatch + qreturn
+    }
 
+    cypherRDFNeo4J(q, (err, data) => {
+      if (err) {
+        console.error(err)
+        callback(err, null)
       } else {
-        let newData = this.transformJSON(data)
-        /*
         let newData = []
-        let subnewData = data['@graph'] || []
-        for (let i= 0; i< subnewData.length; i++){
-          let ann= subnewData[i]
-          ann['@context'] = subnewData['@context']
-          newData.push (ann)
+        if (linking && !_.isEmpty(data)) {
+          if (_.isEmpty(data['@graph'])) {
+            newData.push(data)
+          } else newData = this.transformJSON(data)
+        } else newData = this.transformJSON(data)
+        if (linking) {
+          debuggingg('THIS IS LINKING 1 ::::> ' + JSON.stringify(newData))
         }
-        */
-        console.log('searching: ' + JSON.stringify(newData, null, 2))
+        // newData = this.transformJSON(data)
+        if (linking) {
+          debuggingg('THIS IS LINKING ::::> ' + JSON.stringify(newData))
+        }
+        for (let i = 0; i < newData.length; i++) {
+          if (!_.isArray(newData[i].tags)) {
+            let array = []
+            array.push(newData[i].tags)
+            newData[i].tags = array
+          }
+          if (!_.isArray(newData[i].target) && newData[i].motivation !== 'assessing') {
+            let array = []
+            array.push(newData[i].target)
+            newData[i].target = array
+            newData[i]['oa:target'] = newData[i].target
+          } else {
+            newData[i]['oa:target'] = newData[i].target
+          }
+        }
+        // debuggingg('SEARCH ' + q + '\n POST-RESULT: ' + JSON.stringify(newData, null, 4), false)
         callback(null, newData)
       }
     })
+    this.cleanGarbage()
+  }
+
+  /**
+   * Transform
+   * @param data json
+   * @return annotation json in required format
+   */
+  transformJSON33 (data) {
+    // let txt = JSON.stringify(data, null, 1)
+    // txt = txt.replace(new RegExp('"id": "http://neo4j.com/base/', 'g'), '"id": "')
+    // debuggingg('*******\nCJSON.parse :: \n ' + txt + '\n**********\n')
+    // data = JSON.parse(txt)
+    let ctxt = data['@context']
+    let grafus = data['@graph'] || {}
+    let idTextQuoteSelector = {}
+    let idTarget = {}
+    let annotation = []
+    for (let i = 0; i < grafus.length; i++) {
+      let olddatum = grafus[i]
+      if (olddatum['type']) {
+        if (olddatum['type'] === 'Annotation') {
+          olddatum['@context'] = ctxt
+          annotation.push(olddatum)
+        }
+        if (olddatum['type'].endsWith('Selector')) { // === 'TextQuoteSelector') {
+          idTextQuoteSelector[olddatum['id']] = olddatum
+        }
+      } else {
+        idTarget[olddatum['id']] = olddatum
+      }
+    }
+
+    annotation = traverse(annotation)
+    debuggingg('*******\nCJSON.parse 55 :: \n ' + JSON.stringify(annotation, null, 2) + '\n**********\n')
+    return annotation
   }
 
   /**
@@ -558,7 +710,8 @@ class Neo4JClient {
    */
   transformJSON (data) {
     let txt = JSON.stringify(data, null, 1)
-    txt = txt.replace(new RegExp('"id": "http://neo4j.com/base/', 'g'), '"id": "')
+    // txt = txt.replace(new RegExp('"id": "http://neo4j.com/base/', 'g'), '"id": "')
+    // debuggingg('*******\nCJSON.parse :: \n ' + txt + '\n**********\n')
     data = JSON.parse(txt)
     let ctxt = data['@context']
     let grafus = data['@graph'] || {}
@@ -567,36 +720,39 @@ class Neo4JClient {
     let annotation = []
     for (let i = 0; i < grafus.length; i++) {
       let olddatum = grafus[i]
-      if (olddatum['type']){
+      if (olddatum['type']) {
         if (olddatum['type'] === 'Annotation') {
           olddatum['@context'] = ctxt
           annotation.push(olddatum)
         }
-        if (olddatum['type'].endsWith("Selector")) { // === 'TextQuoteSelector') {
-            idTextQuoteSelector[olddatum['id']] = olddatum
+        if (olddatum['type'].endsWith('Selector')) { // === 'TextQuoteSelector') {
+          idTextQuoteSelector[olddatum['id']] = olddatum
         }
-      }else {
-          idTarget[olddatum['id']] = olddatum
+      } else {
+        idTarget[olddatum['id']] = olddatum
       }
-      }
-
+    }
     let anntxt = JSON.stringify(annotation, null, 3)
-    let list = idTarget
+    let list = null
+    list = idTarget
     for (let j in list) {
       let key = j
       let val = list[j]
-      console.log(j + ' :::> ' + val)
+      debuggingg('>>>>>>> ' + key)
       anntxt = anntxt.replace(new RegExp('"' + key + '"', 'g'), JSON.stringify(val))
     }
+    list = null
     list = idTextQuoteSelector
     for (let j in list) {
       let key = j
       let val = list[j]
-      console.log(j + ' :::> ' + val)
+      debuggingg('>>>>>>> ' + key)
       anntxt = anntxt.replace(new RegExp('"' + key + '"', 'g'), JSON.stringify(val))
     }
-    console.log(anntxt)
     annotation = JSON.parse(anntxt)
+    annotation = traverse(annotation)
+
+    debuggingg('*******\nCJSON.parse 22 :: \n ' + JSON.stringify(annotation, null, 2) + '\n**********\n')
     return annotation
   }
 
