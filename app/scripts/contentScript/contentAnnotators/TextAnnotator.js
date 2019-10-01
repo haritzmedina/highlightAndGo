@@ -4,6 +4,7 @@ const ContentTypeManager = require('../ContentTypeManager')
 const TagManager = require('../TagManager')
 const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
+const PDFTextUtils = require('../../utils/PDFTextUtils')
 const LanguageUtils = require('../../utils/LanguageUtils')
 const Alerts = require('../../utils/Alerts')
 const $ = require('jquery')
@@ -210,7 +211,12 @@ class TextAnnotator extends ContentAnnotator {
     let selectors = []
     // Create FragmentSelector
     if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'FragmentSelector' }) !== -1) {
-      let fragmentSelector = DOMTextUtils.getFragmentSelector(range)
+      let fragmentSelector = null
+      if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+        fragmentSelector = PDFTextUtils.getFragmentSelector(range)
+      } else {
+        fragmentSelector = DOMTextUtils.getFragmentSelector(range)
+      }
       if (fragmentSelector) {
         selectors.push(fragmentSelector)
       }
@@ -892,22 +898,23 @@ class TextAnnotator extends ContentAnnotator {
     if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
       let queryTextSelector = _.find(annotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
       if (queryTextSelector && queryTextSelector.exact) {
+        // Get page for the annotation
+        let fragmentSelector = _.find(annotation.target[0].selector, (selector) => { return selector.type === 'FragmentSelector' })
+        if (fragmentSelector && fragmentSelector.page) {
+          // Check if annotation was found by 'find' command, otherwise go to page
+          if (window.PDFViewerApplication.page !== fragmentSelector.page) {
+            window.PDFViewerApplication.page = fragmentSelector.page
+            this.redrawAnnotations()
+          }
+        }
         window.PDFViewerApplication.findController.executeCommand('find', {query: queryTextSelector.exact, phraseSearch: true})
         // Timeout to remove highlight used by PDF.js
-        setTimeout(() => {
-          let pdfjsHighlights = document.querySelectorAll('.highlight')
-          for (let i = 0; pdfjsHighlights.length; i++) {
-            if (pdfjsHighlights[i]) {
-              pdfjsHighlights[i].classList.remove('highlight')
-            }
-          }
-        }, 1000)
-        // Redraw annotations
-        this.redrawAnnotations()
+        this.removeFindTagsInPDFs()
       }
     } else { // Else, try to find the annotation by data-annotation-id element attribute
       let firstElementToScroll = document.querySelector('[data-annotation-id="' + annotation.id + '"]')
-      if (!_.isElement(firstElementToScroll) && !_.isNumber(this.initializationTimeout)) {
+      // If go to annotation is done by init annotation and it is not found, wait for some seconds for ajax content to be loaded and try again to go to annotation
+      if (!_.isElement(firstElementToScroll) && !_.isNumber(this.initializationTimeout)) { // It is done only once, if timeout does not exist previously (otherwise it won't finish never calling goToAnnotation
         this.initializationTimeout = setTimeout(() => {
           console.debug('Trying to scroll to init annotation in 2 seconds')
           this.initAnnotatorByAnnotation()
