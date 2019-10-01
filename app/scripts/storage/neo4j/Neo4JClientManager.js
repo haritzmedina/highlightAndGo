@@ -10,6 +10,12 @@ const userLoginCheckIntervalPeriodInSeconds = 5
 class Neo4JClientManager extends StorageManager {
   constructor () {
     super()
+    this.storageMetadata = {
+      annotationUrl: 'http://neo4j.com/base/',
+      groupUrl: 'http://neo4j.com/base/',
+      userUrl: 'http://neo4j.com/base/',
+      storageUrl: 'http://neo4j.com/base/'
+    }
     this.isLoggedInInterval = null
   }
 
@@ -113,6 +119,21 @@ class Neo4JClientManager extends StorageManager {
   }
 
   reloadClient (callback) {
+    // TODO Instantiate neo4j client with the correct credentials that the user has already provided
+    this.getCredentials((err, credentials) => {
+      if (err) {
+        callback(err)
+      } else {
+        //        alert ("CREDENTIASL: " + JSON.stringify(credentials.token,null, 4))
+        this.client = new Neo4JClient(credentials.user, credentials.token, credentials.endpoint)
+        if (_.isFunction(callback)) {
+          callback()
+        }
+      }
+    })
+  }
+
+  reloadClientDELETE (callback) {
     // TODO Instantiate neo4j client with the correct credentials that the user has already provided
     this.client = new Neo4JClient()
     if (_.isFunction(callback)) {

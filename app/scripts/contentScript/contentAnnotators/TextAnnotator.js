@@ -305,11 +305,11 @@ class TextAnnotator extends ContentAnnotator {
         value: text
       },
       creator: window.abwa.groupSelector.getCreatorData() || '',
-      'oa:target': window.abwa.storageManager.storageMetadata.annotationUrl + validatedAnnotation.id,
+      'oa:target': window.abwa.storageManager.storageMetadata.annotationUrl + validatedAnnotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, ''),
       permissions: {
         read: ['group:' + window.abwa.groupSelector.currentGroup.id]
       },
-      references: [validatedAnnotation.id],
+      references: [validatedAnnotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')],
       tags: ['motivation:assessing'],
       target: [],
       text: text,
@@ -435,6 +435,7 @@ class TextAnnotator extends ContentAnnotator {
         this.allAnnotations = taggedAnnotations || []
         */
         this.allAnnotations = annotations
+        this.currentAnnotations = this.retrieveCurrentAnnotations()
         LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
         if (_.isFunction(callback)) {
           callback(null, this.allAnnotations)
@@ -527,13 +528,15 @@ class TextAnnotator extends ContentAnnotator {
       return
     } else if (annotation.motivation === 'slr:codebookDevelopment') {
       code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
-        return code.id === annotation.id
+        let annotationId = annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
+        return code.id === annotationId
       })
     } else if (annotation.motivation === 'classifying' || annotation.motivation === 'oa:classifying') {
       let codeAnnotationURL = annotation.body
       let annotationCodeId = codeAnnotationURL.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
       code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
-        return code.id === annotationCodeId
+        let codeId = code.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
+        return codeId === annotationCodeId
       })
     } else if (annotation.motivation === 'assessing' || annotation.motivation === 'oa:assessing') {
       // No need to highlight
@@ -580,7 +583,7 @@ class TextAnnotator extends ContentAnnotator {
           // Find people who validate this
           let validatingAnnotations = _.filter(this.allAnnotations, (allAnnotation) => {
             if (allAnnotation.motivation === 'assessing' && _.has(allAnnotation, 'oa:target')) {
-              if (allAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') === annotation.id) {
+              if (allAnnotation['oa:target'] === annotation.id) {
                 return allAnnotation
               }
             }

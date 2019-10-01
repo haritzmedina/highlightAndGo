@@ -58,6 +58,12 @@ class Code extends GuideElement {
     return {codeAnnotation: codeAnnotation, linkAnnotation: linkAnnotation}
   }
 
+  getIdNumber () {
+    let i = ''
+    if (this.id) i = this.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
+    return i
+  }
+
   getParentLinkingAnnotation () {
     if (this.parentCode) {
       return {
@@ -65,15 +71,15 @@ class Code extends GuideElement {
         '@id': this.parentLinkAnnotationId,
         '@type': 'Annotation',
         motivation: 'linking',
-        body: window.abwa.storageManager.storageMetadata.annotationUrl + this.parentCode.id,
+        body: window.abwa.storageManager.storageMetadata.annotationUrl + this.parentCode.getIdNumber(),
         group: window.abwa.groupSelector.currentGroup.id,
         permissions: {
           read: ['group:' + window.abwa.groupSelector.currentGroup.id]
         },
         tags: ['motivation:linking'],
         target: [],
-        'oa:target': window.abwa.storageManager.storageMetadata.annotationUrl + this.id,
-        text: jsYaml.dump({body: window.abwa.storageManager.storageMetadata.annotationUrl + this.parentCode.id, target: window.abwa.storageManager.storageMetadata.annotationUrl + this.id}),
+        'oa:target': window.abwa.storageManager.storageMetadata.annotationUrl + this.getIdNumber(),
+        text: jsYaml.dump({body: window.abwa.storageManager.storageMetadata.annotationUrl + this.parentCode.getIdNumber(), target: window.abwa.storageManager.storageMetadata.annotationUrl + this.getIdNumber()}),
         uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
       }
     } else {
@@ -114,8 +120,9 @@ class Code extends GuideElement {
       let name = codeAnnotation.body.value || codeNameTag.replace('slr:code:', '')
       let description = codeAnnotation.body.description
       let multivalued = codeAnnotation.body.multivalued || false
+      let codeId = codeAnnotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
       return new Code({
-        id: codeAnnotation.id,
+        id: codeId,
         name: name,
         description: description,
         classificationScheme,

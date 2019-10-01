@@ -29,12 +29,20 @@ class ClassificationScheme extends AnnotationGuide {
     // Get criterias
     let codebookAnnotations = _.filter(annotations, (annotation) => {
       return _.some(annotation.tags, (tag) => {
-        return tag.includes('motivation:slr:codebookDevelopment')
+        if (_.isString(tag)) {
+          return tag.includes('motivation:slr:codebookDevelopment')
+        } else {
+          return false
+        }
       })
     })
     let linkingAnnotations = _.filter(annotations, (annotation) => {
       return _.some(annotation.tags, (tag) => {
-        return tag.includes('motivation:linking')
+        if (_.isString(tag)) {
+          return tag.includes('motivation:linking')
+        } else {
+          return false
+        }
       })
     })
     let codes = []
@@ -50,7 +58,8 @@ class ClassificationScheme extends AnnotationGuide {
       let linkingAnnotation = linkingAnnotations[i]
       // Get body and target from body and target attributes of annotations
       let parentAnnotationUrl = linkingAnnotation.body
-      let childrenAnnotationUrl = linkingAnnotation['oa:target']
+      let childrenAnnotationUrl = linkingAnnotation['oa:target'] || linkingAnnotation['target']
+      childrenAnnotationUrl = _.isArray(childrenAnnotationUrl) ? childrenAnnotationUrl[0] : childrenAnnotationUrl
       // Get body and target
       let parentId = parentAnnotationUrl.replace(classificationScheme.storage.annotationUrl, '')
       let childrenId = childrenAnnotationUrl.replace(classificationScheme.storage.annotationUrl, '')
