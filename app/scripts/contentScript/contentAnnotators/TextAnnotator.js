@@ -265,6 +265,7 @@ class TextAnnotator extends ContentAnnotator {
       text: '',
       uri: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
     }
+    // TODO Must review how to improve this representation retrieving everything: URL, URN, DOI,... and avoiding duplications
     // For pdf files it is also send the relationship between pdf fingerprint and web url
     if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
       let pdfFingerprint = window.abwa.contentTypeManager.pdfFingerprint
@@ -295,6 +296,25 @@ class TextAnnotator extends ContentAnnotator {
     if (_.isString(window.abwa.contentTypeManager.documentTitle)) {
       data.document.title = window.abwa.contentTypeManager.documentTitle
     }
+    // Add everything as a target source
+    let source = []
+    if (window.abwa.contentTypeManager.doi) {
+      source.push({
+        id: 'https://doi.org/' + window.abwa.contentTypeManager.doi
+      })
+    }
+    if (window.abwa.contentTypeManager.pdfFingerprint) {
+      source.push({id: 'urn:x-pdf:' + window.abwa.contentTypeManager.pdfFingerprint})
+    }
+    if (window.abwa.contentTypeManager.documentURL) {
+      source.push({id: window.abwa.contentTypeManager.documentURL})
+    }
+    if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+      source.forEach((elem) => {
+        elem.type = 'application/pdf'
+      })
+    }
+    data.target[0].source = source // Add source to the target
     data.documentMetadata = data.document // Copy to metadata field because hypothes.is doesn't return from its API all the data that it is placed in document
     data.uris = window.abwa.contentTypeManager.getDocumentURIs()
     return data
