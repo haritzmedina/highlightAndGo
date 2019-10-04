@@ -10,11 +10,12 @@ const URL_CHANGE_INTERVAL_IN_SECONDS = 1
 class ContentTypeManager {
   constructor () {
     this.pdfFingerprint = null
-    this.documentURL = null
+    this.textFileFingerprint = null
+    this.url = null
     this.urlChangeInterval = null
     this.urlParam = null
     this.localFile = false
-    this.documentType = ContentTypeManager.documentTypes.html // By default document type is html
+    this.documentFormat = ContentTypeManager.documentFormat.html // By default document type is html
   }
 
   init (callback) {
@@ -25,64 +26,52 @@ class ContentTypeManager {
       this.tryToLoadDoi()
       this.tryToLoadPublicationPDF()
       this.tryToLoadURLParam()
-      // If current web is pdf viewer.html, set document type as pdf
-      if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
-        this.waitUntilPDFViewerLoad(() => {
-          // Save document type as pdf
-          this.documentType = ContentTypeManager.documentTypes.pdf
-          // Try to load title
-          this.tryToLoadTitle()
-          // Save pdf fingerprint
-          this.pdfFingerprint = window.PDFViewerApplication.pdfDocument.pdfInfo.fingerprint
-          // Get document URL
-          if (this.urlParam) {
-            this.documentURL = this.urlParam
-          } else {
-            // Is a local file
-            if (window.PDFViewerApplication.url.startsWith('file:///')) {
-              this.localFile = true
-            } else { // Is an online resource
-              this.documentURL = window.PDFViewerApplication.url
-            }
-          }
-          if (_.isFunction(callback)) {
-            callback()
-          }
-        })
-      } else {
-        this.documentType = ContentTypeManager.documentTypes.html
+      this.loadDocumentFormat().then(() => {
         this.tryToLoadTitle()
-        if (this.urlParam) {
-          this.documentURL = this.urlParam
-        } else {
-          if (window.location.href.startsWith('file:///')) {
-            this.localFile = true
-            this.documentURL = URLUtils.retrieveMainUrl(window.location.href) // TODO Check this, i think this url is not valid
-            // Calculate fingerprint for plain text files
-            this.tryToLoadPlainTextFingerprint()
-          } else {
-            // Support in ajax websites web url change, web url can change dynamically, but local files never do
-            this.initSupportWebURLChange()
-            this.documentURL = URLUtils.retrieveMainUrl(window.location.href)
-            if (_.isFunction(callback)) {
-              callback()
-            }
-          }
+        this.tryToLoadURL()
+        this.tryToLoadURN()
+        if (this.url.startsWith('file:///')) {
+          this.localFile = true
+        } else if (this.documentFormat !== ContentTypeManager.documentFormat.pdf) { // If document is not pdf, it can change its URL
+          // Support in ajax websites web url change, web url can change dynamically, but local files never do
+          this.initSupportWebURLChange()
         }
-      }
+        if (_.isFunction(callback)) {
+          callback()
+        }
+      })
     }
   }
 
   destroy (callback) {
-    if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+    if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
       // Reload to original pdf website
-      window.location.href = this.documentURL || window.PDFViewerApplication.baseUrl
+      window.location.href = this.url || window.PDFViewerApplication.baseUrl
     } else {
       if (_.isFunction(callback)) {
         callback()
       }
     }
     clearInterval(this.urlChangeInterval)
+  }
+
+  /**
+   * Resolves which format
+   * @returns {Promise<unknown>}
+   */
+  loadDocumentFormat () {
+    return new Promise((resolve) => {
+      if (window.location.pathname === '/content/pdfjs/web/viewer.html') {
+        this.documentFormat = ContentTypeManager.documentFormat.pdf
+        this.waitUntilPDFViewerLoad(() => {
+          resolve()
+        })
+        return true
+      } else {
+        this.documentFormat = ContentTypeManager.documentFormat.html
+        resolve()
+      }
+    })
   }
 
   waitUntilPDFViewerLoad (callback) {
@@ -137,26 +126,26 @@ class ContentTypeManager {
   }
 
   getDocumentRootElement () {
-    if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+    if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
       return document.querySelector('#viewer')
-    } else if (this.documentType === ContentTypeManager.documentTypes.html) {
+    } else if (this.documentFormat === ContentTypeManager.documentFormat.html) {
       return document.body
     }
   }
 
   getDocumentURIToSearchInStorage () {
-    if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+    if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
       return 'urn:x-pdf:' + this.pdfFingerprint
     } else {
-      return this.documentURL
+      return this.url
     }
   }
 
   getDocumentURIToSaveInStorage () {
     if (this.doi) {
       return 'https://doi.org/' + this.doi
-    } else if (this.documentURL) {
-      return this.documentURL
+    } else if (this.url) {
+      return this.url
     } else if (this.pdfFingerprint) {
       return 'urn:x-pdf:' + this.pdfFingerprint
     } else {
@@ -166,12 +155,12 @@ class ContentTypeManager {
 
   initSupportWebURLChange () {
     this.urlChangeInterval = setInterval(() => {
-      let newUrl = URLUtils.retrieveMainUrl(window.location.href)
-      if (newUrl !== this.documentURL) {
-        console.debug('Document URL updated from %s to %s', this.documentURL, newUrl)
-        this.documentURL = newUrl
+      let newUrl = this.getDocumentURL()
+      if (newUrl !== this.url) {
+        console.debug('Document URL updated from %s to %s', this.url, newUrl)
+        this.url = newUrl
         // Dispatch event
-        LanguageUtils.dispatchCustomEvent(Events.updatedDocumentURL, {url: this.documentURL})
+        LanguageUtils.dispatchCustomEvent(Events.updatedDocumentURL, {url: this.url})
       }
     }, URL_CHANGE_INTERVAL_IN_SECONDS * 1000)
   }
@@ -180,7 +169,7 @@ class ContentTypeManager {
     let fileTextContentElement = document.querySelector('body > pre')
     if (fileTextContentElement) {
       let fileTextContent = fileTextContentElement.innerText
-      this.documentFingerprint = CryptoUtils.hash(fileTextContent.innerText)
+      return CryptoUtils.hash(fileTextContent.innerText)
     }
   }
 
@@ -226,7 +215,7 @@ class ContentTypeManager {
             if (!this.documentTitle) {
               let promise = new Promise((resolve, reject) => {
                 // Try to load title from pdf metadata
-                if (this.documentType === ContentTypeManager.documentTypes.pdf) {
+                if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
                   this.waitUntilPDFViewerLoad(() => {
                     if (window.PDFViewerApplication.documentInfo.Title) {
                       this.documentTitle = window.PDFViewerApplication.documentInfo.Title
@@ -253,24 +242,54 @@ class ContentTypeManager {
   }
 
   getDocumentURIs () {
-    let uris = []
+    let uris = {}
     if (this.doi) {
-      uris.push('https://doi.org/' + this.doi)
+      uris['doi'] = 'https://doi.org/' + this.doi
     }
-    if (this.documentURL) {
-      uris.push(this.documentURL)
+    if (this.url) {
+      uris['url'] = this.url
     }
-    if (this.pdfFingerprint) {
-      uris.push('urn:x-pdf:' + this.pdfFingerprint)
+    if (this.urn) {
+      uris['urn'] = this.urn
     }
-    if (this.documentFingerprint) {
-      uris.push('urn:x-txt:' + this.documentFingerprint)
+    if (this.citationPdf) {
+      uris['citationPdf'] = this.citationPdf
     }
     return uris
   }
+
+  tryToLoadURN () {
+    // If document is PDF
+    if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
+      this.fingerprint = window.PDFViewerApplication.pdfDocument.pdfInfo.fingerprint
+      this.urn = 'urn:x-pdf:' + this.pdfFingerprint
+    } else {
+      // If document is plain text
+      this.fingerprint = this.tryToLoadPlainTextFingerprint()
+      if (this.fingerprint) {
+        this.urn = 'urn:x-txt:' + this.fingerprint
+      }
+    }
+  }
+
+  tryToLoadURL () {
+    if (this.urlParam) {
+      this.url = this.urlParam
+    } else {
+      this.url = this.getDocumentURL()
+    }
+  }
+
+  getDocumentURL () {
+    if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
+      return window.PDFViewerApplication.url
+    } else {
+      return URLUtils.retrieveMainUrl(window.location.href) // TODO Check this, i think this url is not valid
+    }
+  }
 }
 
-ContentTypeManager.documentTypes = {
+ContentTypeManager.documentFormat = {
   html: {
     name: 'html',
     selectors: ['FragmentSelector', 'RangeSelector', 'TextPositionSelector', 'TextQuoteSelector']

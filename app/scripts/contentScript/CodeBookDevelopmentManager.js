@@ -268,7 +268,7 @@ class CodeBookDevelopmentManager {
       })
       let annotation = code.annotation
       // Compare with all the urls available
-      let coincidence = _.find(annotation.uris, (uri) => { return URLUtils.areSameURI(window.abwa.contentTypeManager.documentURL, uri) })
+      let coincidence = _.find(annotation.uris, (uri) => { return URLUtils.areSameURI(window.abwa.contentTypeManager.url, uri) })
       if (coincidence) {
         // If webpage is the same, just go to annotation
         window.abwa.contentAnnotator.goToAnnotation(annotation)
@@ -561,7 +561,7 @@ class CodeBookDevelopmentManager {
     let annotations = []
     if (newCodeAnnotations.codeAnnotation) {
       // Set selectors to code annotation
-      newCodeAnnotations.codeAnnotation.target.push({selector: selectors})
+      newCodeAnnotations.codeAnnotation.target[0]['selector'] = selectors
       // Append to annotations to save in hypothes.is
       annotations.push(newCodeAnnotations.codeAnnotation)
     }

@@ -2,6 +2,7 @@ const GuideElement = require('./GuideElement')
 const _ = require('lodash')
 const LanguageUtils = require('../../utils/LanguageUtils')
 const jsYaml = require('js-yaml')
+const TextAnntotator = require('../../contentScript/contentAnnotators/TextAnnotator')
 
 class Code extends GuideElement {
   constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}, multivalued = false, uri, uris, creator}) {
@@ -19,13 +20,31 @@ class Code extends GuideElement {
     this.creator = creator
   }
 
-  toAnnotation (target = []) {
+  toAnnotation (target) {
     if (_.isEmpty(target)) {
       if (this.annotation) {
         target = this.annotation.target
       }
     }
-    let codeAnnotation = {
+    let codeAnnotation = TextAnntotator.constructAnnotation({
+      context: [
+        {'oa': 'http://www.w3.org/ns/anno.jsonld'},
+        {'slr': 'http://slr.onekin.org/ns/slr.jsonld'}
+      ],
+      id: this.id || '',
+      motivation: 'slr:codebookDevelopment',
+      creator: this.creator || window.abwa.groupSelector.getCreatorData() || '',
+      body: {
+        '@type': 'SpecificResource',
+        value: this.name,
+        description: this.description || '',
+        multivalued: this.multivalued
+      },
+      target,
+      codeName: this.name
+    })
+    // TODO Remove
+    /* let codeAnnotation = {
       '@context': [
         {'oa': 'http://www.w3.org/ns/anno.jsonld'},
         {'slr': 'http://slr.onekin.org/ns/slr.jsonld'}
@@ -53,7 +72,7 @@ class Code extends GuideElement {
       target: target,
       text: '',
       uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
-    }
+    } */
     let linkAnnotation = this.getParentLinkingAnnotation()
     return {codeAnnotation: codeAnnotation, linkAnnotation: linkAnnotation}
   }
