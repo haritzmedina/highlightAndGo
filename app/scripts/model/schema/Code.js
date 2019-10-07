@@ -29,7 +29,8 @@ class Code extends GuideElement {
     let codeAnnotation = TextAnntotator.constructAnnotation({
       context: [
         {'oa': 'http://www.w3.org/ns/anno.jsonld'},
-        {'slr': 'http://slr.onekin.org/ns/slr.jsonld'}
+        {'slr': 'http://slr.onekin.org/ns/slr.jsonld'},
+        {'datacite': 'https://schema.datacite.org/meta/kernel-4.3/metadata.xsd'}
       ],
       id: this.id || '',
       motivation: 'slr:codebookDevelopment',
@@ -43,36 +44,6 @@ class Code extends GuideElement {
       target,
       codeName: this.name
     })
-    // TODO Remove
-    /* let codeAnnotation = {
-      '@context': [
-        {'oa': 'http://www.w3.org/ns/anno.jsonld'},
-        {'slr': 'http://slr.onekin.org/ns/slr.jsonld'}
-      ],
-      '@id': this.id || '',
-      '@type': 'Annotation',
-      creator: this.creator || window.abwa.groupSelector.getCreatorData() || '',
-      motivation: 'slr:codebookDevelopment',
-      body: {
-        '@type': 'SpecificResource',
-        value: this.name,
-        description: this.description || '',
-        multivalued: this.multivalued
-      },
-      group: window.abwa.groupSelector.currentGroup.id,
-      permissions: {
-        read: ['group:' + window.abwa.groupSelector.currentGroup.id]
-      },
-      references: [],
-      tags: [
-        'motivation:slr:codebookDevelopment',
-        'slr:code:' + LanguageUtils.normalizeString(this.name)
-      ],
-      uris: this.uris || window.abwa.contentTypeManager.getDocumentURIs(),
-      target: target,
-      text: '',
-      uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
-    } */
     let linkAnnotation = this.getParentLinkingAnnotation()
     return {codeAnnotation: codeAnnotation, linkAnnotation: linkAnnotation}
   }

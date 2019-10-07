@@ -3,17 +3,17 @@ const Events = require('./Events')
 const URLUtils = require('../utils/URLUtils')
 const LanguageUtils = require('../utils/LanguageUtils')
 const CryptoUtils = require('../utils/CryptoUtils')
+const RandomUtils = require('../utils/RandomUtils')
 const axios = require('axios')
 
 const URL_CHANGE_INTERVAL_IN_SECONDS = 1
 
 class ContentTypeManager {
   constructor () {
-    this.pdfFingerprint = null
-    this.textFileFingerprint = null
     this.url = null
     this.urlChangeInterval = null
     this.urlParam = null
+    this.documentId = null
     this.localFile = false
     this.documentFormat = ContentTypeManager.documentFormat.html // By default document type is html
   }
@@ -22,25 +22,38 @@ class ContentTypeManager {
     if (document.querySelector('embed[type="application/pdf"]')) {
       window.location = chrome.extension.getURL('content/pdfjs/web/viewer.html') + '?file=' + encodeURIComponent(window.location.href)
     } else {
-      // Load publication metadata
-      this.tryToLoadDoi()
-      this.tryToLoadPublicationPDF()
-      this.tryToLoadURLParam()
-      this.loadDocumentFormat().then(() => {
-        this.tryToLoadTitle()
-        this.tryToLoadURL()
-        this.tryToLoadURN()
-        if (this.url.startsWith('file:///')) {
-          this.localFile = true
-        } else if (this.documentFormat !== ContentTypeManager.documentFormat.pdf) { // If document is not pdf, it can change its URL
-          // Support in ajax websites web url change, web url can change dynamically, but local files never do
-          this.initSupportWebURLChange()
-        }
+      this.reloadTargetInformation(() => {
         if (_.isFunction(callback)) {
           callback()
         }
       })
     }
+  }
+
+  /**
+   * Retrieves information about the target that is annotating (current website)
+   * @param callback
+   */
+  reloadTargetInformation (callback) {
+    // Load publication metadata
+    this.tryToLoadDoi()
+    this.tryToLoadPublicationPDF()
+    this.tryToLoadURLParam()
+    this.loadDocumentFormat().then(() => {
+      this.tryToLoadTitle()
+      this.tryToLoadURL()
+      this.tryToLoadURN()
+      this.tryToLoadTargetId()
+      if (this.url.startsWith('file:///')) {
+        this.localFile = true
+      } else if (this.documentFormat !== ContentTypeManager.documentFormat.pdf) { // If document is not pdf, it can change its URL
+        // Support in ajax websites web url change, web url can change dynamically, but local files never do
+        this.initSupportWebURLChange()
+      }
+      if (_.isFunction(callback)) {
+        callback()
+      }
+    })
   }
 
   destroy (callback) {
@@ -135,7 +148,7 @@ class ContentTypeManager {
 
   getDocumentURIToSearchInStorage () {
     if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
-      return 'urn:x-pdf:' + this.pdfFingerprint
+      return this.urn
     } else {
       return this.url
     }
@@ -146,23 +159,31 @@ class ContentTypeManager {
       return 'https://doi.org/' + this.doi
     } else if (this.url) {
       return this.url
-    } else if (this.pdfFingerprint) {
-      return 'urn:x-pdf:' + this.pdfFingerprint
+    } else if (this.urn) {
+      return this.urn
     } else {
       throw new Error('Unable to retrieve any IRI for this document.')
     }
   }
 
+  /**
+   * Adds an observer which checks if the URL changes
+   */
   initSupportWebURLChange () {
-    this.urlChangeInterval = setInterval(() => {
-      let newUrl = this.getDocumentURL()
-      if (newUrl !== this.url) {
-        console.debug('Document URL updated from %s to %s', this.url, newUrl)
-        this.url = newUrl
-        // Dispatch event
-        LanguageUtils.dispatchCustomEvent(Events.updatedDocumentURL, {url: this.url})
-      }
-    }, URL_CHANGE_INTERVAL_IN_SECONDS * 1000)
+    if (_.isEmpty(this.urlChangeInterval)) {
+      this.urlChangeInterval = setInterval(() => {
+        let newUrl = this.getDocumentURL()
+        if (newUrl !== this.url) {
+          console.debug('Document URL updated from %s to %s', this.url, newUrl)
+          this.url = newUrl
+          // Reload target information
+          this.reloadTargetInformation(() => {
+            // Dispatch event
+            LanguageUtils.dispatchCustomEvent(Events.updatedDocumentURL, {url: this.url})
+          })
+        }
+      }, URL_CHANGE_INTERVAL_IN_SECONDS * 1000)
+    }
   }
 
   tryToLoadPlainTextFingerprint () {
@@ -262,7 +283,7 @@ class ContentTypeManager {
     // If document is PDF
     if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
       this.fingerprint = window.PDFViewerApplication.pdfDocument.pdfInfo.fingerprint
-      this.urn = 'urn:x-pdf:' + this.pdfFingerprint
+      this.urn = 'urn:x-pdf:' + this.fingerprint
     } else {
       // If document is plain text
       this.fingerprint = this.tryToLoadPlainTextFingerprint()
@@ -286,6 +307,21 @@ class ContentTypeManager {
     } else {
       return URLUtils.retrieveMainUrl(window.location.href) // TODO Check this, i think this url is not valid
     }
+  }
+
+  tryToLoadTargetId () {
+    // Wait until updated all annotations is loaded
+    this.targetIdEventListener = document.addEventListener(Events.updatedAllAnnotations, () => {
+      if (window.abwa.contentAnnotator.allAnnotations.length > 0) {
+        this.documentId = window.abwa.contentAnnotator.allAnnotations[0].target[0].source.id
+      } else {
+        this.documentId = RandomUtils.randomString()
+      }
+    })
+  }
+
+  getDocumentId () {
+    return this.documentId || RandomUtils.randomString()
   }
 }
 

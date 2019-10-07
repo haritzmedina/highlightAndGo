@@ -19,7 +19,7 @@ class LocalStorageClient {
       console.debug(annotationToStore)
       // Store in database
       this.database.annotations.push(annotationToStore)
-      // TODO Update storage
+      // Update storage
       this.manager.saveDatabase(this.database)
       // Callback
       callback(null, annotationToStore)
@@ -42,7 +42,7 @@ class LocalStorageClient {
       }
       // Store in database
       this.database.annotations = this.database.annotations.concat(toStoreAnnotations)
-      // TODO Update storage
+      // Update storage
       this.manager.saveDatabase(this.database)
       callback(null, toStoreAnnotations)
     } catch (e) {
@@ -123,8 +123,10 @@ class LocalStorageClient {
       let result = true
       // URL
       if (result && (data.uri || data.url)) {
-        // TODO Check if uri exists in any of the source URIs
-        result = annotation.uri === data.url || annotation.uri === data.uri
+        // Check if uri exists in any of the source's URIs
+        result = !_.isEmpty(_.filter(_.values(annotation.target[0].source), (uri) => {
+          return data.url === uri || data.uri === uri
+        }))
       }
       // User
       if (result && (data.user)) {
@@ -160,12 +162,6 @@ class LocalStorageClient {
       if (result && (data.wildcard_uri)) {
         result = wildcard(data.wildcard_uri, annotation.uri)
       }
-      // Any
-      if (result && (data.any)) {
-        let anyUrl = annotation.uri.includes(data.any) // Any checks in uri
-        let anyTag = annotation.tags.includes(data.any) // Any checks in tags
-        result = anyUrl || anyTag // TODO Quote and text
-      }
       // TODO Quote
       // References
       if (result && (data.references)) {
@@ -173,7 +169,19 @@ class LocalStorageClient {
           result = annotation.references.includes(data.references)
         }
       }
-      // TODO Text
+      // Text
+      if (result && data.text) {
+        if (_.isString(data.text)) {
+          result = annotation.text.includes(data.text)
+        }
+      }
+      // Any, this is the last one as it is the algorithm with higher computational cost
+      if (result && (data.any)) {
+        let anyUrl = annotation.uri.includes(data.any) // Any checks in uri
+        let anyTag = annotation.tags.includes(data.any) // Any checks in tags
+        let anyText = annotation.text.includes(data.text)
+        result = anyUrl || anyTag || anyText // TODO Quote
+      }
       return result
     })
     if (data.order) {

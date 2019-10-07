@@ -5,7 +5,6 @@ const TagManager = require('../TagManager')
 const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
 const PDFTextUtils = require('../../utils/PDFTextUtils')
-const RandomUtils = require('../../utils/RandomUtils')
 const LanguageUtils = require('../../utils/LanguageUtils')
 const HypothesisClientManager = require('../../storage/hypothesis/HypothesisClientManager')
 const Alerts = require('../../utils/Alerts')
@@ -263,7 +262,7 @@ class TextAnnotator extends ContentAnnotator {
     target,
     text = '',
     references = [],
-    context = 'http://www.w3.org/ns/anno.jsonld',
+    context = ['http://www.w3.org/ns/anno.jsonld', 'https://schema.datacite.org/meta/kernel-4.3/metadata.xsd'],
     codeName
   }) {
     let tags = ['motivation:' + motivation]
@@ -308,12 +307,13 @@ class TextAnnotator extends ContentAnnotator {
       }
       // Copy to metadata field because hypothes.is doesn't return from its API all the data that it is placed in document
       data.documentMetadata = data.document
-    } else { // For other cases different to hypothes.is
-      // TODO Get UUID for current target
-      let source = window.abwa.contentTypeManager.getDocumentURIs()
-      source['id'] = RandomUtils.randomString()
-      data.target[0].source = source // Add source to the target
     }
+    let source = window.abwa.contentTypeManager.getDocumentURIs()
+    // Get document title
+    source['title'] = window.abwa.contentTypeManager.documentTitle || ''
+    // Get UUID for current target
+    source['id'] = window.abwa.contentTypeManager.getDocumentId()
+    data.target[0].source = source // Add source to the target
     return data
   }
 
