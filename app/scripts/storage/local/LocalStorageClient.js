@@ -122,7 +122,7 @@ class LocalStorageClient {
     let filteredAnnotations = _.filter(annotations, (annotation) => {
       let result = true
       // URL
-      if (result && (data.uri || data.url)) {
+      if (result && (data.uri || data.url) && !_.isEmpty(annotation.target)) {
         // Check if uri exists in any of the source's URIs
         result = !_.isEmpty(_.filter(_.values(annotation.target[0].source), (uri) => {
           return data.url === uri || data.uri === uri
