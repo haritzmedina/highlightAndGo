@@ -170,14 +170,14 @@ class UserFilter {
   }
 
   createUserFilterElement (name) {
-    let normalizedName = LanguageUtils.normalizeStringToValidID(name)
+    let normalizedName = name
     let userFilterTemplate = document.querySelector('#userFilterTemplate')
     let userFilterElement = $(userFilterTemplate.content.firstElementChild).clone().get(0)
     // Set text and properties for label and input
     let input = userFilterElement.querySelector('input')
     input.id = 'userFilter_' + normalizedName
     let label = userFilterElement.querySelector('label')
-    label.innerText = name.replace('acct:', '').replace('@hypothes.is', '') // Remove to user name hypothesis
+    label.innerText = normalizedName.replace('acct:', '').replace('@hypothes.is', '') // Remove to user name hypothesis
     label.htmlFor = 'userFilter_' + normalizedName
     // Set event handler for input check status
     input.addEventListener('change', (event) => {
