@@ -2,6 +2,7 @@ const GuideElement = require('./GuideElement')
 const _ = require('lodash')
 const LanguageUtils = require('../../utils/LanguageUtils')
 const jsYaml = require('js-yaml')
+const TextAnntotator = require('../../contentScript/contentAnnotators/TextAnnotator')
 
 class Code extends GuideElement {
   constructor ({id, name, description = '', color, parentCode = null, annotation, parentLinkAnnotationId, classificationScheme = {}, multivalued = false, uri, uris, creator}) {
@@ -19,41 +20,30 @@ class Code extends GuideElement {
     this.creator = creator
   }
 
-  toAnnotation (target = []) {
+  toAnnotation (target) {
     if (_.isEmpty(target)) {
       if (this.annotation) {
         target = this.annotation.target
       }
     }
-    let codeAnnotation = {
-      '@context': [
+    let codeAnnotation = TextAnntotator.constructAnnotation({
+      context: [
         {'oa': 'http://www.w3.org/ns/anno.jsonld'},
-        {'slr': 'http://slr.onekin.org/ns/slr.jsonld'}
+        {'slr': 'http://slr.onekin.org/ns/slr.jsonld'},
+        {'datacite': 'https://schema.datacite.org/meta/kernel-4.3/metadata.xsd'}
       ],
-      '@id': this.id || '',
-      '@type': 'Annotation',
-      creator: this.creator || window.abwa.groupSelector.getCreatorData() || '',
+      id: this.id || '',
       motivation: 'slr:codebookDevelopment',
+      creator: this.creator || window.abwa.groupSelector.getCreatorData() || '',
       body: {
         '@type': 'SpecificResource',
         value: this.name,
         description: this.description || '',
         multivalued: this.multivalued
       },
-      group: window.abwa.groupSelector.currentGroup.id,
-      permissions: {
-        read: ['group:' + window.abwa.groupSelector.currentGroup.id]
-      },
-      references: [],
-      tags: [
-        'motivation:slr:codebookDevelopment',
-        'slr:code:' + LanguageUtils.normalizeString(this.name)
-      ],
-      uris: this.uris || window.abwa.contentTypeManager.getDocumentURIs(),
-      target: target,
-      text: '',
-      uri: this.uri || window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
-    }
+      target,
+      codeName: this.name
+    })
     let linkAnnotation = this.getParentLinkingAnnotation()
     return {codeAnnotation: codeAnnotation, linkAnnotation: linkAnnotation}
   }

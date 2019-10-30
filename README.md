@@ -1,7 +1,7 @@
 # Highlight And Go
 [![Build Status](https://travis-ci.com/haritzmedina/highlightAndGo.svg?token=iYaEys7GiGsu2prhEJWx&branch=master)](https://travis-ci.com/haritzmedina/highlightAndGo)
 
-Chrome extension that tracks highlighting activity while reading primary studies, and accordingly populates the Google Sheets application at hand.
+Chrome extension that tracks highlighting activity while reading primary studies during data extraction activity in a Systematic Literature Review. It creates a spreadsheet for easy checking Inter-rating reliability, the current status of the activity and direct links to coding evidences. Highlighting activity can be stored in local, hypothes.is or neo4j.
 
 # For End-users
 End users require a hypothesis and Google Sheet account. Download extension from [Chrome Store](https://chrome.google.com/webstore/detail/highlightgo/bihmalipgnlomidlpekdnoohiejppfmo).
@@ -45,7 +45,7 @@ There are two kinds of entryfiles that create bundles.
 | `--sourcemaps` | Force the creation of sourcemaps. Default: !production                                                                                                |
 
 
-### pack
+### Pack
 
 Zips your `dist` directory and saves it in the `packages` directory.
 
@@ -83,9 +83,10 @@ if(process.env.NODE_ENV === 'development'){
 
 ## Testing
 
-To run the tests locally, it is required a Hypothesis Developer Token. You can get yours at: https://hypothes.is/account/developer
-Then, create an .env file and add it with name "HYPOTHESIS_TOKEN" (without commas)
+There are some basic tests to verify that the extension works as expected. You can run them manually using:
 
+
+    $ npm test
 
 
 

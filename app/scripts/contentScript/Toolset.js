@@ -13,7 +13,7 @@ class Toolset {
       this.sidebarContainer = document.querySelector('#abwaSidebarContainer')
       // Insert after group selector
       this.groupSelector = this.sidebarContainer.querySelector('#groupSelectorContainer')
-      this.groupSelector.insertAdjacentHTML('afterend', response.data)
+      this.groupSelector.insertAdjacentHTML('beforebegin', response.data)
       // Get toolset container
       this.toolsetContainer = this.sidebarContainer.querySelector('#toolset')
       this.toolsetHeader = this.toolsetContainer.querySelector('#toolsetHeader')
