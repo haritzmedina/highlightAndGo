@@ -262,7 +262,7 @@ class TextAnnotator extends ContentAnnotator {
     target,
     text = '',
     references = [],
-    context = ['http://www.w3.org/ns/anno.jsonld', 'https://schema.datacite.org/meta/kernel-4.3/metadata.xsd'],
+    context = ['http://www.w3.org/ns/anno.jsonld'],
     codeName
   }) {
     let tags = ['motivation:' + motivation]

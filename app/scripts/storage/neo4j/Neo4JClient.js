@@ -6,6 +6,8 @@ const jsonld = require('jsonld')
 // Configuration constants
 const now = new Date()
 var contextus = []
+var contextualization = [ 'http://www.w3.org/ns/anno.jsonld', {"datacite":"http://purl.org/spar/datacite/", "urn":"datacite:urn", "url":"datacite:url", "doi":"datacite:doi"}, {"dcterms": "http://purl.org/dc/terms/", "title": "dcterms:title", "created": "dcterms:created", "modified": "dcterms:modified"}, { '@vocab': 'http://rdf.onekin.org/resources/ns/' } ]
+
 /// /UTILS
 function doNothing () {}
 
@@ -14,28 +16,89 @@ function sleep (miliseconds) {
   while (currentTime + miliseconds >= new Date().getTime()) { }
 }
 
+
 /*
 function isString (value) {
   return typeof value === 'string' || value instanceof String
 }
 */
 
+function escapalo (data){
+  let textQuoteSelectorIndex
+  if (Array.isArray(data.target)){
+     textQuoteSelectorIndex = _.findIndex(data.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
+  }else{
+    textQuoteSelectorIndex = _.findIndex(data.target.selector, (selector) => { return selector.type === 'TextQuoteSelector' })
+  }
+  if (textQuoteSelectorIndex > -1) {
+    let pre = data.target[0].selector[textQuoteSelectorIndex].prefix
+    data.target[0].selector[textQuoteSelectorIndex].prefix  = escape(pre)
+    let suf = data.target[0].selector[textQuoteSelectorIndex].suffix
+    data.target[0].selector[textQuoteSelectorIndex].suffix  = escape(suf)
+  }
+  if (data['text']) {
+    data['text'] = escape(data['text'])
+  }
+  if (data['body']) {
+    if (data.body.description) {
+      data.body.description = escape(data.body.description)
+    }
+  }
+
+  return data
+}
+
+function descapalo (data){
+  if (!data) return data
+  if (!data.target) return data
+  let textQuoteSelectorIndex
+  if (Array.isArray(data.target)){
+     textQuoteSelectorIndex = _.findIndex(data.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
+     if (textQuoteSelectorIndex > -1) {
+       let pre = data.target[0].selector[textQuoteSelectorIndex].prefix
+       data.target[0].selector[textQuoteSelectorIndex].prefix  = unescape(pre)
+       let suf = data.target[0].selector[textQuoteSelectorIndex].suffix
+       data.target[0].selector[textQuoteSelectorIndex].suffix  = unescape(suf)
+     }
+  }else{
+    textQuoteSelectorIndex = _.findIndex(data.target.selector, (selector) => { return selector.type === 'TextQuoteSelector' })
+    if (textQuoteSelectorIndex > -1) {
+      let pre = data.target.selector[textQuoteSelectorIndex].prefix
+      data.target.selector[textQuoteSelectorIndex].prefix  = unescape(pre)
+      let suf = data.target.selector[textQuoteSelectorIndex].suffix
+      data.target.selector[textQuoteSelectorIndex].suffix  = unescape(suf)
+    }
+  }
+  if (data['text']) {
+    data['text'] = unescape(data['text'])
+  }
+  if (data['body']) {
+    if (data.body.description) {
+      data.body.description = escape(data.body.description)
+    }
+  }
+  return data
+}
+
 function traverse (o) {
   for (var i in o) {
-    debuggingg('>>>> ' + i + ' <<<<' + JSON.stringify(o[i]))
+    //debuggingg('>>>> ' + i + ' <<<<' + JSON.stringify(o[i]))
     if (i === 'text') {
+      o[i] = unescape(o[i])
+    }
+    if (i === 'description') {
       o[i] = unescape(o[i])
     }
     if (i === 'group' && o[i] !== null && typeof (o[i]) === 'object') {
       o[i] = o[i]['@value']
     }
     if (i === 'id' && o[i] !== null && typeof (o[i]) === 'object') {
-      debuggingg('>>>> RETURNING')
+    //  debuggingg('>>>> RETURNING')
       return traverse(o[i])
     }
     if (o[i] !== null && typeof (o[i]) === 'object') {
       // going one step down in the object tree!!
-      debuggingg('>>>> TRAVERSING')
+      //debuggingg('>>>> TRAVERSING')
       o[i] = traverse(o[i])
     }
   }
@@ -55,7 +118,7 @@ function apiCallJSON (settings, callback) {
         callback(null, [])
       } else {
         // compact a document according to a particular context
-        jsonld.compact(expandedData, { '@context': [ 'http://www.w3.org/ns/anno.jsonld', { '@vocab': 'http://rdf.onekin.org/resources/ns/' } ] }, function (err, compacted) {
+        jsonld.compact(expandedData, { '@context': contextualization }, function (err, compacted) {
           if (err) console.error('Error compacting: ' + err)
           callback(null, compacted)
         })
@@ -197,7 +260,7 @@ function cypherRDFNeo4J (cypher, callback) {
 }
 
 function initializeGraph (err, response) {
-  let q = "CREATE (:NamespacePrefixDefinition {`http://www.w3.org/ns/activitystreams#`: 'as',`http://xmlns.com/foaf/0.1/`: 'foaf', `http://www.w3.org/ns/oa#`: 'oa', `http://www.w3.org/ns/prov#`: 'prov', `http://rdf.onekin.org/resources/ns/`: 'onekin'})"
+  let q = "CREATE (:NamespacePrefixDefinition {`http://www.w3.org/ns/activitystreams#`: 'as',`http://xmlns.com/foaf/0.1/`: 'foaf', `http://www.w3.org/ns/oa#`: 'oa', `http://www.w3.org/ns/prov#`: 'prov', `http://rdf.onekin.org/resources/ns/`: 'onekin', `http://purl.org/spar/datacite/`: 'datacite', `http://purl.org/dc/terms/`: 'dcterms'})"
   if (err) {
     commitNeo4J(q, debuggingg, contextus)
     return
@@ -287,11 +350,21 @@ class Neo4JClient {
       data['target'] = data['oa:target']
       delete data['oa:target']
     }
-    if (data['text']) {
-      data['text'] = escape(data['text'])
-    }
+
+
+    data = escapalo (data)
     // data['permissions'] = null
-    data['@context'] = [ 'http://www.w3.org/ns/anno.jsonld', { '@vocab': 'http://rdf.onekin.org/resources/ns/' } ]
+
+    let today = new Date();
+    var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate()
+    var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds()
+    var dateTime = date+'T'+time+'Z'
+    if (!data['dcterms:created'] && !data['created']) {
+      data['created'] = dateTime
+    }
+    data['modified'] = dateTime
+
+    data['@context'] = contextualization
     let q = `CALL semantics.importRDFSnippet(' ` + escapify(data) + `', 'JSON-LD', { handleMultival: 'ARRAY' , multivalPropList : ['http://rdf.onekin.org/resources/ns/references','http://rdf.onekin.org/resources/ns/tags']})`
     debuggingg(' PRE-QUERY>> ' + q)
     commitNeo4J(q, (err, result) => {
@@ -302,12 +375,13 @@ class Neo4JClient {
       } else {
         data['user'] = this.userName
         data['id'] = data['@id'].replace(this.baseN4J, '')
-        if (data['text']) {
-          data['text'] = unescape(data['text'])
-        }
+
         if (data['target'] && !data['oa:target']) {
           data['oa:target'] = data['target']
         }
+
+        data = descapalo (data)
+
         callback(null, data)
       }
     })
@@ -462,13 +536,12 @@ class Neo4JClient {
   updateAnnotation (idold, data, callback) {
     data['@id'] = idold
     debuggingg('UPDATING IDOLD => ' + idold)
-    let ik = 5 > 1
-    if (ik) {
       this.deleteAnnotation(data, (err, res) => {
         if (err) console.error(err)
+        data.created = res.created
+        alert (data.created)
         this.createNewAnnotation(data, callback)
       })
-    }
   }
 
   /**
@@ -505,13 +578,14 @@ class Neo4JClient {
       cypher = `MATCH (n{uri : '` + id + `'}) DETACH  DELETE n`
     }
     debuggingg('DELETING ID => ' + id + JSON.stringify(annotation))
+
     commitNeo4J(cypher, (err, data) => {
-      if (err) {
-        console.error(err)
-      } else {
-        callback(null, { deleted: true })
-      }
-    })
+        if (err) {
+          console.error(err)
+        } else {
+          callback(null, data)
+        }
+      })
   }
 
   /**
@@ -560,8 +634,8 @@ class Neo4JClient {
     let q = ''
     // URL
 
-    let qmatch = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q) `
-    let qreturn = ` return n,a,p,b,q,c,r`
+    let qmatch = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q), (p)-[d]->(s)`
+    let qreturn = ` return n,a,p,b,q,c,r,d,s`
     let qwhere = ` where `
     let qwhereboolean = false
     if (data.id) {
@@ -569,22 +643,31 @@ class Neo4JClient {
       qwhereboolean = true
       debuggingg('SEARCHING ID => ' + data.id)
     }
+
     if (data.uri && data.url) {
       if (qwhereboolean) qwhere += ` AND `
-      qwhere += `( n.onekin__uri = '` + data.uri + `' `
-      qwhere += `OR n.onekin__uri = '` + data.url + `') `
+      qwhere += `( q.datacite__urn = '` + data.uri + `' `
+      qwhere += `OR q.datacite__urn = '` + data.url + `' `
+      qwhere += `OR q.datacite__url = '` + data.uri + `' `
+      qwhere += `OR q.datacite__url = '` + data.url + `' `
+      qwhere += `OR q.datacite__doi = '` + data.uri + `' `
+      qwhere += `OR q.datacite__doi = '` + data.url + `') `
       qwhereboolean = true
       debuggingg('SEARCHING URI and URL => ' + data.uri + ' || ' + data.url)
     } else {
       if (data.uri) {
         if (qwhereboolean) qwhere += ` AND `
-        qwhere += ` n.onekin__uri = '` + data.uri + `' `
+        qwhere += `( q.datacite__urn = '` + data.uri + `' `
+        qwhere += `OR q.datacite__url = '` + data.uri + `' `
+        qwhere += `OR q.datacite__doi = '` + data.uri + `') `
         qwhereboolean = true
         debuggingg('SEARCHING URI => ' + data.uri)
       }
       if (data.url) {
         if (qwhereboolean) qwhere += ` AND `
-        qwhere += ` n.onekin__uri = '` + data.url + `' `
+        qwhere += `( q.datacite__urn = '` + data.url + `' `
+        qwhere += `OR q.datacite__url = '` + data.url + `' `
+        qwhere += `OR q.datacite__doi = '` + data.url + `') `
         qwhereboolean = true
         debuggingg('SEARCHING URL => ' + data.url)
       }
@@ -653,7 +736,7 @@ class Neo4JClient {
             array.push(newData[i].tags)
             newData[i].tags = array
           }
-          if (!_.isArray(newData[i].target) && newData[i].motivation !== 'assessing') {
+          if (!_.isArray(newData[i].target)  && newData[i].motivation !== 'assessing') {
             let array = []
             array.push(newData[i].target)
             newData[i].target = array
@@ -752,6 +835,9 @@ class Neo4JClient {
     }
     annotation = JSON.parse(anntxt)
     annotation = traverse(annotation)
+    for (let i = 0; i < annotation.length; i++) {
+      annotation[i] = descapalo (annotation[i])
+    }
 
     debuggingg('*******\nCJSON.parse 22 :: \n ' + JSON.stringify(annotation, null, 2) + '\n**********\n')
     return annotation
