@@ -326,10 +326,10 @@ class TextAnnotator extends ContentAnnotator {
       type: 'Annotation',
       motivation: 'assessing',
       group: window.abwa.groupSelector.currentGroup.id,
-      body: {
+      body: [{
         type: 'TextualBody',
         value: text
-      },
+      }],
       creator: window.abwa.groupSelector.getCreatorData() || '',
       'oa:target': window.abwa.storageManager.storageMetadata.annotationUrl + validatedAnnotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, ''),
       permissions: {
@@ -342,7 +342,11 @@ class TextAnnotator extends ContentAnnotator {
       uri: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
     }
     if (agreement) {
-      data.agreement = agreement
+      data.body.push({
+        type: 'SpecificResource',
+        purpose: 'assessing',
+        value: agreement
+      })
     }
     return data
   }
@@ -616,7 +620,8 @@ class TextAnnotator extends ContentAnnotator {
           })
           validatingAnnotations.forEach((validatingAnnotation) => {
             let userName = validatingAnnotation.user.replace('acct:', '').replace('@hypothes.is', '')
-            let agreement = validatingAnnotation.agreement
+            let assessingBody = validatingAnnotation.body.find(body => { return body.purpose === 'assessing' })
+            let agreement = assessingBody.value
             if (agreement === 'agree') {
               highlightedElement.title += '\nReviewer ' + userName + ' agrees: '
             } else if (agreement === 'disagree') {
@@ -810,10 +815,16 @@ class TextAnnotator extends ContentAnnotator {
                 confirmButtonText: 'Validate',
                 input: 'textarea',
                 onOpen: () => {
-                  if (currentUserValidateAnnotation && currentUserValidateAnnotation.agreement === 'agree') {
-                    document.querySelector('#agreeRadio').checked = 'checked'
-                  } else if (currentUserValidateAnnotation && currentUserValidateAnnotation.agreement === 'disagree') {
-                    document.querySelector('#disagreeRadio').checked = 'checked'
+                  if (currentUserValidateAnnotation) {
+                    let assessingBody = currentUserValidateAnnotation.body.find(body => { return body.purpose === 'assessing' })
+                    if (assessingBody) {
+                      let agreement = assessingBody.value
+                      if (agreement === 'agree') {
+                        document.querySelector('#agreeRadio').checked = 'checked'
+                      } else if (agreement === 'disagree') {
+                        document.querySelector('#disagreeRadio').checked = 'checked'
+                      }
+                    }
                   }
                 },
                 preConfirm: () => {
@@ -832,7 +843,16 @@ class TextAnnotator extends ContentAnnotator {
                       // Update already created annotation for assessing
                       currentUserValidateAnnotation.text = form.text
                       if (form.agreement) {
-                        currentUserValidateAnnotation.agreement = form.agreement
+                        let assessingBody = currentUserValidateAnnotation.body.find(body => { return body.purpose === 'assessing' })
+                        if (assessingBody) {
+                          assessingBody.value = form.agreement
+                        } else {
+                          currentUserValidateAnnotation.body.push({
+                            type: 'SpecificResource',
+                            value: form.agreement,
+                            purpose: 'assessing'
+                          })
+                        }
                       }
                       window.abwa.storageManager.client.updateAnnotation(currentUserValidateAnnotation.id, currentUserValidateAnnotation, (err, assessmentAnnotationResult) => {
                         if (err) {
