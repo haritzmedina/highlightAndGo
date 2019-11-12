@@ -190,7 +190,15 @@ class DataExtractionManager {
         if (_.has(window.abwa.codingManager.primaryStudyCoding, codeId)) {
           if (window.abwa.codingManager.primaryStudyCoding[codeId].validated) {
             // Check if any annotation is disagree
-            let disagreeAnnotation = _.find(window.abwa.codingManager.primaryStudyCoding[codeId].validatingAnnotations, validatingAnnotation => validatingAnnotation.agreement === 'disagree')
+            let disagreeAnnotation = _.find(window.abwa.codingManager.primaryStudyCoding[codeId].validatingAnnotations, validatingAnnotation => {
+              // Get body with purpose assessing
+              let assessingBody = validatingAnnotation.body.find(body => { return body.purpose === 'assessing' })
+              if (assessingBody) {
+                return assessingBody.value === 'disagree'
+              } else {
+                return false
+              }
+            })
             let validation = _.isObject(disagreeAnnotation) ? 'disagree' : 'agree'
             return {
               validated: true,
