@@ -267,14 +267,15 @@ class CodeBookDevelopmentManager {
         return code.id === codeId
       })
       let annotation = code.annotation
+      // Get uris from annotation
+      let url = annotation.target[0].source.doi || annotation.target[0].source.url
       // Compare with all the urls available
-      let coincidence = _.find(annotation.uris, (uri) => { return URLUtils.areSameURI(window.abwa.contentTypeManager.url, uri) })
-      if (coincidence) {
+      if (URLUtils.areSameURI(window.abwa.contentTypeManager.url, url)) {
         // If webpage is the same, just go to annotation
         window.abwa.contentAnnotator.goToAnnotation(annotation)
       } else {
         // If webpage is different, open in new tab and go to annotation
-        window.open(annotation.uri + '#hag:' + code.id)
+        window.open(url + '#hag:' + code.id)
       }
     }
   }

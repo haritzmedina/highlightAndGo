@@ -29,12 +29,44 @@ class AnnotationUtils {
   }
 
   static areFromSameDocument (a, b) {
-    // TODO Use also DOI to identify that they are the same document
-    let equalFingerprint = false
-    if (a.documentMetadata && a.documentMetadata.documentFingerprint && b.documentMetadata && b.documentMetadata.documentFingerprint) {
-      equalFingerprint = a.documentMetadata.documentFingerprint === b.documentMetadata.documentFingerprint
+    // By url
+    if (a.uri && b.uri) {
+      if (a.uri === b.uri) {
+        return true
+      }
     }
-    return a.uri === b.uri || equalFingerprint
+    // By target source
+    if (_.isArray(a.target) && _.isArray(b.target)) {
+      let intersection = _.intersectionWith(a.target, b.target, (atarget, btarget) => {
+        if (atarget.source && btarget.source) {
+          if (atarget.source.id && atarget.source.id === btarget.source.id) {
+            return true
+          }
+          if (atarget.source.doi && atarget.source.doi === btarget.source.doi) {
+            return true
+          }
+          if (atarget.source.url && atarget.source.url === btarget.source.url) {
+            return true
+          }
+          if (atarget.source.urn && atarget.source.urn === btarget.source.urn) {
+            return true
+          }
+          return false
+        }
+      })
+      if (!_.isEmpty(intersection)) {
+        return true
+      }
+    }
+    // By documentmetadata
+    if (a.documentMetadata && a.documentMetadata.documentFingerprint && b.documentMetadata && b.documentMetadata.documentFingerprint) {
+      // TODO Use also DOI to identify that they are the same document
+      let result = a.documentMetadata.documentFingerprint === b.documentMetadata.documentFingerprint
+      if (result) {
+        return result
+      }
+    }
+    return false
   }
 }
 

@@ -1,6 +1,7 @@
 const GoogleSheetClientManager = require('../../googleSheets/GoogleSheetsClientManager')
 const Alerts = require('../../utils/Alerts')
 const AnnotationUtils = require('../../utils/AnnotationUtils')
+const URLUtils = require('../../utils/URLUtils')
 const _ = require('lodash')
 const HyperSheetColors = require('./HyperSheetColors')
 
@@ -185,17 +186,17 @@ class SLRGoogleSheetManager {
       let codingAnnotationsForPrimaryStudy = _.filter(codingAnnotations, (codingAnnotation) => {
         return AnnotationUtils.areFromSameDocument(annotationForPrimaryStudy, codingAnnotation)
       })
-      // Retrieve from any annotation the document title
+      // Retrieve from any annotation the document title and url
       let title
       try {
         // Look for any annotation with document title
         let annotationWithTitle = _.find(codingAnnotationsForPrimaryStudy, (annotation) => {
-          if (annotation.documentMetadata) {
-            return _.isString(annotation.documentMetadata.title)
+          if (_.has(annotation, 'target[0].source.title')) {
+            return _.isString(annotation.target[0].source.title)
           }
         })
         if (annotationWithTitle) {
-          title = annotationWithTitle.documentMetadata.title
+          title = annotationWithTitle.target[0].source.title
         } else {
           annotationWithTitle = _.find(codingAnnotationsForPrimaryStudy, (annotation) => {
             return _.isArray(annotation.document.title)
@@ -207,9 +208,21 @@ class SLRGoogleSheetManager {
       } catch (e) {
         title = 'Primary Study ' + i
       }
+      // Retrieve annotated document url (doi or url)
+      let url
+      try {
+        let annotationWithUrl = _.find(codingAnnotationsForPrimaryStudy, (annotation) => {
+          if (_.has(annotation, 'target[0].source')) {
+            return URLUtils.isUrl(annotation.target[0].source.url) || URLUtils.isUrl(annotation.target[0].source.doi) || URLUtils.isUrl(annotation.uri)
+          }
+        })
+        url = annotationWithUrl.target[0].source.doi || annotationWithUrl.target[0].source.url || annotationWithUrl.uri
+      } catch (e) {
+        url = null
+      }
       // Retrieve users for current primary study
       let usersForPrimaryStudy = _.map(_.uniqBy(codingAnnotationsForPrimaryStudy, (anno) => { return anno['user'] }), 'user')
-      let primaryStudy = new PrimaryStudy({metadata: {url: annotationForPrimaryStudy.uri, title: title}, users: usersForPrimaryStudy}) // TODO Retrieve doi
+      let primaryStudy = new PrimaryStudy({metadata: {url: url, title: title}, users: usersForPrimaryStudy})
       let parentCodes = {}
       for (let i = 0; i < codingAnnotationsForPrimaryStudy.length; i++) {
         let codingAnnotationForPrimaryStudy = codingAnnotationsForPrimaryStudy[i]
@@ -218,39 +231,41 @@ class SLRGoogleSheetManager {
           let validatedAnnotationId = validatingAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
           return codingAnnotationForPrimaryStudy.id === validatedAnnotationId
         })
-        let codeId = codingAnnotationForPrimaryStudy.body.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
-        let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => { return code.id === codeId })
-        if (code) {
-          let parentCode = code.getAncestorCode()
-          let firstLevelCode = _.find(parentCode.codes, (firstLevelChild) => { return code.isChildOf(firstLevelChild) || code === firstLevelChild })
-          if (_.has(parentCodes, parentCode.id) && firstLevelCode) {
-            if (_.has(parentCodes[parentCode.id].chosenCodes, firstLevelCode.id)) {
-              parentCodes[parentCode.id].chosenCodes[firstLevelCode.id].annotations.push(codingAnnotationForPrimaryStudy)
-              if (validatingAnnotation) {
-                parentCodes[parentCode.id].chosenCodes[firstLevelCode.id].validatingAnnotation = validatingAnnotation
-              }
-            } else {
-              // If chosen code is parent itself
-              if (parentCode.id !== code.id && firstLevelCode) {
-                // If chosen code is new
-                parentCodes[parentCode.id].chosenCodes[firstLevelCode.id] = new Code({codeId: firstLevelCode.id, codeName: firstLevelCode.name, annotations: [codingAnnotationForPrimaryStudy], validatingAnnotation})
-              } else if (parentCode.id === code.id) {
-                parentCodes[parentCode.id].itself = [codingAnnotationForPrimaryStudy]
+        if (codingAnnotationForPrimaryStudy.body) {
+          let codeId = codingAnnotationForPrimaryStudy.body.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '')
+          let code = _.find(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => { return code.id === codeId })
+          if (code) {
+            let parentCode = code.getAncestorCode()
+            let firstLevelCode = _.find(parentCode.codes, (firstLevelChild) => { return code.isChildOf(firstLevelChild) || code === firstLevelChild })
+            if (_.has(parentCodes, parentCode.id) && firstLevelCode) {
+              if (_.has(parentCodes[parentCode.id].chosenCodes, firstLevelCode.id)) {
+                parentCodes[parentCode.id].chosenCodes[firstLevelCode.id].annotations.push(codingAnnotationForPrimaryStudy)
                 if (validatingAnnotation) {
-                  parentCodes[parentCode.id].validatingAnnotation = validatingAnnotation
+                  parentCodes[parentCode.id].chosenCodes[firstLevelCode.id].validatingAnnotation = validatingAnnotation
+                }
+              } else {
+                // If chosen code is parent itself
+                if (parentCode.id !== code.id && firstLevelCode) {
+                  // If chosen code is new
+                  parentCodes[parentCode.id].chosenCodes[firstLevelCode.id] = new Code({url, codeId: firstLevelCode.id, codeName: firstLevelCode.name, annotations: [codingAnnotationForPrimaryStudy], validatingAnnotation})
+                } else if (parentCode.id === code.id) {
+                  parentCodes[parentCode.id].itself = [codingAnnotationForPrimaryStudy]
+                  if (validatingAnnotation) {
+                    parentCodes[parentCode.id].validatingAnnotation = validatingAnnotation
+                  }
                 }
               }
-            }
-          } else {
-            if (parentCode.id !== code.id && firstLevelCode) {
-              let chosenCodes = {}
-              chosenCodes[firstLevelCode.id] = new Code({codeId: firstLevelCode.id, codeName: firstLevelCode.name, annotations: [codingAnnotationForPrimaryStudy], validatingAnnotation})
-              parentCodes[parentCode.id] = new Codes({parentCode, chosenCodes, multivalued: parentCode.multivalued})
-            } else if (parentCode.id === code.id) {
-              if (parentCodes[parentCode.id]) {
-                parentCodes[parentCode.id].itself = codingAnnotationForPrimaryStudy
-              } else {
-                parentCodes[parentCode.id] = new Codes({parentCode, multivalued: parentCode.multivalued, itself: codingAnnotationForPrimaryStudy, validatingAnnotation})
+            } else {
+              if (parentCode.id !== code.id && firstLevelCode) {
+                let chosenCodes = {}
+                chosenCodes[firstLevelCode.id] = new Code({url, codeId: firstLevelCode.id, codeName: firstLevelCode.name, annotations: [codingAnnotationForPrimaryStudy], validatingAnnotation})
+                parentCodes[parentCode.id] = new Codes({url, parentCode, chosenCodes, multivalued: parentCode.multivalued})
+              } else if (parentCode.id === code.id) {
+                if (parentCodes[parentCode.id]) {
+                  parentCodes[parentCode.id].itself = codingAnnotationForPrimaryStudy
+                } else {
+                  parentCodes[parentCode.id] = new Codes({url, parentCode, multivalued: parentCode.multivalued, itself: codingAnnotationForPrimaryStudy, validatingAnnotation})
+                }
               }
             }
           }
@@ -274,11 +289,19 @@ class PrimaryStudy {
   toSpreadsheetRow (codesColumnCalc) {
     let cells = []
     // Title column
-    cells.push({
-      userEnteredValue: {
-        formulaValue: '=HYPERLINK("' + this.url + '", "' + this.title + '")'
-      }
-    })
+    if (this.url) {
+      cells.push({
+        userEnteredValue: {
+          formulaValue: '=HYPERLINK("' + this.url + '", "' + this.title + '")'
+        }
+      })
+    } else {
+      cells.push({
+        userEnteredValue: {
+          stringValue: this.title
+        }
+      })
+    }
     // Calculate the rest of the columns based on columnsCalc
     for (let i = 0; i < codesColumnCalc.length; i++) {
       let lengthOfCurrentColumn = codesColumnCalc[i].columns
@@ -306,7 +329,8 @@ class PrimaryStudy {
 }
 
 class Code {
-  constructor ({codeId, codeName, annotations, validatingAnnotation}) {
+  constructor ({url, codeId, codeName, annotations, validatingAnnotation}) {
+    this.url = url
     this.codeId = codeId
     this.codeName = codeName
     this.annotations = annotations
@@ -323,7 +347,7 @@ class Code {
       }
       return {
         userEnteredValue: {
-          formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + this.codeName + '")'
+          formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + this.codeName + '")'
         },
         userEnteredFormat: {
           backgroundColor: HyperSheetColors.green
@@ -341,7 +365,7 @@ class Code {
         if (allUsersWithThisCode) {
           return {
             userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + this.codeName + '")'
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + this.codeName + '")'
             },
             userEnteredFormat: {
               backgroundColor: HyperSheetColors.yellow
@@ -350,7 +374,7 @@ class Code {
         } else {
           return {
             userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + this.codeName + '")'
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + this.codeName + '")'
             },
             userEnteredFormat: {
               backgroundColor: HyperSheetColors.red
@@ -362,7 +386,7 @@ class Code {
         let annotation = this.annotations[0]
         return {
           userEnteredValue: {
-            formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + this.codeName + '")'
+            formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + this.codeName + '")'
           }
         }
       }
@@ -386,7 +410,8 @@ Code.status = {
 }
 
 class Codes {
-  constructor ({parentCode, chosenCodes = {}, itself, multivalued = false, validatingAnnotation}) {
+  constructor ({url, parentCode, chosenCodes = {}, itself, multivalued = false, validatingAnnotation}) {
+    this.url = url
     this.parentCode = parentCode
     this.chosenCodes = chosenCodes
     this.itself = itself
@@ -428,7 +453,7 @@ class Codes {
           }
           return [{
             userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + validatedCode.codeName + '")'
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + validatedCode.codeName + '")'
             },
             userEnteredFormat: {
               backgroundColor: HyperSheetColors.green
@@ -441,7 +466,7 @@ class Codes {
             // Conflict
             return [{
               userEnteredValue: {
-                formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
+                formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
               },
               userEnteredFormat: {
                 backgroundColor: HyperSheetColors.red
@@ -467,7 +492,7 @@ class Codes {
               // All reviewers has annotated with that code and more than one reviewer has codified the PS
               return [{
                 userEnteredValue: {
-                  formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
+                  formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
                 },
                 userEnteredFormat: {
                   backgroundColor: HyperSheetColors.yellow
@@ -477,7 +502,7 @@ class Codes {
               // Not all reviewers has annotated with that code or there is only one reviewer that has codified the PS
               return [{
                 userEnteredValue: {
-                  formulaValue: '=HYPERLINK("' + annotation.uri + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
+                  formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
                 }
               }]
             }
@@ -495,7 +520,7 @@ class Codes {
         if (this.validatingAnnotation) {
           return [
             {userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + this.itself.uri + '#hag:' + this.itself.id + '", "' + quote + '")'
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id + '", "' + quote + '")'
             },
             userEnteredFormat: {
               backgroundColor: HyperSheetColors.yellow
@@ -503,7 +528,7 @@ class Codes {
             }]
         } else {
           return [{userEnteredValue: {
-            formulaValue: '=HYPERLINK("' + this.itself.uri + '#hag:' + this.itself.id + '", "' + quote + '")'
+            formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id + '", "' + quote + '")'
           }}]
         }
       }
