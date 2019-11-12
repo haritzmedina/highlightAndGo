@@ -6,6 +6,7 @@ const Events = require('../Events')
 const DOMTextUtils = require('../../utils/DOMTextUtils')
 const PDFTextUtils = require('../../utils/PDFTextUtils')
 const LanguageUtils = require('../../utils/LanguageUtils')
+const HypothesisClientManager = require('../../storage/hypothesis/HypothesisClientManager')
 const Alerts = require('../../utils/Alerts')
 const $ = require('jquery')
 require('jquery-contextmenu/dist/jquery.contextMenu')
@@ -186,7 +187,11 @@ class TextAnnotator extends ContentAnnotator {
       let range = document.getSelection().getRangeAt(0)
       let selectors = TextAnnotator.getSelectors(range)
       // Construct the annotation to send to hypothesis
-      let annotation = TextAnnotator.constructAnnotation(selectors, event.detail.code)
+      let annotation = TextAnnotator.constructAnnotation({
+        selectors,
+        codeName: event.detail.code.name,
+        body: window.abwa.storageManager.storageMetadata.annotationUrl + event.detail.code.id
+      })
       window.abwa.storageManager.client.createNewAnnotation(annotation, (err, annotation) => {
         if (err) {
           window.alert('Unexpected error, unable to create annotation')
@@ -210,9 +215,9 @@ class TextAnnotator extends ContentAnnotator {
   static getSelectors (range) {
     let selectors = []
     // Create FragmentSelector
-    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'FragmentSelector' }) !== -1) {
+    if (_.findIndex(window.abwa.contentTypeManager.documentFormat.selectors, (elem) => { return elem === 'FragmentSelector' }) !== -1) {
       let fragmentSelector = null
-      if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+      if (window.abwa.contentTypeManager.documentFormat === ContentTypeManager.documentFormat.pdf) {
         fragmentSelector = PDFTextUtils.getFragmentSelector(range)
       } else {
         fragmentSelector = DOMTextUtils.getFragmentSelector(range)
@@ -222,14 +227,14 @@ class TextAnnotator extends ContentAnnotator {
       }
     }
     // Create RangeSelector
-    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'RangeSelector' }) !== -1) {
+    if (_.findIndex(window.abwa.contentTypeManager.documentFormat.selectors, (elem) => { return elem === 'RangeSelector' }) !== -1) {
       let rangeSelector = DOMTextUtils.getRangeSelector(range)
       if (rangeSelector) {
         selectors.push(rangeSelector)
       }
     }
     // Create TextPositionSelector
-    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextPositionSelector' }) !== -1) {
+    if (_.findIndex(window.abwa.contentTypeManager.documentFormat.selectors, (elem) => { return elem === 'TextPositionSelector' }) !== -1) {
       let rootElement = window.abwa.contentTypeManager.getDocumentRootElement()
       let textPositionSelector = DOMTextUtils.getTextPositionSelector(range, rootElement)
       if (textPositionSelector) {
@@ -237,7 +242,7 @@ class TextAnnotator extends ContentAnnotator {
       }
     }
     // Create TextQuoteSelector
-    if (_.findIndex(window.abwa.contentTypeManager.documentType.selectors, (elem) => { return elem === 'TextQuoteSelector' }) !== -1) {
+    if (_.findIndex(window.abwa.contentTypeManager.documentFormat.selectors, (elem) => { return elem === 'TextQuoteSelector' }) !== -1) {
       let textQuoteSelector = DOMTextUtils.getTextQuoteSelector(range)
       if (textQuoteSelector) {
         selectors.push(textQuoteSelector)
@@ -246,77 +251,69 @@ class TextAnnotator extends ContentAnnotator {
     return selectors
   }
 
-  static constructAnnotation (selectors, code) {
+  static constructAnnotation ({
+    selectors,
+    motivation = 'classifying',
+    id = '',
+    creator = window.abwa.groupSelector.getCreatorData(),
+    body,
+    group = window.abwa.groupSelector.currentGroup.id,
+    permissions = {read: ['group:' + window.abwa.groupSelector.currentGroup.id]},
+    target,
+    text = '',
+    references = [],
+    context = ['http://www.w3.org/ns/anno.jsonld', 'https://schema.datacite.org/meta/kernel-4.3/metadata.xsd'],
+    codeName
+  }) {
+    let tags = ['motivation:' + motivation]
+    if (codeName) {
+      tags.push('slr:code:' + codeName)
+    }
     let data = {
-      '@context': 'http://www.w3.org/ns/anno.jsonld',
-      'motivation': 'classifying',
-      creator: window.abwa.groupSelector.getCreatorData() || '',
-      group: window.abwa.groupSelector.currentGroup.id,
-      body: window.abwa.storageManager.storageMetadata.annotationUrl + code.id,
-      document: {},
-      permissions: {
-        read: ['group:' + window.abwa.groupSelector.currentGroup.id]
-      },
-      references: [],
-      tags: ['slr:code:' + code.name, 'motivation:classifying'], // TODO Should we add all the parent codes as tags?
-      target: [{
+      '@context': context,
+      '@id': id,
+      '@type': 'Annotation',
+      'motivation': motivation,
+      creator: creator || '',
+      group: group,
+      body: body,
+      permissions: permissions,
+      references: references,
+      tags: tags,
+      // tags: ['slr:code:' + code.name, 'motivation:classifying'], // TODO Should we add all the parent codes as tags?
+      target: target || [{
         selector: selectors
       }],
-      text: '',
-      uri: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
+      text: text
     }
-    // TODO Must review how to improve this representation retrieving everything: URL, URN, DOI,... and avoiding duplications
-    // For pdf files it is also send the relationship between pdf fingerprint and web url
-    if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
-      let pdfFingerprint = window.abwa.contentTypeManager.pdfFingerprint
-      data.document = {
-        documentFingerprint: pdfFingerprint,
-        link: [{
-          href: 'urn:x-pdf:' + pdfFingerprint
-        }, {
-          href: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
-        }]
+    // As hypothes.is don't follow some attributes of W3C, we must adapt created annotation with its own attributes to set the target source
+    if (LanguageUtils.isInstanceOf(window.abwa.storageManager, HypothesisClientManager)) {
+      // Add uri attribute
+      data.uri = window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
+      // Add document, uris, title, etc.
+      let uris = window.abwa.contentTypeManager.getDocumentURIs()
+      data.document = {}
+      if (uris.urn) {
+        data.document.documentFingerprint = uris.urn
       }
+      data.document.link = Object.values(uris).map(uri => { return {href: uri} })
+      if (uris.doi) {
+        data.document.dc = { identifier: [uris.doi] }
+        data.document.highwire = { doi: [uris.doi] }
+      }
+      // If document title is retrieved
+      if (_.isString(window.abwa.contentTypeManager.documentTitle)) {
+        data.document.title = window.abwa.contentTypeManager.documentTitle
+      }
+      // Copy to metadata field because hypothes.is doesn't return from its API all the data that it is placed in document
+      data.documentMetadata = data.document
     }
-    // If doi is available, add it to the annotation
-    if (!_.isEmpty(window.abwa.contentTypeManager.doi)) {
-      let doi = window.abwa.contentTypeManager.doi
-      data.document.dc = { identifier: [doi] }
-      data.document.highwire = { doi: [doi] }
-      data.document.link = data.document.link || []
-      data.document.link.push({href: 'doi:' + doi})
-    }
-    // If citation pdf is found
-    if (!_.isEmpty(window.abwa.contentTypeManager.citationPdf)) {
-      let pdfUrl = window.abwa.contentTypeManager.doi
-      data.document.link = data.document.link || []
-      data.document.link.push({href: pdfUrl, type: 'application/pdf'})
-    }
-    // If document title is retrieved
-    if (_.isString(window.abwa.contentTypeManager.documentTitle)) {
-      data.document.title = window.abwa.contentTypeManager.documentTitle
-    }
-    // Add everything as a target source
-    let source = []
-    if (window.abwa.contentTypeManager.doi) {
-      source.push({
-        id: 'https://doi.org/' + window.abwa.contentTypeManager.doi
-      })
-    }
-    if (window.abwa.contentTypeManager.pdfFingerprint) {
-      source.push({id: 'urn:x-pdf:' + window.abwa.contentTypeManager.pdfFingerprint})
-    }
-    if (window.abwa.contentTypeManager.documentURL) {
-      source.push({id: window.abwa.contentTypeManager.documentURL})
-    }
-    if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
-      source.forEach((elem) => {
-        elem.type = 'application/pdf'
-      })
-    }
+    let source = window.abwa.contentTypeManager.getDocumentURIs()
+    // Get document title
+    source['title'] = window.abwa.contentTypeManager.documentTitle || ''
+    // Get UUID for current target
+    source['id'] = window.abwa.contentTypeManager.getDocumentId()
     data.target[0].source = source // Add source to the target
-    data.documentMetadata = data.document // Copy to metadata field because hypothes.is doesn't return from its API all the data that it is placed in document
-    data.uris = window.abwa.contentTypeManager.getDocumentURIs()
     return data
   }
 
@@ -326,10 +323,10 @@ class TextAnnotator extends ContentAnnotator {
       type: 'Annotation',
       motivation: 'assessing',
       group: window.abwa.groupSelector.currentGroup.id,
-      body: [{
+      body: {
         type: 'TextualBody',
         value: text
-      }],
+      },
       creator: window.abwa.groupSelector.getCreatorData() || '',
       'oa:target': window.abwa.storageManager.storageMetadata.annotationUrl + validatedAnnotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, ''),
       permissions: {
@@ -342,11 +339,7 @@ class TextAnnotator extends ContentAnnotator {
       uri: window.abwa.contentTypeManager.getDocumentURIToSaveInStorage()
     }
     if (agreement) {
-      data.body.push({
-        type: 'SpecificResource',
-        purpose: 'assessing',
-        value: agreement
-      })
+      data.agreement = agreement
     }
     return data
   }
@@ -620,8 +613,7 @@ class TextAnnotator extends ContentAnnotator {
           })
           validatingAnnotations.forEach((validatingAnnotation) => {
             let userName = validatingAnnotation.user.replace('acct:', '').replace('@hypothes.is', '')
-            let assessingBody = validatingAnnotation.body.find(body => { return body.purpose === 'assessing' })
-            let agreement = assessingBody.value
+            let agreement = validatingAnnotation.agreement
             if (agreement === 'agree') {
               highlightedElement.title += '\nReviewer ' + userName + ' agrees: '
             } else if (agreement === 'disagree') {
@@ -815,16 +807,10 @@ class TextAnnotator extends ContentAnnotator {
                 confirmButtonText: 'Validate',
                 input: 'textarea',
                 onOpen: () => {
-                  if (currentUserValidateAnnotation) {
-                    let assessingBody = currentUserValidateAnnotation.body.find(body => { return body.purpose === 'assessing' })
-                    if (assessingBody) {
-                      let agreement = assessingBody.value
-                      if (agreement === 'agree') {
-                        document.querySelector('#agreeRadio').checked = 'checked'
-                      } else if (agreement === 'disagree') {
-                        document.querySelector('#disagreeRadio').checked = 'checked'
-                      }
-                    }
+                  if (currentUserValidateAnnotation && currentUserValidateAnnotation.agreement === 'agree') {
+                    document.querySelector('#agreeRadio').checked = 'checked'
+                  } else if (currentUserValidateAnnotation && currentUserValidateAnnotation.agreement === 'disagree') {
+                    document.querySelector('#disagreeRadio').checked = 'checked'
                   }
                 },
                 preConfirm: () => {
@@ -843,16 +829,7 @@ class TextAnnotator extends ContentAnnotator {
                       // Update already created annotation for assessing
                       currentUserValidateAnnotation.text = form.text
                       if (form.agreement) {
-                        let assessingBody = currentUserValidateAnnotation.body.find(body => { return body.purpose === 'assessing' })
-                        if (assessingBody) {
-                          assessingBody.value = form.agreement
-                        } else {
-                          currentUserValidateAnnotation.body.push({
-                            type: 'SpecificResource',
-                            value: form.agreement,
-                            purpose: 'assessing'
-                          })
-                        }
+                        currentUserValidateAnnotation.agreement = form.agreement
                       }
                       window.abwa.storageManager.client.updateAnnotation(currentUserValidateAnnotation.id, currentUserValidateAnnotation, (err, assessmentAnnotationResult) => {
                         if (err) {
@@ -935,7 +912,7 @@ class TextAnnotator extends ContentAnnotator {
 
   goToAnnotation (annotation) {
     // If document is pdf, the DOM is dynamic, we must scroll to annotation using PDF.js FindController
-    if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+    if (window.abwa.contentTypeManager.documentFormat === ContentTypeManager.documentFormat.pdf) {
       let queryTextSelector = _.find(annotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
       if (queryTextSelector && queryTextSelector.exact) {
         // Get page for the annotation
@@ -1007,7 +984,7 @@ class TextAnnotator extends ContentAnnotator {
     if (window.abwa.annotationBasedInitializer.initAnnotation) {
       let initAnnotation = window.abwa.annotationBasedInitializer.initAnnotation
       // If document is pdf, the DOM is dynamic, we must scroll to annotation using PDF.js FindController
-      if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+      if (window.abwa.contentTypeManager.documentFormat === ContentTypeManager.documentFormat.pdf) {
         let queryTextSelector = _.find(initAnnotation.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
         if (queryTextSelector && queryTextSelector.exact) {
           window.PDFViewerApplication.findController.executeCommand('find', {query: queryTextSelector.exact, phraseSearch: true})
@@ -1037,7 +1014,7 @@ class TextAnnotator extends ContentAnnotator {
   }
 
   initRemoveOverlaysInPDFs () {
-    if (window.abwa.contentTypeManager.documentType === ContentTypeManager.documentTypes.pdf) {
+    if (window.abwa.contentTypeManager.documentFormat === ContentTypeManager.documentFormat.pdf) {
       this.removeOverlaysInterval = setInterval(() => {
         // Remove third party made annotations created overlays periodically
         document.querySelectorAll('section[data-annotation-id]').forEach((elem) => { $(elem).remove() })
