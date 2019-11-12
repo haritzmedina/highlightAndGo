@@ -6,7 +6,7 @@ const jsonld = require('jsonld')
 // Configuration constants
 const now = new Date()
 var contextus = []
-var contextualization = [ 'http://www.w3.org/ns/anno.jsonld', {"datacite":"http://purl.org/spar/datacite/", "urn":"datacite:urn", "url":"datacite:url", "doi":"datacite:doi"}, {"dcterms": "http://purl.org/dc/terms/", "title": "dcterms:title", "created": "dcterms:created", "modified": "dcterms:modified"}, { '@vocab': 'http://rdf.onekin.org/resources/ns/' } ]
+var contextualization = [ 'http://www.w3.org/ns/anno.jsonld', {"assessing":"oa:assessing", "slr":"http://rdf.onekin.org/resource/ns/slr/"}, {"datacite":"http://purl.org/spar/datacite/", "urn":"datacite:urn", "url":"datacite:url", "doi":"datacite:doi"}, {"dcterms": "http://purl.org/dc/terms/", "title": "dcterms:title", "created": "dcterms:created", "modified": "dcterms:modified"}, { '@vocab': 'http://rdf.onekin.org/resources/ns/' } ]
 
 /// /UTILS
 function doNothing () {}
@@ -328,6 +328,7 @@ class Neo4JClient {
    * @param callback Function to execute after annotation creation
    */
   createNewAnnotation (data, callback) {
+    debuggingg (JSON.stringify(data, null, 4) )
     sleep(100)
     if (!data['@type'] && !data['type']) {
       data['@type'] = 'Annotation'
@@ -365,7 +366,7 @@ class Neo4JClient {
     data['modified'] = dateTime
 
     data['@context'] = contextualization
-    let q = `CALL semantics.importRDFSnippet(' ` + escapify(data) + `', 'JSON-LD', { handleMultival: 'ARRAY' , multivalPropList : ['http://rdf.onekin.org/resources/ns/references','http://rdf.onekin.org/resources/ns/tags']})`
+    let q = `CALL semantics.importRDFSnippet(' ` + escapify(data) + `', 'JSON-LD', { handleMultival: 'ARRAY' , multivalPropList : ['http://www.w3.org/ns/oa#hasBody', 'http://rdf.onekin.org/resources/ns/references','http://rdf.onekin.org/resources/ns/tags']})`
     debuggingg(' PRE-QUERY>> ' + q)
     commitNeo4J(q, (err, result) => {
       if (err) {
@@ -539,7 +540,7 @@ class Neo4JClient {
       this.deleteAnnotation(data, (err, res) => {
         if (err) console.error(err)
         data.created = res.created
-        alert (data.created)
+        //alert (data.created)
         this.createNewAnnotation(data, callback)
       })
   }
