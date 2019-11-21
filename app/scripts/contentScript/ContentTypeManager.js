@@ -5,6 +5,7 @@ const LanguageUtils = require('../utils/LanguageUtils')
 const CryptoUtils = require('../utils/CryptoUtils')
 const RandomUtils = require('../utils/RandomUtils')
 const axios = require('axios')
+const DOI = require('doi-regex')
 
 const URL_CHANGE_INTERVAL_IN_SECONDS = 1
 
@@ -102,21 +103,34 @@ class ContentTypeManager {
     // Try to load doi from hash param
     let decodedUri = decodeURIComponent(window.location.href)
     let params = URLUtils.extractHashParamsFromUrl(decodedUri)
-    if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
-      this.doi = decodeURIComponent(params.doi)
+    if (!_.isEmpty(params) && !_.isEmpty(params.doi) && params.doi !== 'null') {
+      let doiParamDecoded = decodeURIComponent(params.doi)
+      if (this.isDOI(doiParamDecoded)) {
+        this.doi = doiParamDecoded
+      }
     }
     // Try to load doi from page metadata
     if (_.isEmpty(this.doi)) {
       try {
-        this.doi = document.querySelector('meta[name="citation_doi"]').content
+        let citationDoi = document.querySelector('meta[name="citation_doi"]').content
+        if (this.isDOI(citationDoi)) {
+          this.doi = citationDoi
+        }
         if (!this.doi) {
-          this.doi = document.querySelector('meta[name="dc.identifier"]').content
+          let dcIdentifier = document.querySelector('meta[name="dc.identifier"]').content
+          if (this.isDOI(dcIdentifier)) {
+            this.doi = dcIdentifier
+          }
         }
       } catch (e) {
         console.debug('Doi not found for this document')
       }
     }
     // TODO Try to load doi from chrome tab storage
+  }
+
+  isDOI (doiString) {
+    return DOI({exact: true}).test(doiString)
   }
 
   tryToLoadURLParam () {
@@ -234,7 +248,7 @@ class ContentTypeManager {
               this.documentTitle = documentTitleElement.content
             }
             if (!this.documentTitle) {
-              let promise = new Promise((resolve, reject) => {
+              let promise = new Promise((resolve) => {
                 // Try to load title from pdf metadata
                 if (this.documentFormat === ContentTypeManager.documentFormat.pdf) {
                   this.waitUntilPDFViewerLoad(() => {
