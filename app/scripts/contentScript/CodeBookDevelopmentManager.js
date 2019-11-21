@@ -481,8 +481,13 @@ class CodeBookDevelopmentManager {
           preConfirm: () => {
             // Check if code name is empty
             code.name = document.querySelector('#newCodeName').value
-            code.description = document.querySelector('#newCodeDescription').value
-            code.multivalued = !!document.querySelector('#newCodeMultivalued').checked
+            if (code.name.length === 0) {
+              const swal = require('sweetalert2')
+              swal.showValidationMessage('Code name cannot be empty')
+            } else {
+              code.description = document.querySelector('#newCodeDescription').value
+              code.multivalued = !!document.querySelector('#newCodeMultivalued').checked
+            }
           },
           callback: (err, result) => {
             if (err) {

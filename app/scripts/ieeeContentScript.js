@@ -12,51 +12,93 @@ class IEEEContentScript {
     // Get url params
     let params = URLUtils.extractHashParamsFromUrl(window.location.href)
     // Get document doi
-    if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
-      this.doi = decodeURIComponent(params.doi)
-    } else {
-      // Scrap the doi from web
-      this.doi = this.findDoi()
-    }
-    // Get pdf link element
-    let pdfLinkElement = this.getPdfLinkElement()
-    if (pdfLinkElement) {
-      // Get if this tab has an annotation to open
-      if (!_.isEmpty(params) && !_.isEmpty(params.hag)) {
-        // Activate the extension
-        chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, (result) => {
-          console.debug('Activated popup')
-          // Retrieve pdf url
-          let pdfUrl = pdfLinkElement.href
-          // Create hash with required params to open extension
-          let hash = '#hag:' + params.hag
-          if (this.doi) {
-            hash += '&doi:' + this.doi
-          }
-          // Append hash to pdf url
-          pdfUrl += hash
-          // Redirect browser to pdf
-          window.location.replace(pdfUrl)
-        })
+    let getDOIPromise = new Promise((resolve) => {
+      if (!_.isEmpty(params) && !_.isEmpty(params.doi)) {
+        this.doi = decodeURIComponent(params.doi)
+        resolve()
       } else {
-        // Append doi to PDF url
-        if (pdfLinkElement) {
-          pdfLinkElement.href += '#doi:' + this.doi
+        // Scrap the doi from web
+        this.findDoi((err, doi) => {
+          if (err) {
+            resolve()
+          } else {
+            this.doi = doi
+            resolve()
+          }
+        })
+      }
+    })
+    getDOIPromise.then(() => {
+      // Get pdf link element
+      let pdfLinkElement = this.getPdfLinkElement()
+      if (pdfLinkElement) {
+        // Get if this tab has an annotation to open
+        if (!_.isEmpty(params) && !_.isEmpty(params.hag)) {
+          // Activate the extension
+          chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, () => {
+            console.debug('Activated popup')
+            // Retrieve pdf url
+            let pdfUrl = pdfLinkElement.href
+            // Create hash with required params to open extension
+            let hash = '#hag:' + params.hag
+            if (this.doi) {
+              hash += '&doi:' + this.doi
+            }
+            // Append hash to pdf url
+            pdfUrl += hash
+            // Redirect browser to pdf
+            window.location.replace(pdfUrl)
+          })
+        } else {
+          // Append doi to PDF url
+          if (this.doi) {
+            pdfLinkElement.href += '#doi:' + this.doi
+          }
         }
       }
-    }
+    })
   }
 
   /**
-   * Depending on the article, the ACM-DL shows the DOI in different parts of the document. This function tries to find in the DOM the DOI for the current paper
-   * @returns {*}
+   * This function tries to find in the DOM the DOI for the current paper. As IEEE loads dynamically the web content, we must wait until element with DOI is loaded
+   * @param callback
    */
-  findDoi () {
-    let doiElement = document.querySelector('[href*="doi.org"]')
-    if (this.checkIfDoiElement(doiElement)) {
-      return doiElement.innerText
+  findDoi (callback) {
+    // DOI is loaded dynamically as the metadata of the webpage is loaded
+    this.waitForDOIElement((err, doiElement) => {
+      if (err) {
+        // Nothing to do
+      } else {
+        if (doiElement && this.isDOI(doiElement.innerText)) {
+          callback(null, doiElement.innerText)
+        } else {
+          callback(new Error('Unable to retrieve doi from webpage'))
+        }
+      }
+    })
+  }
+
+  isDOI (doiString) {
+    return DOI({exact: true}).test(doiString)
+  }
+
+  waitForDOIElement (callback) {
+    let counter = 0
+    let checkDOIElementLoads = () => {
+      let doiElement = document.querySelector('[href*="doi.org"]')
+      if (_.isElement(doiElement)) {
+        callback(null, doiElement)
+      } else {
+        if (counter > 20) {
+          console.debug('Unable to retrieve doi from webpage')
+          callback(new Error('Unable to retrieve doi from webpage'))
+        } else {
+          counter++
+          setTimeout(checkDOIElementLoads, 500)
+        }
+      }
     }
-    return null
+    checkDOIElementLoads()
   }
 
   checkIfDoiElement (doiElement) {
@@ -86,7 +128,7 @@ class IEEEContentScript {
       // Get if this tab has an annotation to open
       if (!_.isEmpty(params) && !_.isEmpty(params.hag)) {
         // Activate the extension
-        chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, (result) => {
+        chrome.runtime.sendMessage({scope: 'extension', cmd: 'activatePopup'}, () => {
           console.debug('Activated popup')
           // Retrieve pdf url
           let pdfUrl = iframeElement.src
@@ -102,10 +144,8 @@ class IEEEContentScript {
         })
       } else {
         // Append doi to PDF url
-        if (iframeElement) {
-          iframeElement.src += '#doi:' + this.doi
-          window.location.replace(iframeElement.src)
-        }
+        iframeElement.src += '#doi:' + this.doi
+        window.location.replace(iframeElement.src)
       }
     }
   }

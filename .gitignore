@@ -146,3 +146,6 @@ Temporary Items
 .apdisk
 
 /build/
+
+# Sonarlint
+.idea/sonarlint
