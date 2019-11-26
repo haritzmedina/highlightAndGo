@@ -51,17 +51,34 @@ class Background {
 
     // Initialize page_action event handler
     chrome.pageAction.onClicked.addListener((tab) => {
-      if (this.tabs[tab.id]) {
-        if (this.tabs[tab.id].activated) {
-          this.tabs[tab.id].deactivate()
+      // Do we have access to file to annotate?
+      let checkResourceAccess = new Promise((resolve) => {
+        if (tab.url.startsWith('file://')) {
+          chrome.extension.isAllowedFileSchemeAccess((isAllowedAccess) => {
+            if (isAllowedAccess === false) {
+              chrome.tabs.create({url: chrome.runtime.getURL('pages/filePermission.html')})
+            } else {
+              resolve()
+            }
+          })
         } else {
+          resolve()
+        }
+      })
+      checkResourceAccess.then(() => { // Has access permission
+        if (this.tabs[tab.id]) {
+          if (this.tabs[tab.id].activated) {
+            this.tabs[tab.id].deactivate()
+          } else {
+            this.tabs[tab.id].activate()
+          }
+        } else {
+          this.tabs[tab.id] = new Popup()
           this.tabs[tab.id].activate()
         }
-      } else {
-        this.tabs[tab.id] = new Popup()
-        this.tabs[tab.id].activate()
-      }
+      })
     })
+
     // On tab is reloaded
     chrome.tabs.onUpdated.addListener((tabId) => {
       if (this.tabs[tabId]) {
