@@ -347,7 +347,7 @@ class Code {
       }
       return {
         userEnteredValue: {
-          formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + this.codeName + '")'
+          formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + this.codeName + '")'
         },
         userEnteredFormat: {
           backgroundColor: HyperSheetColors.green
@@ -365,7 +365,7 @@ class Code {
         if (allUsersWithThisCode) {
           return {
             userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + this.codeName + '")'
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + this.codeName + '")'
             },
             userEnteredFormat: {
               backgroundColor: HyperSheetColors.yellow
@@ -374,7 +374,7 @@ class Code {
         } else {
           return {
             userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + this.codeName + '")'
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + this.codeName + '")'
             },
             userEnteredFormat: {
               backgroundColor: HyperSheetColors.red
@@ -386,7 +386,7 @@ class Code {
         let annotation = this.annotations[0]
         return {
           userEnteredValue: {
-            formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + this.codeName + '")'
+            formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + this.codeName + '")'
           }
         }
       }
@@ -453,7 +453,7 @@ class Codes {
           }
           return [{
             userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + validatedCode.codeName + '")'
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + validatedCode.codeName + '")'
             },
             userEnteredFormat: {
               backgroundColor: HyperSheetColors.green
@@ -466,7 +466,7 @@ class Codes {
             // Conflict
             return [{
               userEnteredValue: {
-                formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
+                formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + chosenCodes[0].codeName + '")'
               },
               userEnteredFormat: {
                 backgroundColor: HyperSheetColors.red
@@ -492,7 +492,7 @@ class Codes {
               // All reviewers has annotated with that code and more than one reviewer has codified the PS
               return [{
                 userEnteredValue: {
-                  formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
+                  formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + chosenCodes[0].codeName + '")'
                 },
                 userEnteredFormat: {
                   backgroundColor: HyperSheetColors.yellow
@@ -502,7 +502,7 @@ class Codes {
               // Not all reviewers has annotated with that code or there is only one reviewer that has codified the PS
               return [{
                 userEnteredValue: {
-                  formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id + '", "' + chosenCodes[0].codeName + '")'
+                  formulaValue: '=HYPERLINK("' + this.url + '#hag:' + annotation.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + chosenCodes[0].codeName + '")'
                 }
               }]
             }
@@ -520,7 +520,7 @@ class Codes {
         if (this.validatingAnnotation) {
           return [
             {userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id + '", "' + quote + '")'
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
             },
             userEnteredFormat: {
               backgroundColor: HyperSheetColors.yellow
@@ -528,7 +528,7 @@ class Codes {
             }]
         } else {
           return [{userEnteredValue: {
-            formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id + '", "' + quote + '")'
+            formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
           }}]
         }
       }

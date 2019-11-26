@@ -16,6 +16,16 @@ function sleep (miliseconds) {
   while (currentTime + miliseconds >= new Date().getTime()) { }
 }
 
+function getObjectId (data, id) {
+  for (let i = 0; i < data.length; i++) {
+    let item = data [i]
+    if (item.id == id){
+      return item
+    }
+  }
+  return data
+}
+
 
 /*
 function isString (value) {
@@ -88,6 +98,10 @@ function traverse (o) {
     }
     if (i === 'description') {
       o[i] = unescape(o[i])
+    }
+    if (o[i]['@value'] && o[i]['type']=== 'xsd:long') {
+      //alert (parseInt(o[i]['@value']))
+        o[i] = parseInt(o[i]['@value'])
     }
     if (i === 'group' && o[i] !== null && typeof (o[i]) === 'object') {
       o[i] = o[i]['@value']
@@ -173,7 +187,6 @@ function commitNeo4J (query, callback) {
 var verbose = true
 function debuggingg (msg, priority) {
   if (priority === true) verbose = true
-  verbose = true
   if (verbose) {
     console.debug('::>' + msg)
   }
@@ -300,18 +313,19 @@ class Neo4JClient {
     this.baseURI = 'http://localhost:7474'
     this.baseN4J = 'http://neo4j.com/base/'
     if (userName) {
-      this.userName = userName //  btoa(user+":"+password)  // IKER: base64-encoded string of username:password.
+      if (userName != "") this.userName = userName //  btoa(user+":"+password)  // IKER: base64-encoded string of username:password.
     }
     if (userToken) {
-      this.userToken = userToken //  btoa(user+":"+password)  // IKER: base64-encoded string of username:password.
+      if (userToken != "") this.userToken = userToken //  btoa(user+":"+password)  // IKER: base64-encoded string of username:password.
     }
+    //alert (this.userName+'::'+this.userToken )
     if (baseURI) {
       this.baseURI = baseURI //  btoa(user+":"+password)  // IKER: base64-encoded string of username:password.
     }
     this.group = {
       name: 'OpenSLR',
       description: 'Default Open Systematic Literature Review',
-      id: 1,
+      id: "1",
       url: this.baseURI
     }
     contextus.userName = this.userName
@@ -328,7 +342,7 @@ class Neo4JClient {
    * @param callback Function to execute after annotation creation
    */
   createNewAnnotation (data, callback) {
-    debuggingg (JSON.stringify(data, null, 4) )
+    console.debug (JSON.stringify(data, null, 4) )
     sleep(100)
     if (!data['@type'] && !data['type']) {
       data['@type'] = 'Annotation'
@@ -336,6 +350,7 @@ class Neo4JClient {
       data['@type'] = data['type']
       delete data['type']
     }
+    console.debug ('1')
     data['user'] = this.userName
     if (!data['@id'] && !data['id']) {
       data['@id'] = randomString()
@@ -351,11 +366,17 @@ class Neo4JClient {
       data['target'] = data['oa:target']
       delete data['oa:target']
     }
-
+console.debug ('2' + data['agreement'])
+    if (data['agreement']){
+      let gree = data['agreement']
+      let value = data['body']['value']
+      data['body']['value']= gree
+      data['body']['onekin__value'] = value
+    }
 
     data = escapalo (data)
     // data['permissions'] = null
-
+console.debug ('3')
     let today = new Date();
     var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate()
     var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds()
@@ -364,7 +385,7 @@ class Neo4JClient {
       data['created'] = dateTime
     }
     data['modified'] = dateTime
-
+console.debug ('4')
     data['@context'] = contextualization
     let q = `CALL semantics.importRDFSnippet(' ` + escapify(data) + `', 'JSON-LD', { handleMultival: 'ARRAY' , multivalPropList : ['http://www.w3.org/ns/oa#hasBody', 'http://rdf.onekin.org/resources/ns/references','http://rdf.onekin.org/resources/ns/tags']})`
     debuggingg(' PRE-QUERY>> ' + q)
@@ -382,7 +403,7 @@ class Neo4JClient {
         }
 
         data = descapalo (data)
-
+debuggingg ('result:: ' + JSON.stringify(data) )
         callback(null, data)
       }
     })
@@ -509,17 +530,27 @@ class Neo4JClient {
    */
   fetchAnnotation (id, callback) {
     let cypher = `match (r)<-[c]-(n)-[a]->(p)-[b]->(q) where n.uri = '` + this.baseN4J + id + `' return n,a,p,b,q, c, r`
-    debuggingg('FETCHING ID => ' + id)
+    debuggingg('FETCHING ID => ' + id + ':::' + cypher)
     cypherRDFNeo4J(cypher, (err, data) => {
       if (err) {
         console.error(err)
       } else {
-        let newdata = this.transformJSON(data)
+        let newdata = this.transformJSON(data, null, 2)
+        newdata = getObjectId (newdata, this.baseN4J + id)
+        if (!_.isArray(newdata.target)) {
+          let array = [newdata.target]
+          newdata.target = array
+          newdata['oa:target'] = newdata.target
+        } else {
+          newdata['oa:target'] = newdata.target
+        }
+        //alert (JSON.stringify (newdata, null, 2))
         callback(null, newdata)
       }
     })
     this.cleanGarbage()
   }
+
 
   cleanGarbage () {
     // let cypher = `MATCH (n:Resource) WHERE not ()--> (n) AND NOT (n) -->() DELETE n `
@@ -794,10 +825,10 @@ class Neo4JClient {
    * @return annotation json in required format
    */
   transformJSON (data) {
-    let txt = JSON.stringify(data, null, 1)
+    //let txt = JSON.stringify(data, null, 1)
     // txt = txt.replace(new RegExp('"id": "http://neo4j.com/base/', 'g'), '"id": "')
     // debuggingg('*******\nCJSON.parse :: \n ' + txt + '\n**********\n')
-    data = JSON.parse(txt)
+    //data = JSON.parse(txt)
     let ctxt = data['@context']
     let grafus = data['@graph'] || {}
     let idTextQuoteSelector = {}
