@@ -43,6 +43,11 @@
       "run_at": "document_end"
     },
     {
+      "matches": ["*://link.springer.com/*"],
+      "js": ["scripts/springerContentScript.js"],
+      "run_at": "document_end"
+    },
+    {
       "matches": [
         "https://hypothes.is/groups/*/*"
       ],
