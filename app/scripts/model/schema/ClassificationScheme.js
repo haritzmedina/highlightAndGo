@@ -53,6 +53,7 @@ class ClassificationScheme extends AnnotationGuide {
       let code = Code.fromAnnotation(codebookAnnotation, classificationScheme)
       codes.push(code)
     }
+    codes = _.compact(codes)
     // Create relationships between codes
     for (let i = 0; i < linkingAnnotations.length; i++) {
       let linkingAnnotation = linkingAnnotations[i]
