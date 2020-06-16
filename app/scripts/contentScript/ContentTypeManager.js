@@ -4,6 +4,7 @@ const URLUtils = require('../utils/URLUtils')
 const LanguageUtils = require('../utils/LanguageUtils')
 const CryptoUtils = require('../utils/CryptoUtils')
 const RandomUtils = require('../utils/RandomUtils')
+const Alerts = require('../utils/Alerts')
 const axios = require('axios')
 const DOI = require('doi-regex')
 
@@ -45,6 +46,7 @@ class ContentTypeManager {
       this.tryToLoadURL()
       this.tryToLoadURN()
       this.tryToLoadTargetId()
+      this.isOpenedDropboxViewer()
       if (this.url.startsWith('file:///')) {
         this.localFile = true
       } else if (this.documentFormat !== ContentTypeManager.documentFormat.pdf) { // If document is not pdf, it can change its URL
@@ -67,6 +69,20 @@ class ContentTypeManager {
       }
     }
     clearInterval(this.urlChangeInterval)
+  }
+
+  isOpenedDropboxViewer () {
+    let url = new URL(this.url)
+    if (url.host === 'www.dropbox.com' && url.search.includes('dl=0') && document.body) {
+      Alerts.confirmAlert({
+        text: 'You are trying to use Highlight&Go over dropbox custom viewer. <a target="_blank" href="https://github.com/haritzmedina/highlightAndGo/wiki/For-end-users#pdfs-stored-in-dropbox">We recommend</a> to use the native viewer from your browser for best experience. Would you like to load this document using the native viewer?',
+        title: 'Highlight&Go won`t work as expected',
+        alertType: Alerts.alertType.warning,
+        callback: () => {
+          window.open(url.origin + url.pathname + '?raw=1')
+        }
+      })
+    }
   }
 
   /**
