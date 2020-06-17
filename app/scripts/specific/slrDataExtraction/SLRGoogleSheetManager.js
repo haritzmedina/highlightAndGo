@@ -43,7 +43,18 @@ class SLRGoogleSheetManager {
           properties: {
             title: window.abwa.groupSelector.currentGroup.name,
             locale: 'en'
-          }
+          },
+          sheets: [
+            {
+              properties: {
+                gridProperties: {
+                  columnCount: 1000,
+                  rowCount: 2000
+                },
+                sheetId: 0
+              }
+            }
+          ]
         }
       }, (result) => {
         if (_.has(result.err)) {
@@ -211,12 +222,25 @@ class SLRGoogleSheetManager {
       // Retrieve annotated document url (doi or url)
       let url
       try {
+        // Most reliable annotation
         let annotationWithUrl = _.find(codingAnnotationsForPrimaryStudy, (annotation) => {
-          if (_.has(annotation, 'target[0].source')) {
-            return URLUtils.isUrl(annotation.target[0].source.url) || URLUtils.isUrl(annotation.target[0].source.doi) || URLUtils.isUrl(annotation.uri)
+          if (_.has(annotation, 'target[0].source') && _.has(annotation, 'documentMetadata.link')) {
+            let links = annotation.documentMetadata.link.map(l => l.href).concat(annotation.target[0].source)
+            return links.find(l => !l.includes('dropboxuser') && !l.startsWith('urn:'))
           }
         })
+        // If not found
+        if (!annotationWithUrl) {
+          annotationWithUrl = _.find(codingAnnotationsForPrimaryStudy, (annotation) => {
+            if (_.has(annotation, 'target[0].source')) {
+              return URLUtils.isUrl(annotation.target[0].source.url) || URLUtils.isUrl(annotation.target[0].source.doi) || URLUtils.isUrl(annotation.uri)
+            }
+          })
+        }
         url = annotationWithUrl.target[0].source.doi || annotationWithUrl.target[0].source.url || annotationWithUrl.uri
+        if (url.includes('https://www.dropbox.com') && url.endsWith('raw=1url')) {
+          url = url.replace('raw=1url', 'raw=1')
+        }
       } catch (e) {
         url = null
       }
