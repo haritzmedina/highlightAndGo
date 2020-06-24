@@ -27,11 +27,33 @@ if (_.isEmpty(window.abwa)) {
   let promise = new Promise((resolve) => {
     if (window.location.href.includes('dl.dropboxusercontent.com') && !window.location.href.includes('chrome-extension')) {
       chrome.runtime.onMessage.addListener((request, sender, sendresponse) => {
-        let location = window.location.href + 'url::' + request.url
-        if (request.annotationId) {
-          location += '&hag:' + request.annotationId
+        if (request.scope === 'dropbox' && request.cmd === 'redirection') {
+          let url = new URL(window.location.href)
+          if (!url.hash.includes('url:') && request.data.url) {
+            let location = window.location.href + 'url::' + request.data.url
+            if (request.data.annotationId) {
+              location += '&hag:' + request.data.annotationId
+            }
+            window.location.href = location
+          }
         }
-        window.location.href = location
+        resolve()
+      })
+    } else if (window.location.href.includes('chrome-extension://')) {
+      chrome.runtime.onMessage.addListener((request, sender, sendresponse) => {
+        if (request.scope === 'dropbox' && request.cmd === 'redirection') {
+          let currentUrlParam = window.location.href
+          let currentUrl = new URL(currentUrlParam)
+          let dynamicUrlParam = currentUrl.searchParams.get('file')
+          let dynamicUrl = new URL(dynamicUrlParam)
+          if (!dynamicUrl.hash.includes('url:') && request.data.url) {
+            let definitiveUrl = 'url::' + request.data.url
+            if (request.data.annotationId) {
+              definitiveUrl += '&hag:' + request.data.annotationId
+            }
+            window.location.replace(currentUrlParam + encodeURIComponent(definitiveUrl))
+          }
+        }
         resolve()
       })
     } else {

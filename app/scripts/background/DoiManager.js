@@ -114,7 +114,7 @@ class DoiManager {
 
     chrome.webRequest.onCompleted.addListener((details) => {
       if (this.tabs[details.tabId]) {
-        chrome.tabs.sendMessage(details.tabId, this.tabs[details.tabId])
+        chrome.tabs.sendMessage(details.tabId, {scope: 'dropbox', cmd: 'redirection', data: this.tabs[details.tabId]})
       }
     }, this.dropboxContent)
   }
