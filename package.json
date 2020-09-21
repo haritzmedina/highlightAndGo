@@ -1,7 +1,7 @@
 {
   "name": "highlight_and_go",
   "private": true,
-  "version": "0.2.13",
+  "version": "0.2.14",
   "description": "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
   "scripts": {
     "start": "npm run dev:chrome",
@@ -37,7 +37,7 @@
     "dom-seek": "^4.0.1",
     "file-saver": "^1.3.8",
     "hypothesis": "^1.203.0",
-    "hypothesis-api-client": "^0.1.6",
+    "hypothesis-api-client": "^0.1.10",
     "jquery": "^3.4.1",
     "jquery-contextmenu": "^2.8.0",
     "jquery-csv": "^0.8.12",

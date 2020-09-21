@@ -4,9 +4,9 @@ const HypothesisClient = require('hypothesis-api-client')
 
 const StorageManager = require('../StorageManager')
 
-const reloadIntervalInSeconds = 10 // Reload the hypothesis client every 10 seconds
+const HypothesisClientInterface = require('./HypothesisClientInterface')
 
-const Alerts = require('../../utils/Alerts')
+const reloadIntervalInSeconds = 10 // Reload the hypothesis client every 10 seconds
 
 class HypothesisClientManager extends StorageManager {
   constructor () {
@@ -19,19 +19,31 @@ class HypothesisClientManager extends StorageManager {
       groupUrl: 'https://hypothes.is/api/groups/',
       userUrl: 'https://hypothes.is/api/users/'
     }
-    this.reloadInterval = null
   }
 
   init (callback) {
-    this.reloadClient(() => {
-      // Start reloading of client
-      this.reloadInterval = setInterval(() => {
-        this.reloadClient()
-      }, reloadIntervalInSeconds * 1000)
-      if (_.isFunction(callback)) {
-        callback()
-      }
-    })
+    if (window.background) {
+      this.reloadClient(() => {
+        // Start reloading of client
+        this.reloadInterval = setInterval(() => {
+          this.reloadClient()
+        }, reloadIntervalInSeconds * 1000)
+        if (_.isFunction(callback)) {
+          callback()
+        }
+      })
+    } else {
+      // Check if user is logged in hypothesis
+      chrome.runtime.sendMessage({ scope: 'hypothesis', cmd: 'getToken' }, (token) => {
+        if (this.hypothesisToken !== token) {
+          this.hypothesisToken = token
+        }
+        this.client = new HypothesisClientInterface()
+        if (_.isFunction(callback)) {
+          callback()
+        }
+      })
+    }
   }
 
   reloadClient (callback) {
@@ -60,7 +72,7 @@ class HypothesisClientManager extends StorageManager {
         })
       }
     } else {
-      chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, (token) => {
+      chrome.runtime.sendMessage({ scope: 'hypothesis', cmd: 'getToken' }, (token) => {
         if (this.hypothesisToken !== token) {
           this.hypothesisToken = token
           if (this.hypothesisToken) {
@@ -77,49 +89,46 @@ class HypothesisClientManager extends StorageManager {
   }
 
   isLoggedIn (callback) {
-    if (_.isFunction(callback)) {
-      let isLoggedIn = _.isString(this.hypothesisToken)
-      callback(null, isLoggedIn)
-    }
+    callback(null, !_.isEmpty(this.hypothesisToken))
+  }
+
+  constructSearchUrl ({ groupId }) {
+    return this.annotationServerMetadata.groupUrl + groupId
   }
 
   logIn (callback) {
     // TODO Check if user grant permission to access hypothesis account
-    this.isLoggedIn((err, isLoggedIn) => {
+    this.isLoggedIn((err, isLogged) => {
       if (err) {
-        if (_.isFunction(callback)) {
-          callback(new Error('Error while checking if the user is logged in or not.'))
-        }
+        console.error(err)
       } else {
-        if (!isLoggedIn) {
-          this.askUserToLogIn((err, token) => {
+        if (!isLogged) {
+          this.askUserToLogInHypothesis((err, token) => {
             if (err) {
-              if (_.isFunction(callback)) {
-                callback(err)
-              }
+              callback(err)
             } else {
-              if (_.isFunction(callback)) {
-                callback(null)
-              }
+              callback(null, token)
             }
           })
         } else {
-          if (_.isFunction(callback)) {
-            callback(null)
-          }
+          callback(null, this.hypothesisToken)
         }
       }
     })
   }
 
-  askUserToLogIn (callback) {
-    Alerts.confirmAlert({
-      title: 'Hypothes.is login required',
+  askUserToLogInHypothesis (callback) {
+    const swal = require('sweetalert2').default
+    // Ask question
+    swal({
+      title: 'Hypothes.is login required', // TODO i18n
       text: chrome.i18n.getMessage('HypothesisLoginRequired'),
-      alertType: Alerts.alertType.info,
-      callback: () => {
+      type: 'info',
+      showCancelButton: true
+    }).then((result) => {
+      if (result.value) {
         // Prompt hypothesis login form
-        chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'userLoginForm'}, (result) => {
+        chrome.runtime.sendMessage({ scope: 'hypothesis', cmd: 'userLoginForm' }, (result) => {
           if (result.error) {
             if (_.isFunction(callback)) {
               callback(new Error(result.error))
@@ -132,11 +141,8 @@ class HypothesisClientManager extends StorageManager {
             })
           }
         })
-      },
-      cancelCallback: () => {
-        if (_.isFunction(callback)) {
-          callback(new Error('User don\'t want to log in hypothes.is'))
-        }
+      } else {
+        callback(new Error('User don\'t want to log in hypothes.is'))
       }
     })
   }

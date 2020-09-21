@@ -1,8 +1,9 @@
 const DOM = require('../utils/DOM')
 const $ = require('jquery')
-
+const HypothesisClientManager = require('../storage/hypothesis/HypothesisClientManager')
+const HypothesisBackgroundManager = require('../storage/hypothesis/HypothesisBackgroundManager')
 const checkHypothesisLoggedIntervalInSeconds = 20 // fetch token every X seconds
-const checkHypothesisLoggedInWhenPromptInSeconds = 5 // When user is prompted to login, the checking should be with higher period
+const checkHypothesisLoggedInWhenPromptInSeconds = 0.5 // When user is prompted to login, the checking should be with higher period
 const maxTries = 10 // max tries before deleting the token
 
 class HypothesisManager {
@@ -19,6 +20,11 @@ class HypothesisManager {
       this.setToken(err, token)
     })
 
+    // Init hypothesis client manager
+    this.initHypothesisClientManager()
+    // Init hypothesis background manager, who listens to commands from contentScript
+    this.initHypothesisBackgroundManager()
+
     // Create an observer to check if user is logged to hypothesis
     this.createRetryHypothesisTokenRetrieve()
 
@@ -30,7 +36,7 @@ class HypothesisManager {
   }
 
   createRetryHypothesisTokenRetrieve (intervalSeconds = checkHypothesisLoggedIntervalInSeconds) {
-    let intervalHandler = () => {
+    const intervalHandler = () => {
       this.retrieveHypothesisToken((err, token) => {
         this.setToken(err, token)
       })
@@ -44,11 +50,11 @@ class HypothesisManager {
   }
 
   retrieveHypothesisToken (callback) {
-    let callSettings = {
-      'async': true,
-      'crossDomain': true,
-      'url': 'https://hypothes.is/account/developer',
-      'method': 'GET'
+    const callSettings = {
+      async: true,
+      crossDomain: true,
+      url: 'https://hypothes.is/account/developer',
+      method: 'GET'
     }
 
     DOM.scrapElement(callSettings, '#token', (error, resultNodes) => {
@@ -61,13 +67,13 @@ class HypothesisManager {
               if (error) {
                 callback(error)
               } else {
-                let hypothesisToken = resultNodes[0].value
+                const hypothesisToken = resultNodes[0].value
                 callback(null, hypothesisToken)
               }
             })
           })
         } else {
-          let hypothesisToken = resultNodes[0].value
+          const hypothesisToken = resultNodes[0].value
           callback(null, hypothesisToken)
         }
       }
@@ -76,10 +82,10 @@ class HypothesisManager {
 
   setToken (err, token) {
     if (err) {
-      console.debug('The token is unreachable')
+      console.error('The token is unreachable')
       if (this.tries >= maxTries) { // The token is unreachable after some tries, probably the user is logged out
         this.token = null // Probably the website is down or the user has been logged out
-        console.debug('The token is deleted after unsuccessful %s tries', maxTries)
+        console.error('The token is deleted after unsuccessful %s tries', maxTries)
       } else {
         this.tries += 1 // The token is unreachable, add a done try
         console.debug('The token is unreachable for %s time(s), but is maintained %s', this.tries, this.token)
@@ -96,29 +102,29 @@ class HypothesisManager {
       if (request.scope === 'hypothesis') {
         if (request.cmd === 'userLoginForm') {
           // Create new tab on google chrome
-          chrome.tabs.create({url: 'https://hypothes.is/login'}, (tab) => {
+          chrome.tabs.create({ url: 'https://hypothes.is/login' }, (tab) => {
             // Retrieve hypothesis token periodically
-            let interval = setInterval(() => {
+            const interval = setInterval(() => {
               this.retrieveHypothesisToken((err, token) => {
                 if (err) {
-                  console.debug('Checking again in %s seconds', checkHypothesisLoggedInWhenPromptInSeconds)
+                  console.log('Checking again in %s seconds', checkHypothesisLoggedInWhenPromptInSeconds)
                 } else {
                   // Once logged in, take the token and close the tab
                   this.token = token
                   chrome.tabs.remove(tab.id, () => {
                     clearInterval(interval)
-                    sendResponse({token: this.token})
+                    sendResponse({ token: this.token })
                   })
                 }
               })
             }, checkHypothesisLoggedInWhenPromptInSeconds * 1000)
             // Set event for when user close the tab
-            let closeTabListener = (closedTabId) => {
+            const closeTabListener = (closedTabId) => {
               if (closedTabId === tab.id && !this.token) {
                 // Remove listener for hypothesis token
                 clearInterval(interval)
                 // Hypothes.is login tab is closed
-                sendResponse({error: 'The hypothes.is login tab was closed'})
+                sendResponse({ error: 'Hypothesis tab closed intentionally' })
               }
               chrome.tabs.onRemoved.removeListener(closeTabListener)
             }
@@ -177,6 +183,18 @@ class HypothesisManager {
     }).fail((error) => {
       callback(error)
     })
+  }
+
+  initHypothesisClientManager () {
+    this.annotationServerManager = new HypothesisClientManager()
+    this.annotationServerManager.init((err) => {
+      console.error('Unable to initialize hypothesis client manager. Error: ' + err.message)
+    })
+  }
+
+  initHypothesisBackgroundManager () {
+    this.hypothesisBackgroundManager = new HypothesisBackgroundManager()
+    this.hypothesisBackgroundManager.init()
   }
 }
 
