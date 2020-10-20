@@ -192,11 +192,15 @@ class DataExtractionManager {
             // Check if any annotation is disagree
             let disagreeAnnotation = _.find(window.abwa.codingManager.primaryStudyCoding[codeId].validatingAnnotations, validatingAnnotation => {
               // Get body with purpose assessing
-              let assessingBody = validatingAnnotation.body.find(body => { return body.purpose === 'assessing' })
-              if (assessingBody) {
-                return assessingBody.value === 'disagree'
-              } else {
-                return false
+              if (_.isArray(validatingAnnotation.body)) { // Implementation for body assessment seems to be different in Hypothes.is and Neo4J, so both options are available to keep backward compatibility
+                let assessingBody = validatingAnnotation.body.find(body => { return body.purpose === 'assessing' })
+                if (assessingBody) {
+                  return assessingBody.value === 'disagree'
+                } else {
+                  return false
+                }
+              } else if (_.has(validatingAnnotation, 'agreement')) {
+                return validatingAnnotation.agreement === 'disagree' || false
               }
             })
             let validation = _.isObject(disagreeAnnotation) ? 'disagree' : 'agree'
