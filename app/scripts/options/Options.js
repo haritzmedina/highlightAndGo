@@ -19,6 +19,12 @@ class Options {
       document.querySelector('#storageDropdown').value = storage || 'hypothesis'
       this.showSelectedStorageConfiguration(storage)
     })
+    chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getPreferences'}, ({preferences}) => {
+      document.querySelector('#allEvidenceSheetCheckbox').checked = preferences.allEvidenceSheet
+    })
+    document.querySelector('#allEvidenceSheetCheckbox').addEventListener('change', (event) => {
+      this.updateSheetPreferences()
+    })
     // Local storage restore
     document.querySelector('#restoreDatabaseButton').addEventListener('click', () => {
       Alerts.inputTextAlert({
@@ -156,6 +162,20 @@ class Options {
         console.debug('Saved credentials ' + JSON.stringify(credentials))
       })
     }
+  }
+
+  updateSheetPreferences () {
+    // Get preferences from form elements
+    let preferences = {}
+    preferences['allEvidenceSheet'] = document.querySelector('#allEvidenceSheetCheckbox').checked
+    // Send preferences to chrome background
+    chrome.runtime.sendMessage({
+      scope: 'googleSheets',
+      cmd: 'setPreferences',
+      data: {preferences: preferences}
+    }, ({preferences}) => {
+      console.debug('Saved credentials ' + JSON.stringify(preferences))
+    })
   }
 }
 
