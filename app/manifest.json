@@ -68,7 +68,6 @@
     "open_in_tab": true
   },
   "permissions": [
-    "contextMenus",
     "https://hypothes.is/*",
     "identity",
     "storage",
