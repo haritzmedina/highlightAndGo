@@ -3,6 +3,7 @@ const FileUtils = require('../utils/FileUtils')
 const LocalStorageManager = require('../storage/local/LocalStorageManager')
 const FileSaver = require('file-saver')
 const _ = require('lodash')
+const Neo4JAuditUrlsConfig = require('./Neo4JAuditUrlsConfig')
 
 class Options {
   init () {
@@ -87,6 +88,10 @@ class Options {
       this.neo4JEndpointElement.value = credentials.endpoint || ''
       this.neo4JTokenElement.value = credentials.token || ''
       this.neo4JUserElement.value = credentials.user || ''
+    })
+    // Neo4J Audit Urls pane
+    chrome.runtime.sendMessage({scope: 'neo4j', cmd: 'getAuditUrlsConfig'}, ({auditUrlsConfig}) => {
+      this.neo4JAuditUrlsConfig = new Neo4JAuditUrlsConfig(auditUrlsConfig)
     })
   }
 
