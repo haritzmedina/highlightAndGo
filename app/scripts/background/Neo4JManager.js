@@ -30,6 +30,28 @@ class Neo4JManager {
               sendResponse({credentials: credentials})
             }
           })
+        } else if (request.cmd === 'setAuditUrlsConfig') {
+          let auditUrlsConfig = request.data.auditUrlsConfig
+          ChromeStorage.setData('neo4j.auditUrlsConfig', {data: JSON.stringify(auditUrlsConfig)}, ChromeStorage.sync, (err) => {
+            if (err) {
+              sendResponse({err: err})
+            } else {
+              sendResponse({auditUrlsConfig: auditUrlsConfig})
+            }
+          })
+        } else if (request.cmd === 'getAuditUrlsConfig') {
+          ChromeStorage.getData('neo4j.auditUrlsConfig', ChromeStorage.sync, (err, auditUrlsConfig) => {
+            if (err) {
+              sendResponse({err: err})
+            } else {
+              if (auditUrlsConfig) {
+                let parsedAuditUrlsConfig = JSON.parse(auditUrlsConfig.data)
+                sendResponse({auditUrlsConfig: parsedAuditUrlsConfig || {}})
+              } else {
+                sendResponse({auditUrlsConfig: {}})
+              }
+            }
+          })
         }
       }
     })

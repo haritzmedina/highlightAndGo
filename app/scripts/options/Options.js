@@ -3,6 +3,7 @@ const FileUtils = require('../utils/FileUtils')
 const LocalStorageManager = require('../storage/local/LocalStorageManager')
 const FileSaver = require('file-saver')
 const _ = require('lodash')
+const Neo4JAuditUrlsConfig = require('./Neo4JAuditUrlsConfig')
 
 class Options {
   init () {
@@ -18,6 +19,12 @@ class Options {
     chrome.runtime.sendMessage({scope: 'storage', cmd: 'getSelectedStorage'}, ({storage}) => {
       document.querySelector('#storageDropdown').value = storage || 'hypothesis'
       this.showSelectedStorageConfiguration(storage)
+    })
+    chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getPreferences'}, ({preferences}) => {
+      document.querySelector('#allEvidenceSheetCheckbox').checked = preferences.allEvidenceSheet
+    })
+    document.querySelector('#allEvidenceSheetCheckbox').addEventListener('change', (event) => {
+      this.updateSheetPreferences()
     })
     // Local storage restore
     document.querySelector('#restoreDatabaseButton').addEventListener('click', () => {
@@ -81,6 +88,10 @@ class Options {
       this.neo4JEndpointElement.value = credentials.endpoint || ''
       this.neo4JTokenElement.value = credentials.token || ''
       this.neo4JUserElement.value = credentials.user || ''
+    })
+    // Neo4J Audit Urls pane
+    chrome.runtime.sendMessage({scope: 'neo4j', cmd: 'getAuditUrlsConfig'}, ({auditUrlsConfig}) => {
+      this.neo4JAuditUrlsConfig = new Neo4JAuditUrlsConfig(auditUrlsConfig)
     })
   }
 
@@ -156,6 +167,20 @@ class Options {
         console.debug('Saved credentials ' + JSON.stringify(credentials))
       })
     }
+  }
+
+  updateSheetPreferences () {
+    // Get preferences from form elements
+    let preferences = {}
+    preferences['allEvidenceSheet'] = document.querySelector('#allEvidenceSheetCheckbox').checked
+    // Send preferences to chrome background
+    chrome.runtime.sendMessage({
+      scope: 'googleSheets',
+      cmd: 'setPreferences',
+      data: {preferences: preferences}
+    }, ({preferences}) => {
+      console.debug('Saved credentials ' + JSON.stringify(preferences))
+    })
   }
 }
 

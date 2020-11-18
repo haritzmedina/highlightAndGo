@@ -7,7 +7,9 @@ const HyperSheetColors = require('./HyperSheetColors')
 
 class SLRGoogleSheetManager {
   init (callback) {
-    this.initGoogleSheetClientManager(callback)
+    this.initGoogleSheetClientManager(() => {
+      this.getGoogleSheetPreferences(callback)
+    })
   }
 
   initGoogleSheetClientManager (callback) {
@@ -26,6 +28,15 @@ class SLRGoogleSheetManager {
           }
         }
       })
+    })
+  }
+
+  getGoogleSheetPreferences (callback) {
+    chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getPreferences'}, ({preferences}) => {
+      this.preferences = preferences
+      if (_.isFunction(callback)) {
+        callback()
+      }
     })
   }
 
@@ -93,7 +104,7 @@ class SLRGoogleSheetManager {
       let sheetId = 0
       // Update spreadsheet with primary studies data
       let rows = []
-      // Calculate for each code which one is the number of columns (multivalued use case)
+      // Calculate for each code which one is the number of columns (multivalued or single code use cases)
       let columns = this.calculateColumns(primaryStudies)
       // First row is for codebook facets
       let parentCodes = _.filter(window.abwa.mappingStudyManager.classificationScheme.codes, (code) => {
@@ -134,13 +145,13 @@ class SLRGoogleSheetManager {
     return parentCodes.map((parentCode) => {
       let primaryStudyWithMaxValuesForThisCode = _.maxBy(primaryStudies, (ps) => {
         if (_.has(ps.codes, parentCode.id)) {
-          return ps.codes[parentCode.id].numberOfColumns()
+          return ps.codes[parentCode.id].numberOfColumns({allEvidenceSheet: this.preferences.allEvidenceSheet})
         } else {
           return 1
         }
       })
       if (_.has(primaryStudyWithMaxValuesForThisCode.codes, parentCode.id)) {
-        return {parentCode: parentCode, columns: primaryStudyWithMaxValuesForThisCode.codes[parentCode.id].numberOfColumns()}
+        return {parentCode: parentCode, columns: primaryStudyWithMaxValuesForThisCode.codes[parentCode.id].numberOfColumns({allEvidenceSheet: this.preferences.allEvidenceSheet})}
       } else {
         return {parentCode: parentCode, columns: 1}
       }
@@ -275,7 +286,7 @@ class SLRGoogleSheetManager {
                 } else if (parentCode.id === code.id) {
                   parentCodes[parentCode.id].itself = [codingAnnotationForPrimaryStudy]
                   if (validatingAnnotation) {
-                    parentCodes[parentCode.id].validatingAnnotation = validatingAnnotation
+                    parentCodes[parentCode.id].validatingAnnotations.push(validatingAnnotation)
                   }
                 }
               }
@@ -287,11 +298,15 @@ class SLRGoogleSheetManager {
               } else if (parentCode.id === code.id) {
                 if (parentCodes[parentCode.id]) {
                   parentCodes[parentCode.id].itself = codingAnnotationForPrimaryStudy
+                  if (validatingAnnotation) {
+                    parentCodes[parentCode.id].validatingAnnotations.push(validatingAnnotation)
+                  }
                 } else {
                   parentCodes[parentCode.id] = new Codes({url, parentCode, multivalued: parentCode.multivalued, itself: codingAnnotationForPrimaryStudy, validatingAnnotation})
                 }
               }
             }
+            parentCodes[parentCode.id].annotations.push(codingAnnotationForPrimaryStudy)
           }
         }
       }
@@ -434,18 +449,28 @@ Code.status = {
 }
 
 class Codes {
-  constructor ({url, parentCode, chosenCodes = {}, itself, multivalued = false, validatingAnnotation}) {
+  constructor ({url, parentCode, annotations = [], chosenCodes = {}, itself, multivalued = false, validatingAnnotation}) {
     this.url = url
+    this.annotations = annotations
     this.parentCode = parentCode
     this.chosenCodes = chosenCodes
     this.itself = itself
     this.multivalued = multivalued
-    this.validatingAnnotation = validatingAnnotation
+    this.validatingAnnotations = []
+    if (validatingAnnotation) {
+      this.validatingAnnotations.push(validatingAnnotation)
+    }
   }
 
-  numberOfColumns () {
+  numberOfColumns ({allEvidenceSheet}) {
     if (this.multivalued) {
       return _.values(this.chosenCodes).length || 1
+    } else if (allEvidenceSheet) {
+      if (_.values(this.chosenCodes).length > 0) {
+        return _.values(this.chosenCodes).length || 1
+      } else {
+        return this.annotations.length || 1
+      }
     } else {
       return 1
     }
@@ -534,26 +559,73 @@ class Codes {
         }
       }
     } else {
-      if (this.itself) {
-        // Get quote of annotation in itself
-        let textQuoteSelector = _.find(this.itself.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
-        let quote = 'Quote'
-        if (textQuoteSelector && textQuoteSelector.exact) {
-          quote = textQuoteSelector.exact
-        }
-        if (this.validatingAnnotation) {
-          return [
-            {userEnteredValue: {
-              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
-            },
-            userEnteredFormat: {
-              backgroundColor: HyperSheetColors.yellow
+      if (window.abwa.toolset.slrGoogleSheetManager.preferences.allEvidenceSheet) {
+        return this.annotations.map(anno => {
+          // Get quote of annotation in itself
+          let textQuoteSelector = _.find(anno.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
+          let quote = 'Quote'
+          if (textQuoteSelector && textQuoteSelector.exact) {
+            quote = textQuoteSelector.exact
+          }
+          if (this.validatingAnnotations.length > 0) {
+            let validatingAnnotation = this.validatingAnnotations.find(validatingAnnotation => {
+              return validatingAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') === anno.id
+            })
+            if (validatingAnnotation && validatingAnnotation.agreement === 'agree') {
+              // Set green only if current annotation is validated positively
+              return [
+                {userEnteredValue: {
+                  formulaValue: '=HYPERLINK("' + this.url + '#hag:' + anno.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
+                },
+                userEnteredFormat: {
+                  backgroundColor: HyperSheetColors.green
+                }
+                }]
+            } else {
+              return [{userEnteredValue: {
+                formulaValue: '=HYPERLINK("' + this.url + '#hag:' + anno.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
+              }}]
             }
+          } else {
+            return [{
+              userEnteredValue: {
+                formulaValue: '=HYPERLINK("' + this.url + '#hag:' + anno.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
+              }
             }]
-        } else {
-          return [{userEnteredValue: {
-            formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
-          }}]
+          }
+        })
+      } else {
+        if (this.itself) {
+          // Get quote of annotation in itself
+          let textQuoteSelector = _.find(this.itself.target[0].selector, (selector) => { return selector.type === 'TextQuoteSelector' })
+          let quote = 'Quote'
+          if (textQuoteSelector && textQuoteSelector.exact) {
+            quote = textQuoteSelector.exact
+          }
+          if (this.validatingAnnotations.length > 0) {
+            let validatingAnnotation = this.validatingAnnotations.find(validatingAnnotation => {
+              return validatingAnnotation['oa:target'].replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') === this.itself.id
+            })
+            if (validatingAnnotation && validatingAnnotation.agreement === 'agree') {
+              // Set green only if current annotation is validated positively
+              return [
+                {userEnteredValue: {
+                  formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
+                },
+                userEnteredFormat: {
+                  backgroundColor: HyperSheetColors.green
+                }
+                }]
+            } else {
+              return [{userEnteredValue: {
+                formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
+              }}]
+            }
+          } else {
+            return [{userEnteredValue: {
+              formulaValue: '=HYPERLINK("' + this.url + '#hag:' + this.itself.id.replace(window.abwa.storageManager.storageMetadata.annotationUrl, '') + '", "' + quote + '")'
+            }}]
+          }
         }
       }
     }

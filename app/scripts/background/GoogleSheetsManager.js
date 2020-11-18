@@ -1,4 +1,5 @@
 const GoogleSheetClient = require('../googleSheets/GoogleSheetClient')
+const ChromeStorage = require('../utils/ChromeStorage')
 
 class GoogleSheetsManager {
   constructor () {
@@ -50,6 +51,28 @@ class GoogleSheetsManager {
             })
           })
           return true
+        } if (request.cmd === 'getPreferences') {
+          ChromeStorage.getData('gsheet.preferences', ChromeStorage.sync, (err, preferences) => {
+            if (err) {
+              sendResponse({err: err})
+            } else {
+              if (preferences) {
+                let parsedPreferences = JSON.parse(preferences.data)
+                sendResponse({preferences: parsedPreferences || {}})
+              } else {
+                sendResponse({preferences: {}})
+              }
+            }
+          })
+        } else if (request.cmd === 'setPreferences') {
+          let preferences = request.data.preferences
+          ChromeStorage.setData('gsheet.preferences', {data: JSON.stringify(preferences)}, ChromeStorage.sync, (err) => {
+            if (err) {
+              sendResponse({err: err})
+            } else {
+              sendResponse({preferences: preferences})
+            }
+          })
         }
       }
     })

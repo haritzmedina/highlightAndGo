@@ -5,14 +5,15 @@ const LanguageUtils = require('../utils/LanguageUtils')
 
 class UserFilter {
   constructor () {
-    this.filteredUsers = null
-    this.allUsers = []
+    this.filteredUsers = [] // Includes only the users that are filtered by
+    this.allUsers = [] // Includes all the users that have created annotation in the document
     this.events = {}
     this.userFilterWrapper = null
     this.usersContainer = null
   }
 
   init (callback) {
+    console.debug('Initializing UserFilter')
     this.initUserFilterStructure((err) => {
       if (err) {
         // Handle error
@@ -24,9 +25,9 @@ class UserFilter {
         this.initAnnotationsUpdatedEventHandler()
         // Init event handler when click in all
         this.initAllFilter()
-        // Init panel construction (if no annotation event is detected)
+        // Init panel construction
         this.initUsersPanel()
-        // Callback
+        console.debug('Initialized UserFilter')
         if (_.isFunction(callback)) {
           callback()
         }
@@ -34,8 +35,22 @@ class UserFilter {
     })
   }
 
+  addFilteredUser (user) {
+    // If the user is not in the all users list
+    if (_.isArray(this.allUsers) && !_.find(this.allUsers, user)) {
+      this.allUsers.push(user)
+    }
+    // Add the user to the filter if it is filtered
+    if (_.isArray(this.filteredUsers)) {
+      if (!_.find(this.filteredUsers, user)) {
+        this.filteredUsers.push(user)
+        return true
+      }
+    }
+  }
+
   initUserFilterStructure (callback) {
-    let tagWrapperUrl = chrome.extension.getURL('pages/sidebar/userFilterWrapper.html')
+    const tagWrapperUrl = chrome.extension.getURL('pages/sidebar/userFilterWrapper.html')
     $.get(tagWrapperUrl, (html) => {
       document.querySelector('#codingValidationContainer').insertAdjacentHTML('afterbegin', html)
       this.userFilterWrapper = document.querySelector('#userFilterWrapper')
@@ -46,8 +61,16 @@ class UserFilter {
     })
   }
 
+  hideUserFilterContainer () {
+    $(this.userFilterWrapper).hide()
+  }
+
+  showUserFilterContainer () {
+    $(this.userFilterWrapper).show()
+  }
+
   initAllFilter () {
-    let allFilter = document.querySelector('#userFilter_all')
+    const allFilter = document.querySelector('#userFilter_all')
     allFilter.checked = true
     // Init event handler on change all filter
     allFilter.addEventListener('change', (event) => {
@@ -59,15 +82,10 @@ class UserFilter {
       // Dispatch event user filter has changed
       this.dispatchFilterChanged()
     })
-    let initialEventListener = () => {
-      this.activateAll()
-      document.removeEventListener(Events.updatedAllAnnotations, initialEventListener)
-    }
-    document.addEventListener(Events.updatedAllAnnotations, initialEventListener)
   }
 
   activateAll () {
-    let checkboxes = this.usersContainer.querySelectorAll('input')
+    const checkboxes = this.usersContainer.querySelectorAll('input')
     this.filteredUsers = _.clone(this.allUsers)
     // Activate all the checkboxes
     checkboxes.forEach((checkbox) => {
@@ -77,7 +95,7 @@ class UserFilter {
   }
 
   deactivateAll () {
-    let checkboxes = this.usersContainer.querySelectorAll('input')
+    const checkboxes = this.usersContainer.querySelectorAll('input')
     this.filteredUsers = []
     // Deactivate all the checkboxes
     checkboxes.forEach((checkbox) => {
@@ -87,7 +105,7 @@ class UserFilter {
   }
 
   initAnnotationsUpdatedEventHandler (callback) {
-    this.events.updatedAllAnnotations = {element: document, event: Events.updatedAllAnnotations, handler: this.createUpdatedAllAnnotationsEventHandler()}
+    this.events.updatedAllAnnotations = { element: document, event: Events.updatedAllAnnotations, handler: this.createUpdatedAllAnnotationsEventHandler() }
     this.events.updatedAllAnnotations.element.addEventListener(this.events.updatedAllAnnotations.event, this.events.updatedAllAnnotations.handler, false)
     if (_.isFunction(callback)) {
       callback()
@@ -98,7 +116,7 @@ class UserFilter {
     return (event) => {
       // Retrieve all annotations
       let annotations = []
-      if (_.has(event, 'detail.annotations')) {
+      if (_.hasIn(event, 'detail.annotations')) {
         annotations = event.detail.annotations // If is included in the event
       } else {
         annotations = window.abwa.contentAnnotator.allAnnotations
@@ -131,9 +149,9 @@ class UserFilter {
         $(this.usersContainer).append(this.createUserFilterElement(this.allUsers[i]))
       }
       // Activate all users
-      let checkboxes = this.usersContainer.querySelectorAll('input')
+      const checkboxes = this.usersContainer.querySelectorAll('input')
       for (let i = 0; i < checkboxes.length; i++) {
-        let currentCheckbox = checkboxes[i]
+        const currentCheckbox = checkboxes[i]
         currentCheckbox.checked = true
       }
       // If all old filtered users are current all users, just activate all of them
@@ -143,23 +161,21 @@ class UserFilter {
 
   updateUsersPanel (annotations) {
     if (_.isArray(annotations)) {
-      let oldFilteredUsers = _.clone(this.filteredUsers)
       // Retrieve users who had annotated the document
       this.allUsers = _.uniq(_.map(annotations, (annotation) => {
         return annotation.user
       }))
-      this.filteredUsers = _.clone(this.allUsers)
       // Upload sidebar panel with users
       this.usersContainer.innerHTML = '' // Empty the container
       for (let i = 0; i < this.allUsers.length; i++) {
         $(this.usersContainer).append(this.createUserFilterElement(this.allUsers[i]))
       }
       // Activate users which where previously activated (and remove if no user is found from this.allUsers and this.filteredUsers)
-      let checkboxes = this.usersContainer.querySelectorAll('input')
+      const checkboxes = this.usersContainer.querySelectorAll('input')
       for (let i = 0; i < checkboxes.length; i++) {
-        let currentCheckbox = checkboxes[i]
-        if (_.isString(_.find(oldFilteredUsers, (oldUser) => {
-          return oldUser === currentCheckbox.id.replace('userFilter_', '')
+        const currentCheckbox = checkboxes[i]
+        if (_.isString(_.find(this.filteredUsers, (oldUser) => {
+          return LanguageUtils.normalizeStringToValidID(oldUser) === currentCheckbox.id.replace('userFilter_', '')
         }))) {
           currentCheckbox.checked = true
         }
@@ -170,28 +186,27 @@ class UserFilter {
   }
 
   createUserFilterElement (name) {
-    let normalizedName = LanguageUtils.normalizeStringToValidID(name)
-    let userFilterTemplate = document.querySelector('#userFilterTemplate')
-    let userFilterElement = $(userFilterTemplate.content.firstElementChild).clone().get(0)
+    const userFilterTemplate = document.querySelector('#userFilterTemplate')
+    const userFilterElement = $(userFilterTemplate.content.firstElementChild).clone().get(0)
     // Set text and properties for label and input
-    let input = userFilterElement.querySelector('input')
-    input.id = 'userFilter_' + normalizedName
-    let label = userFilterElement.querySelector('label')
+    const input = userFilterElement.querySelector('input')
+    input.id = 'userFilter_' + LanguageUtils.normalizeStringToValidID(name)
+    const label = userFilterElement.querySelector('label')
     label.innerText = name.replace('acct:', '').replace('@hypothes.is', '') // Remove to user name hypothesis
-    label.htmlFor = 'userFilter_' + normalizedName
+    label.htmlFor = 'userFilter_' + LanguageUtils.normalizeStringToValidID(name)
     // Set event handler for input check status
     input.addEventListener('change', (event) => {
       // Update filtered array
       if (event.target.checked) {
         // Add to filtered elements
-        if (!_.includes(this.filteredUsers, normalizedName)) {
-          this.filteredUsers.push(normalizedName)
+        if (!_.includes(this.filteredUsers, name)) {
+          this.filteredUsers.push(name)
         }
         // Activate all filter if all users are selected
         this.checkAllActivated()
       } else {
         // Remove from filtered elements
-        _.pull(this.filteredUsers, normalizedName)
+        _.pull(this.filteredUsers, name)
         // Deactivate all filter
         document.querySelector('#userFilter_all').checked = false
       }
@@ -201,26 +216,33 @@ class UserFilter {
     return userFilterElement
   }
 
+  /**
+   * Activate "All" checkbox if all the users' checkboxes are activated
+   */
   checkAllActivated () {
-    let allCheckboxes = this.usersContainer.querySelectorAll('input')
-    let deactivatedCheckboxes = _.find(allCheckboxes, (checkbox) => { return checkbox.checked === false })
+    const allCheckboxes = this.usersContainer.querySelectorAll('input')
+    const deactivatedCheckboxes = _.find(allCheckboxes, (checkbox) => { return checkbox.checked === false })
     if (_.isUndefined(deactivatedCheckboxes)) { // There are not found any deactivated checkboxes
       document.querySelector('#userFilter_all').checked = true
     }
   }
 
   dispatchFilterChanged () {
-    LanguageUtils.dispatchCustomEvent(Events.userFilterChange, {filteredUsers: this.filteredUsers})
+    LanguageUtils.dispatchCustomEvent(Events.userFilterChange, { filteredUsers: this.filteredUsers })
   }
 
   destroy () {
+    // Remove observer
+    // clearInterval(this.observerInterval)
     // Remove event listeners
-    let events = _.values(this.events)
+    const events = _.values(this.events)
     for (let i = 0; i < events.length; i++) {
       events[i].element.removeEventListener(events[i].event, events[i].handler)
     }
     // Remove user filter container from sidebar
-    $(this.userFilterWrapper).remove()
+    if (_.isElement(this.userFilterWrapper)) {
+      this.userFilterWrapper.remove()
+    }
   }
 }
 

@@ -30,6 +30,15 @@
           </div>
         </div>
       </div>
+      <div id="googleSheetConfigurationCard" class="card">
+        <div class="card-header bg-dark text-white">Google sheets preferences</div>
+        <div class="card-body">
+          <div class="form-check">
+            <input type="checkbox" id="allEvidenceSheetCheckbox" class="form-check-input"/>
+            <label for="allEvidenceSheetCheckbox" class="form-check-label">Spreadsheets will be created including all the annotation quotes for each theme without subcodes</label>
+          </div>
+        </div>
+      </div>
       <div id="annotationStorageConfigurationCard" class="card">
         <div class="card-header bg-dark text-white">Annotation storage</div>
         <div class="card-body">
@@ -53,6 +62,7 @@
           </div>
         </div>
       </div>
+      <!-- Neo4J Configuration -->
       <div id="neo4jConfigurationCard" class="card storageConfiguration">
         <a id="neo4jConfiguration"></a>
         <div class="card-header bg-dark text-white">Neo4J configuration</div>
@@ -69,6 +79,72 @@
             <label for="neo4jUser">User</label>
             <input type="text" class="form-control" id="neo4jUser" placeholder="Enter your username or orcid">
           </div>
+        </div>
+      </div>
+      <div id="neo4jAuditSharingCard" class="card">
+        <a id="neo4jAuditSharing"></a>
+        <div class="card-header bg-dark text-white">Neo4J audit sharing URL's management</div>
+        <div class="card-body">
+          <form>
+            <div class="form-row">
+              <div class="col-md-4">
+                <label for="neo4jAuditFrontEndUrl" class="requiredFormInput">Auditing front-end URL</label>
+                <input type="url" class="form-control" id="neo4jAuditFrontEndUrl" placeholder="Enter your neo4j front-end URL">
+              </div>
+              <div class="col-md-4">
+                <label for="neo4jAuditBackendUrl" class="requiredFormInput">Auditing back-end URL</label>
+                <input type="url" class="form-control" id="neo4jAuditBackendUrl" placeholder="Enter your neo4j back-end URL">
+              </div>
+              <div class="col-md-2">
+                <label for="neo4jAuditUser" class="requiredFormInput">User</label>
+                <input type="text" class="form-control" id="neo4jAuditUser" placeholder="Enter neo4j username">
+              </div>
+              <div class="col-md-2">
+                <label for="neo4jAuditPass" class="requiredFormInput">Password</label>
+                <input type="password" class="form-control" id="neo4jAuditPass" placeholder="Enter neo4j password">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="col-md-2">
+              <button class="btn btn-secondary" id="">Create audit URL</button>
+              </div>
+            </div>
+          </form>
+          <hr/>
+          <!-- Generated URLs -->
+          <div class="row">
+            <template id="neo4jAuditTableRow">
+              <td class="neo4jAuditUrlCell" scope="row">https://iker.github.io/auditing/index.html <img src="../images/copyToClipboard.svg" class="toolButton"></td>
+              <td class="neo4jAuditUserCell">auditor1</td>
+              <td class="neo4jAuditOptionsCell">
+                <img src="../images/delete.png" class="toolButton">
+              </td>
+            </template>
+            <table id="neo4jAuditTable" class="table table-hover">
+              <thead>
+              <tr>
+                <th scope="col">Audit URL</th>
+                <th scope="col">User</th>
+                <th scope="col">Delete</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr>
+                <td scope="row">https://iker.github.io/auditing/index.html?host=https%3A%2F%2Fneo4j.onekin.org%3A7474%2&token=aWtlcjpwYXNzd29yZA== <img src="../images/copyToClipboard.svg" class="toolButton"></td>
+                <td>auditor1</td>
+                <td>
+                  <img src="../images/delete.png" class="toolButton">
+                </td>
+              </tr>
+              <tr>
+                <td scope="row">https://iker.github.io/auditing/index.html?host=https%3A%2F%2Fneo4j.onekin.org%3A7474%2&token=aWtlcjpwYXNz <img src="../images/copyToClipboard.svg" class="toolButton"></td>
+                <td>auditor2</td>
+                <td>
+                  <img src="../images/delete.png" class="toolButton">
+                </td>
+              </tr>
+              </tbody>
+            </table>
         </div>
       </div>
     </div>

@@ -13,8 +13,8 @@ class MappingStudyManager {
       if (err) {
         callback(err)
       } else {
-        this.classificationSchemeAnnotations = classificationSchemeAnnotations
-        this.classificationScheme = ClassificationScheme.fromAnnotations(classificationSchemeAnnotations, window.abwa.storageManager.getStorageMetadata())
+        window.abwa.mappingStudyManager.classificationSchemeAnnotations = classificationSchemeAnnotations
+        window.abwa.mappingStudyManager.classificationScheme = ClassificationScheme.fromAnnotations(classificationSchemeAnnotations, window.abwa.storageManager.getStorageMetadata())
         if (_.isFunction(callback)) {
           callback()
         }

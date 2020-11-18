@@ -825,49 +825,51 @@ class TextAnnotator extends ContentAnnotator {
                   if (err) {
                     window.alert('Unable to load comment input form')
                   } else {
-                    if (currentUserValidateAnnotation) {
-                      // Update already created annotation for assessing
-                      currentUserValidateAnnotation.text = form.text
-                      if (form.agreement) {
-                        currentUserValidateAnnotation.agreement = form.agreement
-                      }
-                      window.abwa.storageManager.client.updateAnnotation(currentUserValidateAnnotation.id, currentUserValidateAnnotation, (err, assessmentAnnotationResult) => {
-                        if (err) {
-                          Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to update your validation for this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
-                        } else {
-                          let index = _.findIndex(this.allAnnotations, (annotation) => {
-                            return annotation.id === assessmentAnnotationResult.id
-                          })
-                          if (index !== -1) {
-                            this.allAnnotations[index] = assessmentAnnotationResult
+                    if (form !== Alerts.results.dismiss) {
+                      if (currentUserValidateAnnotation) {
+                        // Update already created annotation for assessing
+                        currentUserValidateAnnotation.text = form.text
+                        if (form.agreement) {
+                          currentUserValidateAnnotation.agreement = form.agreement
+                        }
+                        window.abwa.storageManager.client.updateAnnotation(currentUserValidateAnnotation.id, currentUserValidateAnnotation, (err, assessmentAnnotationResult) => {
+                          if (err) {
+                            Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to update your validation for this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
+                          } else {
+                            let index = _.findIndex(this.allAnnotations, (annotation) => {
+                              return annotation.id === assessmentAnnotationResult.id
+                            })
+                            if (index !== -1) {
+                              this.allAnnotations[index] = assessmentAnnotationResult
+                            }
+                            LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+                            // Redraw current annotations
+                            this.currentAnnotations = this.retrieveCurrentAnnotations()
+                            LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
+                            this.redrawAnnotations()
+                            // Send event new assessment annotation is created
+                            LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation, assessmentAnnotation: assessmentAnnotationResult})
                           }
-                          LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
-                          // Redraw current annotations
-                          this.currentAnnotations = this.retrieveCurrentAnnotations()
-                          LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
-                          this.redrawAnnotations()
-                          // Send event new assessment annotation is created
-                          LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation, assessmentAnnotation: assessmentAnnotationResult})
-                        }
-                      })
-                    } else {
-                      // Create a new annotation for assessing
-                      let assessmentAnnotation = TextAnnotator.constructAssessmentAnnotation({text: form.text, agreement: form.agreement, validatedAnnotation: annotation})
-                      window.abwa.storageManager.client.createNewAnnotation(assessmentAnnotation, (err, assessmentAnnotationResult) => {
-                        if (err) {
-                          Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to validate this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
-                        } else {
-                          // Update data model
-                          this.allAnnotations.push(assessmentAnnotationResult)
-                          LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
-                          // Redraw current annotations
-                          this.currentAnnotations = this.retrieveCurrentAnnotations()
-                          LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
-                          this.redrawAnnotations()
-                          // Send event new assessment annotation is created
-                          LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation, assessmentAnnotation: assessmentAnnotationResult})
-                        }
-                      })
+                        })
+                      } else {
+                        // Create a new annotation for assessing
+                        let assessmentAnnotation = TextAnnotator.constructAssessmentAnnotation({text: form.text, agreement: form.agreement, validatedAnnotation: annotation})
+                        window.abwa.storageManager.client.createNewAnnotation(assessmentAnnotation, (err, assessmentAnnotationResult) => {
+                          if (err) {
+                            Alerts.errorAlert({title: 'Unable to validate code', text: 'We were unable to validate this code. Please check internet connection and try again.'}) // TODO i18n + contact developer
+                          } else {
+                            // Update data model
+                            this.allAnnotations.push(assessmentAnnotationResult)
+                            LanguageUtils.dispatchCustomEvent(Events.updatedAllAnnotations, {annotations: this.allAnnotations})
+                            // Redraw current annotations
+                            this.currentAnnotations = this.retrieveCurrentAnnotations()
+                            LanguageUtils.dispatchCustomEvent(Events.updatedCurrentAnnotations, {annotations: this.updatedCurrentAnnotations})
+                            this.redrawAnnotations()
+                            // Send event new assessment annotation is created
+                            LanguageUtils.dispatchCustomEvent(Events.annotationValidated, {annotation: annotation, assessmentAnnotation: assessmentAnnotationResult})
+                          }
+                        })
+                      }
                     }
                   }
                 }
