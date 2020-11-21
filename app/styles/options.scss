@@ -4,6 +4,10 @@
   display: none;
 }
 
+.configurationSectionContainer[aria-hidden="true"] {
+  display: none;
+}
+
 .requiredFormInput:after {
   color: red;
   content: " *";
@@ -26,4 +30,9 @@ input:invalid {
 .toolButton:hover {
   background-color: rgba(0, 0, 0, 0.1);
   border-radius: 3px;
+}
+
+.clickableInfoSpan {
+  font-weight: bold;
+  cursor: pointer;
 }

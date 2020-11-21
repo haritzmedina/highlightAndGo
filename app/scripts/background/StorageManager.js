@@ -32,6 +32,7 @@ class StorageManager {
             }
           })
         }
+        return true
       }
     })
   }

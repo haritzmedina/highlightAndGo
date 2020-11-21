@@ -76,6 +76,23 @@ class Options {
         }
       })
     })
+    // Hypothesis login
+    this.hypothesisConfigurationContainerElement = document.querySelector('#hypothesisConfigurationCard')
+    this.hypothesisConfigurationContainerElement.querySelector('#hypothesisLogin').addEventListener('click', this.createHypothesisLoginEventHandler())
+    this.hypothesisConfigurationContainerElement.querySelector('#hypothesisLogout').addEventListener('click', this.createHypothesisLogoutEventHandler())
+    this.hypothesisConfigurationContainerElement.querySelector('#hypothesisLoggedInUsername').addEventListener('click', this.createDisplayHypothesisLoginInfoEventHandler())
+    // Get token and username if logged in
+    chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getToken'}, ({ token }) => {
+      if (_.isString(token)) {
+        this.hypothesisToken = token
+        chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getUserProfileMetadata'}, (profile) => {
+          this.hypothesisConfigurationContainerElement.querySelector('#hypothesisLoggedInUsername').innerText = profile.metadata.displayName
+        })
+        this.hypothesisConfigurationContainerElement.querySelector('#hypothesisLoginContainer').setAttribute('aria-hidden', 'true')
+      } else {
+        this.hypothesisConfigurationContainerElement.querySelector('#hypothesisLoggedInContainer').setAttribute('aria-hidden', 'true')
+      }
+    })
     // Neo4J Configuration
     this.neo4JEndpointElement = document.querySelector('#neo4jEndpoint')
     this.neo4JTokenElement = document.querySelector('#neo4jToken')
@@ -181,6 +198,45 @@ class Options {
     }, ({preferences}) => {
       console.debug('Saved credentials ' + JSON.stringify(preferences))
     })
+  }
+
+  createHypothesisLoginEventHandler () {
+    return () => {
+      chrome.runtime.sendMessage({
+        scope: 'hypothesis',
+        cmd: 'userLoginForm'
+      }, ({token}) => {
+        this.hypothesisToken = token
+        chrome.runtime.sendMessage({scope: 'hypothesis', cmd: 'getUserProfileMetadata'}, (profile) => {
+          document.querySelector('#hypothesisLoggedInUsername').innerText = profile.metadata.displayName
+          document.querySelector('#hypothesisLoggedInContainer').setAttribute('aria-hidden', 'false')
+        })
+        document.querySelector('#hypothesisLoginContainer').setAttribute('aria-hidden', 'true')
+      })
+    }
+  }
+
+  createHypothesisLogoutEventHandler () {
+    return () => {
+      chrome.runtime.sendMessage({
+        scope: 'hypothesis',
+        cmd: 'userLogout'
+      }, ({token}) => {
+        document.querySelector('#hypothesisLoggedInContainer').setAttribute('aria-hidden', 'true')
+        document.querySelector('#hypothesisLoginContainer').setAttribute('aria-hidden', 'false')
+        this.hypothesisToken = 'Unknown'
+        document.querySelector('#hypothesisLoggedInUsername').innerText = 'Unknown user'
+      })
+    }
+  }
+
+  createDisplayHypothesisLoginInfoEventHandler () {
+    return () => {
+      Alerts.infoAlert({
+        title: 'You are logged in Hypothes.is',
+        text: 'Token: ' + window.options.hypothesisToken
+      })
+    }
   }
 }
 

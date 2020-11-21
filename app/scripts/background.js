@@ -13,6 +13,7 @@ chrome.tabs.onCreated.addListener((tab) => {
   // Retrieve saved clicked doi element
 })
 
+// const HypothesisManager = require('./background/HypothesisManager')
 const HypothesisManager = require('./background/HypothesisManager')
 const Neo4JManager = require('./background/Neo4JManager')
 const StorageManager = require('./background/StorageManager')

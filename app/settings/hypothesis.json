@@ -1,0 +1,6 @@
+{
+  "clientId": "bea89e64-7e36-11e9-a6ab-134f99967cf3",
+  "authorizationEndpoint": "https://hypothes.is/oauth/authorize",
+  "revokeEndpoint": "https://hypothes.is/oauth/revoke",
+  "tokenEndpoint": "https://hypothes.is/api/token"
+}

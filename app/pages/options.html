@@ -62,6 +62,19 @@
           </div>
         </div>
       </div>
+      <!-- Hypothesis login -->
+      <div id="hypothesisConfigurationCard" class="card storageConfiguration">
+        <div class="card-header bg-dark text-white">Hypothesis</div>
+        <div class="card-body">
+          <div id="hypothesisLoginContainer" class="configurationSectionContainer">
+            <button class="btn btn-secondary" id="hypothesisLogin">Log in</button>
+          </div>
+          <div id="hypothesisLoggedInContainer" class="configurationSectionContainer">
+            Logged in as <span id="hypothesisLoggedInUsername" class="clickableInfoSpan">Unknown user</span>
+            <button class="btn btn-secondary" id="hypothesisLogout">Log out</button>
+          </div>
+        </div>
+      </div>
       <!-- Neo4J Configuration -->
       <div id="neo4jConfigurationCard" class="card storageConfiguration">
         <a id="neo4jConfiguration"></a>
@@ -81,7 +94,7 @@
           </div>
         </div>
       </div>
-      <div id="neo4jAuditSharingCard" class="card">
+      <!--<div id="neo4jAuditSharingCard" class="card">
         <a id="neo4jAuditSharing"></a>
         <div class="card-header bg-dark text-white">Neo4J audit sharing URL's management</div>
         <div class="card-body">
@@ -111,7 +124,6 @@
             </div>
           </form>
           <hr/>
-          <!-- Generated URLs -->
           <div class="row">
             <template id="neo4jAuditTableRow">
               <td class="neo4jAuditUrlCell" scope="row">https://iker.github.io/auditing/index.html <img src="../images/copyToClipboard.svg" class="toolButton"></td>
@@ -147,7 +159,7 @@
             </table>
         </div>
       </div>
-    </div>
+    </div>-->
   </div>
 </div>
 <script src="../scripts/options.js"></script>
