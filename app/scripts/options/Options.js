@@ -18,7 +18,7 @@ class Options {
     })
     chrome.runtime.sendMessage({scope: 'storage', cmd: 'getSelectedStorage'}, ({storage}) => {
       document.querySelector('#storageDropdown').value = storage || 'hypothesis'
-      this.showSelectedStorageConfiguration(storage)
+      this.showSelectedStorageConfiguration(storage || 'hypothesis')
     })
     chrome.runtime.sendMessage({scope: 'googleSheets', cmd: 'getPreferences'}, ({preferences}) => {
       document.querySelector('#allEvidenceSheetCheckbox').checked = preferences.allEvidenceSheet
