@@ -86,7 +86,7 @@ class HypothesisClientManager extends StorageManager {
   }
 
   constructSearchUrl ({ groupId }) {
-    return this.annotationServerMetadata.groupUrl + groupId
+    return this.storageMetadata.groupUrl + groupId
   }
 
   logIn (callback) {
