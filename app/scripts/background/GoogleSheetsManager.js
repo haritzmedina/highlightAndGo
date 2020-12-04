@@ -17,7 +17,6 @@ class GoogleSheetsManager {
               sendResponse({token: token})
             }
           })
-          return true
         } else if (request.cmd === 'getTokenSilent') {
           chrome.identity.getAuthToken({ 'interactive': false }, function (token) {
             if (chrome.runtime.lastError) {
@@ -26,7 +25,6 @@ class GoogleSheetsManager {
               sendResponse({token: token})
             }
           })
-          return true
         } else if (request.cmd === 'createSpreadsheet') {
           chrome.identity.getAuthToken({ 'interactive': true }, function (token) {
             this.googleSheetClient = new GoogleSheetClient(token)
@@ -38,7 +36,6 @@ class GoogleSheetsManager {
               }
             })
           })
-          return true
         } else if (request.cmd === 'updateSpreadsheet') {
           chrome.identity.getAuthToken({ 'interactive': true }, function (token) {
             this.googleSheetClient = new GoogleSheetClient(token)
@@ -50,7 +47,6 @@ class GoogleSheetsManager {
               }
             })
           })
-          return true
         } if (request.cmd === 'getPreferences') {
           ChromeStorage.getData('gsheet.preferences', ChromeStorage.sync, (err, preferences) => {
             if (err) {
@@ -74,6 +70,7 @@ class GoogleSheetsManager {
             }
           })
         }
+        return true
       }
     })
   }
